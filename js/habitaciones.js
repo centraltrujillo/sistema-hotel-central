@@ -9,14 +9,54 @@ import {
     orderBy 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+async function cargarHabitacionesIniciales() {
+    const listaHabitaciones = [
+        { n: "201", t: "Doble", p: "2" },
+        { n: "202", t: "Matrimonial", p: "2" },
+        { n: "203", t: "Matrimonial", p: "2" },
+        { n: "204", t: "Matrimonial", p: "2" },
+        { n: "301", t: "Triple", p: "3" },
+        { n: "302", t: "Matrimonial", p: "3" },
+        { n: "303", t: "Doble", p: "3" },
+        { n: "304", t: "Matrimonial", p: "3" },
+        { n: "305", t: "Simple", p: "3" },
+        { n: "401", t: "Matrimonial + Adicional", p: "4" },
+        { n: "402", t: "Doble", p: "4" },
+        { n: "403", t: "Doble", p: "4" },
+        { n: "404", t: "Simple", p: "4" }
+    ];
+
+    console.log("Iniciando carga de habitaciones...");
+
+    for (const h of listaHabitaciones) {
+        try {
+            await setDoc(doc(db, "habitaciones", `hab${h.n}`), {
+                numero: h.n,
+                tipo: h.t,
+                piso: h.p,
+                estado: "Libre" // Todas inician libres por defecto
+            });
+            console.log(`Habitación ${h.n} cargada con éxito.`);
+        } catch (e) {
+            console.error(`Error cargando hab ${h.n}: `, e);
+        }
+    }
+    alert("¡Todas las habitaciones han sido cargadas en Firebase!");
+}
+
+// Descomenta la siguiente línea para ejecutarlo una sola vez al cargar la página:
+cargarHabitacionesIniciales();
+
 const habGrid = document.getElementById('habGrid');
+const searchHab = document.getElementById('searchHab');
 
 // 1. PROTEGER RUTA
 onAuthStateChanged(auth, (user) => {
     if (user) {
         cargarHabitaciones();
     } else {
-        window.location.href = "login.html";
+        // Corregido: redirigir a index.html si no hay sesión
+        window.location.href = "index.html";
     }
 });
 
@@ -25,74 +65,88 @@ function cargarHabitaciones() {
     const q = query(collection(db, "habitaciones"), orderBy("numero", "asc"));
 
     onSnapshot(q, (snapshot) => {
-        habGrid.innerHTML = ''; // Limpiar grid
+        if (!habGrid) return;
         
-        // Contadores para las mini-stats de arriba
+        habGrid.innerHTML = ''; 
+        
         let libres = 0;
         let ocupadas = 0;
+        const term = searchHab.value.toLowerCase(); // Para el buscador
 
         snapshot.forEach((docSnap) => {
             const hab = docSnap.data();
             const id = docSnap.id;
 
+            // Lógica de contadores globales
             if (hab.estado === "Libre") libres++;
-            else ocupadas++;
+            else if (hab.estado === "Ocupada") ocupadas++;
 
-            // Crear el elemento de la tarjeta
-            const card = document.createElement('div');
-            card.className = `hab-card ${hab.estado.toLowerCase()}`;
-            
-            card.innerHTML = `
-                <div class="hab-header">
-                    <span class="hab-number">${hab.numero}</span>
-                    <span class="hab-badge">${hab.estado}</span>
-                </div>
-                <div class="hab-body">
-                    <p><i class="fa-solid fa-layer-group"></i> Piso ${hab.piso || hab.numero.charAt(0)}</p>
-                    <p><i class="fa-solid fa-tags"></i> Colonial Standard</p>
-                </div>
-                <div class="hab-footer">
-                    <button class="btn-change" data-id="${id}" data-estado="${hab.estado}">
-                        <i class="fa-solid fa-arrows-rotate"></i> 
-                        Marcar como ${hab.estado === 'Libre' ? 'Ocupada' : 'Libre'}
-                    </button>
-                </div>
-            `;
-            habGrid.appendChild(card);
+            // Filtro de búsqueda por número
+            if (hab.numero.toString().toLowerCase().includes(term)) {
+                const card = document.createElement('div');
+                // Clase dinámica: hab-card libre o hab-card ocupada
+                card.className = `hab-card ${hab.estado.toLowerCase()}`;
+                
+                card.innerHTML = `
+    <div class="hab-header">
+        <span class="hab-number">${hab.numero}</span>
+        <span class="hab-badge">${hab.estado}</span>
+    </div>
+    <div class="hab-body">
+        <p><i class="fa-solid fa-layer-group"></i> Piso ${hab.piso || hab.numero.toString().charAt(0)}</p>
+        <p><i class="fa-solid fa-tags"></i> ${hab.tipo || 'Simple'}</p> 
+    </div>
+    <div class="hab-footer">
+        <button class="btn-change" data-id="${id}" data-estado="${hab.estado}">
+            <i class="fa-solid fa-arrows-rotate"></i> 
+            Marcar como ${hab.estado === 'Libre' ? 'Ocupada' : 'Libre'}
+        </button>
+    </div>
+`;
+habGrid.appendChild(card);
+            }
         });
 
-        // Actualizar las mini-tarjetas de arriba (Opcional si usas los IDs correctos)
         actualizarMiniStats(snapshot.size, libres, ocupadas);
     });
 }
 
-// 3. FUNCIÓN PARA CAMBIAR ESTADO (Click en botón)
-habGrid.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('btn-change') || e.target.parentElement.classList.contains('btn-change')) {
-        const button = e.target.classList.contains('btn-change') ? e.target : e.target.parentElement;
-        const id = button.getAttribute('data-id');
-        const estadoActual = button.getAttribute('data-estado');
-        const nuevoEstado = estadoActual === "Libre" ? "Ocupada" : "Libre";
+// 3. EVENTO PARA EL BUSCADOR
+if (searchHab) {
+    searchHab.addEventListener('input', () => {
+        cargarHabitaciones(); // Recarga y filtra en tiempo real
+    });
+}
 
-        try {
-            const habRef = doc(db, "habitaciones", id);
-            await updateDoc(habRef, {
-                estado: nuevoEstado
-            });
-            console.log(`Habitación ${id} cambiada a ${nuevoEstado}`);
-        } catch (error) {
-            console.error("Error al actualizar estado:", error);
-            alert("No se pudo cambiar el estado.");
-        }
+// 4. FUNCIÓN PARA CAMBIAR ESTADO
+habGrid.addEventListener('click', async (e) => {
+    // Detectar click en el botón o en el icono dentro del botón
+    const btn = e.target.closest('.btn-change');
+    if (!btn) return;
+
+    const id = btn.getAttribute('data-id');
+    const estadoActual = btn.getAttribute('data-estado');
+    const nuevoEstado = estadoActual === "Libre" ? "Ocupada" : "Libre";
+
+    try {
+        const habRef = doc(db, "habitaciones", id);
+        await updateDoc(habRef, {
+            estado: nuevoEstado
+        });
+        // No hace falta recargar, onSnapshot lo hace solo
+    } catch (error) {
+        console.error("Error al actualizar:", error);
+        alert("Error al cambiar el estado.");
     }
 });
 
-// 4. ACTUALIZAR CONTADORES SUPERIORES
+// 5. ACTUALIZAR CONTADORES SUPERIORES POR ID
 function actualizarMiniStats(total, libres, ocupadas) {
-    const stats = document.querySelectorAll('.stat-card-mini h3');
-    if (stats.length >= 3) {
-        stats[0].innerText = total;      // Total
-        stats[1].innerText = libres;     // Disponibles
-        stats[2].innerText = ocupadas;   // Ocupadas
-    }
+    const txtTotal = document.getElementById('stat-total');
+    const txtLibres = document.getElementById('stat-libres');
+    const txtOcupadas = document.getElementById('stat-ocupadas');
+
+    if (txtTotal) txtTotal.innerText = total;
+    if (txtLibres) txtLibres.innerText = libres;
+    if (txtOcupadas) txtOcupadas.innerText = ocupadas;
 }

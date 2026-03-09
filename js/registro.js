@@ -6,7 +6,10 @@ const formRegistro = document.getElementById("formRegistro");
 const togglePassword = document.getElementById("togglePassword");
 const passwordInput = document.getElementById("password");
 
-// 👁️ Mostrar/ocultar contraseña (Corregido para coincidir con el texto del CSS)
+// Color institucional para los botones
+const COLOR_HOTEL = '#800020';
+
+// 👁️ Mostrar/ocultar contraseña
 togglePassword.addEventListener("click", () => {
   const isPassword = passwordInput.type === "password";
   passwordInput.type = isPassword ? "text" : "password";
@@ -17,22 +20,40 @@ togglePassword.addEventListener("click", () => {
 formRegistro.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  // Captura de datos del nuevo formulario
+  // Captura de datos
   const nombre = document.getElementById("nombre").value.trim();
-  const rol = document.getElementById("rol").value; // Captura: Administrador, Recepcionista o Limpieza
+  const rol = document.getElementById("rol").value; 
   const correo = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
 
-  // Validación básica de seguridad
+  // --- VALIDACIONES CON SWEETALERT ---
   if (password.length < 6) {
-    alert("⚠️ Por seguridad, la contraseña debe tener al menos 6 caracteres.");
+    Swal.fire({
+      icon: 'warning',
+      title: 'Contraseña débil',
+      text: 'Por seguridad, debe tener al menos 6 caracteres.',
+      confirmButtonColor: COLOR_HOTEL
+    });
     return;
   }
 
   if (!rol) {
-    alert("⚠️ Por favor, asigne un rol al trabajador.");
+    Swal.fire({
+      icon: 'warning',
+      title: 'Falta información',
+      text: 'Por favor, asigne un rol al trabajador.',
+      confirmButtonColor: COLOR_HOTEL
+    });
     return;
   }
+
+  // Mostrar indicador de carga mientras procesa
+  Swal.fire({
+    title: 'Procesando registro...',
+    text: 'Espere un momento por favor',
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
 
   try {
     // 1. Crear usuario en Firebase Authentication
@@ -43,34 +64,47 @@ formRegistro.addEventListener("submit", async (e) => {
     await updateProfile(user, { displayName: nombre });
 
     // 3. Guardar información extendida en Firestore
-    // Usamos el UID de Auth como ID del documento para que coincida con el Login
     await setDoc(doc(db, "usuarios", user.uid), {
       uid: user.uid,
       nombre: nombre,
       correo: correo,
-      rol: rol, // Se guarda el rol seleccionado en el hotel
+      rol: rol,
       fechaRegistro: serverTimestamp(),
-      estado: "Activo" // Opcional: para control administrativo
+      estado: "Activo"
     });
 
-    alert(`✅ Registro exitoso. Se ha creado la cuenta para: ${nombre} (${rol})`);
-    
-    // Redirigir al login para que el nuevo usuario entre formalmente
-    window.location.href = "login.html";
+    // --- ÉXITO ---
+    Swal.fire({
+      icon: 'success',
+      title: '¡Registro Exitoso!',
+      text: `Se ha creado la cuenta para: ${nombre} (${rol})`,
+      confirmButtonColor: COLOR_HOTEL,
+      confirmButtonText: 'Ir al Login'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        window.location.href = "login.html";
+      }
+    });
 
   } catch (error) {
     console.error("Error en el registro:", error);
     let mensaje = "Ocurrió un error al procesar el registro.";
     
-    // Gestión de errores de Firebase
+    // Gestión de errores de Firebase específicos
     if (error.code === "auth/email-already-in-use") {
-        mensaje = "⚠️ Este correo ya está asignado a otro trabajador.";
+        mensaje = "Este correo ya está asignado a otro trabajador.";
     } else if (error.code === "auth/invalid-email") {
-        mensaje = "⚠️ El formato del correo electrónico no es válido.";
+        mensaje = "El formato del correo electrónico no es válido.";
     } else if (error.code === "auth/weak-password") {
-        mensaje = "⚠️ La contraseña elegida es muy débil.";
+        mensaje = "La contraseña elegida es muy débil.";
     }
     
-    alert(mensaje);
+    // --- ERROR ---
+    Swal.fire({
+      icon: 'error',
+      title: 'Error de registro',
+      text: mensaje,
+      confirmButtonColor: COLOR_HOTEL
+    });
   }
 });
