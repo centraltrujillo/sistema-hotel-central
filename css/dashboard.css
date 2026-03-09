@@ -1,0 +1,240 @@
+/* --- dashboard.css | Hotel Central (Versión Optimizada) --- 
+
+📏 Estándar de Tipografía (General)
+Base (body): 15px (Lato).
+
+Títulos Principales (h2, logo h3): 20px (Playfair Display).
+
+Números KPI (h2 en tarjetas): 25px (Playfair Display).
+
+Enlaces de Navegación (nav-link): 14px.
+
+Títulos de Tarjetas (h3): 16px.
+
+Etiquetas y Detalles: 11px - 12px.
+
+🎨 Paleta y Comportamiento
+Sidebar: 200px de ancho con fondo blanco y sombra sutil.
+
+Identidad: Uso predominante de Vino Tinto para elementos activos y acentos.
+
+*/
+
+body { 
+    font-family: var(--font-main); 
+    background-color: var(--blanco-colonial); 
+    color: var(--gris-antracita); 
+    margin: 0;
+    font-size: 15px; /* Tamaño base profesional */
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+
+.admin-layout { 
+    display: flex; 
+    height: 100vh; 
+    overflow: hidden; 
+}
+
+/* 🏛️ Sidebar: Estilo Colonial Premium */
+.sidebar { 
+    width: 200px; 
+    background-color: var(--blanco); 
+    border-right: 1px solid #e2e8f0; 
+    padding: var(--spacing-lg); 
+    display: flex; 
+    flex-direction: column; 
+    box-shadow: 2px 0 10px rgba(0,0,0,0.03);
+    animation: slideSidebar 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.logo-box { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    margin-bottom: 40px; 
+    text-decoration: none;
+}
+
+.logo-icon { 
+    width: 45px; height: 45px; 
+    background-color: var(--vino-tinto); 
+    color: var(--blanco); 
+    border-radius: 12px; 
+    display: grid; place-items: center; 
+    font-size: 22px; 
+    box-shadow: 0 4px 6px rgba(100, 30, 22, 0.2);
+}
+
+.logo-box h3 { 
+    font-family: var(--font-titles); 
+    color: var(--marron-zocalo); 
+    font-size: 20px; /* Ajustado para equilibrio */
+    margin: 0;
+    line-height: 1;
+}
+
+.logo-box p { 
+    font-size: 11px; 
+    color: var(--gris-antracita); 
+    opacity: 0.7;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.nav-menu { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+
+.nav-link { 
+    display: flex; align-items: center; gap: 12px; 
+    padding: 12px 16px; 
+    text-decoration: none; 
+    color: var(--gris-antracita); 
+    border-radius: 10px; 
+    transition: all 0.3s ease; 
+    font-weight: 600; 
+    font-size: 14px;
+}
+
+.nav-link:hover { 
+    background-color: rgba(100, 30, 22, 0.05); 
+    color: var(--vino-tinto); 
+}
+
+.nav-link.active { 
+    background-color: var(--vino-tinto); 
+    color: var(--blanco); 
+    box-shadow: 0 4px 12px rgba(100, 30, 22, 0.2);
+}
+
+/* 🏨 Main Content */
+.main-content { 
+    flex: 1; 
+    overflow-y: auto; 
+    padding: var(--spacing-xl);
+    animation: slideUpFade 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation-delay: 0.1s;
+}
+
+.header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: var(--spacing-xl); 
+}
+
+.header h2 { 
+    font-family: var(--font-titles); 
+    color: var(--marron-zocalo); 
+    font-size: 20px;
+    margin: 0;
+}
+
+.user-info { display: flex; align-items: center; gap: var(--spacing-md); }
+.text-right { text-align: right; }
+.text-right p { margin: 0; font-weight: 700; font-size: 14px; }
+.text-right small { color: #64748b; }
+
+#btnLogout { 
+    background: none; 
+    border: 1px solid #e2e8f0; 
+    padding: 8px 16px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    color: var(--rojo-vibrante);
+    font-weight: 700;
+    font-size: 13px;
+    transition: 0.3s;
+}
+
+#btnLogout:hover { 
+    background-color: var(--rojo-vibrante); 
+    color: var(--blanco); 
+    border-color: var(--rojo-vibrante);
+}
+
+/* 💳 KPI Grid */
+.kpi-grid { 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); 
+    gap: var(--spacing-lg); 
+    margin-bottom: var(--spacing-xl); 
+    animation: slideUpFade 0.8s cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation-delay: 0.2s;
+}
+
+.kpi-card { 
+    background-color: var(--blanco); 
+    padding: var(--spacing-lg); 
+    border-radius: 16px; 
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.kpi-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+
+.kpi-info span { 
+    color: var(--marron-zocalo); 
+    font-size: 12px; /* Tamaño etiqueta */
+    font-weight: 700; 
+    opacity: 0.7; 
+    text-transform: uppercase; 
+    letter-spacing: 1px;
+}
+
+.kpi-info h2 { 
+    font-size: 25px; 
+    margin: 5px 0; 
+    color: var(--marron-zocalo); 
+    font-family: var(--font-titles);
+}
+
+.trend { font-size: 12px; font-weight: 700; }
+.trend.up { color: #2e7d32; }
+.trend.down { color: var(--rojo-vibrante); }
+
+.kpi-icon { 
+    width: 50px; height: 50px; 
+    border-radius: 12px; 
+    display: grid; place-items: center; 
+    font-size: 22px; 
+}
+
+.blue { background-color: #e3f2fd; color: #0277bd; }
+.green { background-color: #e8f5e9; color: #2e7d32; }
+.purple { background-color: #f3e5f5; color: #7b1fa2; }
+.orange { background-color: #fff3e0; color: var(--amarillo-ocre); }
+
+/* 📊 Charts & Lists Area */
+.dashboard-footer-grid { 
+    display: grid; 
+    grid-template-columns: 1.5fr 1fr; 
+    gap: var(--spacing-lg); 
+    animation: slideUpFade 0.9s cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation-delay: 0.3s;
+}
+
+.card { 
+    background-color: var(--blanco); 
+    padding: var(--spacing-lg); 
+    border-radius: 16px; 
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.card h3 { 
+    margin-bottom: var(--spacing-md); 
+    font-family: var(--font-titles);
+    color: var(--marron-zocalo);
+    font-size: 16px; 
+}
+
+/* Responsivo rápido */
+@media (max-width: 1100px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .dashboard-footer-grid { grid-template-columns: 1fr; }
+}

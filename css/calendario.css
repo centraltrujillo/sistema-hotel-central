@@ -1,0 +1,187 @@
+/* =========================================
+   🌟 CALENDARIO OPERATIVO HOTEL CENTRAL
+========================================= */
+
+/* 1. Ajuste del Body para el Layout con Sidebar */
+body {
+  font-family: 'Lato', sans-serif;
+  margin: 0;
+  background-color: #f8fafc; /* Color de fondo del dashboard */
+  color: #1e293b;
+  min-height: 100vh;
+}
+
+/* 2. Contenedor Principal (Dentro de .main-content) */
+.calendar-container {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  padding: 30px;
+  margin-top: 20px;
+  animation: fadeIn 0.6s ease;
+}
+
+/* 3. Encabezado de Navegación */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 0 10px;
+}
+
+#monthYear {
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.nav-btn {
+  background: #f1f5f9;
+  color: #64748b;
+  border: none;
+  border-radius: 10px;
+  width: 45px;
+  height: 45px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-btn:hover {
+  background: #1a56db; /* Azul Figma */
+  color: #ffffff;
+}
+
+/* 4. Grilla de Días */
+.days-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.days-header div {
+  color: #94a3b8;
+  font-weight: 700;
+  text-align: center;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+.days div {
+  min-height: 110px; /* Un poco más alto para ver eventos */
+  padding: 10px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.days div:hover {
+  border-color: #1a56db;
+  background: #f8fafc;
+  transform: translateY(-2px);
+}
+
+/* Día actual */
+.days div.today {
+  border: 2px solid #1a56db;
+  background: #eff6ff;
+}
+
+/* 5. Etiquetas de Eventos (Dentro de los días) */
+.event-item {
+  width: 100%;
+  font-size: 11px;
+  padding: 3px 6px;
+  margin-top: 4px;
+  border-radius: 4px;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Colores por Tipo de Operación Hotelera */
+.type-mantenimiento { background: #ef4444; } /* Rojo */
+.type-limpieza { background: #10b981; }     /* Verde */
+.type-evento { background: #f59e0b; }       /* Naranja */
+.type-admin { background: #6366f1; }        /* Indigo */
+
+/* 6. MODAL (Estilo Hotel Paradise) */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5); /* Fondo más oscuro y elegante */
+  backdrop-filter: blur(4px);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 20px;
+  width: 450px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: popIn 0.3s ease-out;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.btn-primary {
+  background: #1a56db;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-delete {
+  background: #fee2e2;
+  color: #ef4444;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ✨ Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

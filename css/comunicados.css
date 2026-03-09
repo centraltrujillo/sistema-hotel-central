@@ -1,0 +1,104 @@
+/* ====== Reset y base ====== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: var(--font-family); background-color: #f5f6fa; color: #333; }
+
+/* ====== Navbar ====== */
+nav.navbar {
+  background-color: var(--celeste);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--azul-borde);
+}
+
+nav.navbar .logo { font-size: 22px; font-weight: bold; color: var(--blanco); }
+nav.navbar .nav-links { display: flex; gap: 20px; list-style: none; }
+nav.navbar .nav-links li a { color: var(--blanco); text-decoration: none; font-weight: 500; transition: color 0.3s ease; }
+nav.navbar .nav-links li a:hover { color: var(--azul-oscuro); text-decoration: underline; }
+
+/* ====== Contenedor principal ====== */
+main.contenedor {
+  padding: 20px;
+  max-width: 1000px;
+  margin: 20px auto;
+  background: var(--blanco);
+  border: 2px solid var(--azul-borde);
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* ====== Formulario de comunicados ====== */
+#form-comunicado {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#form-comunicado input,
+#form-comunicado textarea {
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  width: 100%;
+  font-size: 14px;
+}
+
+#form-comunicado button {
+  width: 150px;
+  align-self: flex-start;
+  background-color: var(--celeste);
+  border: none;
+  color: var(--blanco);
+  border-radius: 5px;
+  padding: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+#form-comunicado button:hover {
+  background-color: var(--azul-borde);
+}
+
+/* ====== Lista de comunicados ====== */
+#lista-comunicados {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.comunicado {
+  border-left: 5px solid var(--celeste);
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.comunicado h3 { margin: 0; color: var(--azul-oscuro); font-size: 16px; }
+.comunicado p { margin: 0; font-size: 14px; }
+.comunicado small { color: var(--gris); font-size: 12px; }
+
+/* Botones de acción */
+.comunicado .acciones { display: flex; gap: 5px; }
+.comunicado .edit-btn { background-color: #f39c12; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+.comunicado .edit-btn:hover { background-color: #d68910; }
+.comunicado .delete-btn { background-color: var(--rojo); color: #fff; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+.comunicado .delete-btn:hover { background-color: #c0392b; }
+
+/* Secciones ocultas */
+section#formulario-section.oculto { display: none; }
+
+/* Encabezados */
+section#formulario-section h2,
+section#lista-section h2 { margin-bottom: 10px; color: var(--azul-oscuro); }
+
+/* Scroll estilizado */
+#lista-comunicados::-webkit-scrollbar { width: 6px; }
+#lista-comunicados::-webkit-scrollbar-thumb { background-color: var(--celeste); border-radius: 3px; }
