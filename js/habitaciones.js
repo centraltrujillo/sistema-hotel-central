@@ -9,43 +9,6 @@ import {
     orderBy 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-async function cargarHabitacionesIniciales() {
-    const listaHabitaciones = [
-        { n: "201", t: "Doble", p: "2" },
-        { n: "202", t: "Matrimonial", p: "2" },
-        { n: "203", t: "Matrimonial", p: "2" },
-        { n: "204", t: "Matrimonial", p: "2" },
-        { n: "301", t: "Triple", p: "3" },
-        { n: "302", t: "Matrimonial", p: "3" },
-        { n: "303", t: "Doble", p: "3" },
-        { n: "304", t: "Matrimonial", p: "3" },
-        { n: "305", t: "Simple", p: "3" },
-        { n: "401", t: "Matrimonial + Adicional", p: "4" },
-        { n: "402", t: "Doble", p: "4" },
-        { n: "403", t: "Doble", p: "4" },
-        { n: "404", t: "Simple", p: "4" }
-    ];
-
-    console.log("Iniciando carga de habitaciones...");
-
-    for (const h of listaHabitaciones) {
-        try {
-            await setDoc(doc(db, "habitaciones", `hab${h.n}`), {
-                numero: h.n,
-                tipo: h.t,
-                piso: h.p,
-                estado: "Libre" // Todas inician libres por defecto
-            });
-            console.log(`Habitación ${h.n} cargada con éxito.`);
-        } catch (e) {
-            console.error(`Error cargando hab ${h.n}: `, e);
-        }
-    }
-    alert("¡Todas las habitaciones han sido cargadas en Firebase!");
-}
-
-// Descomenta la siguiente línea para ejecutarlo una sola vez al cargar la página:
-cargarHabitacionesIniciales();
 
 const habGrid = document.getElementById('habGrid');
 const searchHab = document.getElementById('searchHab');

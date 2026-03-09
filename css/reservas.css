@@ -1,4 +1,11 @@
-/* --- Estilos Gestión de Reservas (Consolidado) --- */
+/* --- Estilos Gestión de Reservas (Consolidado y Corregido) --- */
+
+:root {
+    /* Asegurando coherencia con tus variables globales */
+    --vino-tinto: #800020;
+    --amarillo-ocre: #d4a017;
+    --marron-zocalo: #4a3728;
+}
 
 /* Cabecera: Título y Botón */
 .page-header {
@@ -29,11 +36,6 @@
     border-radius: 12px; 
     border: 1px solid #e2e8f0; 
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    transition: transform 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
 }
 
 .stat-card span { 
@@ -66,15 +68,11 @@
     transition: all 0.3s;
 }
 
-.btn-add:hover { 
-    background: var(--vino-tinto);
-    color: white;
-}
+.btn-add:hover { background: var(--vino-tinto); color: white; }
 
-/* Barra de búsqueda y filtros */
+/* Barra de búsqueda */
 .search-section { 
     display: flex; 
-    align-items: center;
     gap: 15px; 
     margin-bottom: 25px; 
     background: #fff;
@@ -83,197 +81,48 @@
     border: 1px solid #e2e8f0;
 }
 
-.search-box { 
-    flex: 2; 
-    display: flex; 
-    align-items: center; 
-    position: relative;
-}
+.search-box { flex: 2; position: relative; display: flex; align-items: center; }
+.search-box i { position: absolute; left: 15px; color: #94a3b8; }
+.search-box input { width: 100%; padding: 12px 12px 12px 45px; border: 1px solid #e2e8f0; border-radius: 8px; }
 
-.search-box i {
-    position: absolute;
-    left: 15px;
-    color: #94a3b8;
-}
+#filtroReserva { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569; }
 
-.search-box input { 
-    width: 100%;
-    padding: 12px 12px 12px 45px;
+/* Tabla y Select de Estados */
+.table-container { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow-x: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.res-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+.res-table th { background: #f8fafc; padding: 15px 20px; font-size: 11px; font-weight: 700; color: #64748b; text-align: left; }
+.res-table td { padding: 15px 20px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+
+.status-select {
+    padding: 6px 12px;
+    border-radius: 20px;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    outline: none;
-    font-family: inherit; 
-    transition: border-color 0.3s;
-}
-
-.search-box input:focus {
-    border-color: #1a56db;
-}
-
-#filtroReserva {
-    flex: 1;
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    background: #f8fafc;
     color: #475569;
-    background-color: white;
 }
 
-/* --- Tabla de Reservas --- */
-.table-container {
-    background: #fff;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    overflow-x: auto; 
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
+.btn-del { color: #d33; background: none; border: none; cursor: pointer; font-size: 16px; }
 
-.res-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 800px;
-}
-
-.res-table th {
-    background: #f8fafc;
-    color: #64748b;
-    text-transform: uppercase;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 15px 20px;
-    text-align: left;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.res-table td {
-    padding: 15px 20px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 14px;
-    color: #1e293b;
-}
-
-.huesped-cell span { 
-    display: block; 
-    font-weight: 700; 
-    color: var(--vino-tinto); 
-}
-
-/* Badges de Estado */
-.status-pill {
-    padding: 4px 10px;
-    border-radius: 100px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.status-Confirmada { background: #dcfce7; color: #15803d; }
-.status-Pendiente { background: #fef9c3; color: #a16207; }
-.status-Completada { background: #dbeafe; color: #1d4ed8; }
-
-.action-btns i {
-    cursor: pointer;
-    color: #94a3b8;
-    margin-right: 10px;
-    transition: 0.2s;
-}
-
-.action-btns i:hover { color: #ef4444; }
-
-/* --- MODAL DE RESERVAS --- */
+/* --- MODAL --- */
 .modal-reserva-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
-    z-index: 3000;
-    align-items: center;
-    justify-content: center;
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 3000;
+    align-items: center; justify-content: center;
 }
+.modal-reserva-content { background: white; width: 95%; max-width: 650px; border-radius: 12px; overflow: hidden; }
+.modal-reserva-header { background: var(--vino-tinto); color: white; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; }
 
-.modal-reserva-content {
-    background: white;
-    width: 95%;
-    max-width: 650px;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-    animation: slideUp 0.3s ease-out;
-}
+.form-grid-res { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 25px; }
+.form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--marron-zocalo); }
+.form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; }
 
-.modal-reserva-header {
-    background: var(--vino-tinto);
-    color: white;
-    padding: 20px 25px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+.form-actions-res { padding: 20px 25px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; }
+.btn-save { padding: 10px 25px; border: none; background: var(--vino-tinto); color: white; border-radius: 6px; cursor: pointer; }
 
-.modal-reserva-header h3 { margin: 0; font-family: var(--font-titles), serif; }
-.close-modal { cursor: pointer; font-size: 24px; opacity: 0.8; }
-.close-modal:hover { opacity: 1; }
-
-.form-grid-res {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    padding: 25px;
-}
-
-.form-group label {
-    display: block;
-    font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: var(--marron-zocalo);
-}
-
-.form-group input, .form-group select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-family: inherit;
-}
-
-.form-actions-res {
-    padding: 20px 25px;
-    background: #f8fafc;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-}
-
-.btn-cancel { 
-    padding: 10px 20px; 
-    border: 1px solid #cbd5e1; 
-    background: white; 
-    border-radius: 6px; 
-    cursor: pointer;
-    font-weight: 600;
-}
-
-.btn-save { 
-    padding: 10px 25px; 
-    border: none; 
-    background: var(--vino-tinto); 
-    color: white; 
-    border-radius: 6px; 
-    cursor: pointer;
-    font-weight: 600;
-}
-
-@keyframes slideUp {
-    from { transform: translateY(30px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-/* Responsivo */
 @media (max-width: 600px) {
     .form-grid-res { grid-template-columns: 1fr; }
-    .stats-grid { grid-template-columns: 1fr 1fr; }
 }

@@ -1,129 +1,131 @@
-import { db } from "./firebaseconfig.js";
+import { auth, db } from "./firebaseconfig.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { 
-    collection, addDoc, onSnapshot, query, orderBy, getDocs, where, serverTimestamp 
+    collection, 
+    addDoc, 
+    onSnapshot, 
+    query, 
+    orderBy, 
+    updateDoc, 
+    deleteDoc, 
+    doc 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// DOM
-const modal = document.getElementById('modalReserva');
-const btnCerrar = document.querySelector('.close-modal');
-const btnCancelar = document.querySelector('.btn-cancel');
-const form = document.getElementById('formNuevaReserva');
-const tablaBody = document.getElementById('tablaReservasBody');
-const datalist = document.getElementById('listaHuespedesExistentes');
+// --- 1. ELEMENTOS DEL DOM ---
+const tablaReservasBody = document.getElementById("tablaReservasBody");
+const formNuevaReserva = document.getElementById("formNuevaReserva");
+const modal = document.getElementById("modalReserva");
+const btnAbrirModal = document.getElementById("btnAbrirModal");
+const selectHabitacion = document.getElementById("resHabitacion");
 
-// KPIs
-const resTotal = document.getElementById('resTotal');
-const resConf = document.getElementById('resConf');
-const resPend = document.getElementById('resPend');
-const resComp = document.getElementById('resComp');
+// --- 2. GESTIÓN DEL MODAL ---
+btnAbrirModal.onclick = () => modal.style.display = "flex";
+document.querySelector(".close-modal").onclick = () => modal.style.display = "none";
+document.querySelector(".btn-cancel").onclick = () => modal.style.display = "none";
 
-// --- ABRIR/CERRAR MODAL ---
-document.querySelector('.btn-add').onclick = () => {
-    cargarHabitacionesLibres();
-    cargarSugerenciasHuespedes();
-    modal.style.display = 'flex';
-};
-
-const cerrarModal = () => { modal.style.display = 'none'; form.reset(); };
-btnCerrar.onclick = cerrarModal;
-btnCancelar.onclick = cerrarModal;
-
-// --- CARGAR DATOS PARA EL FORMULARIO ---
-async function cargarHabitacionesLibres() {
-    const selectHab = document.getElementById('resHabitacion');
-    const q = query(collection(db, "habitaciones"), where("estado", "==", "Libre"));
-    const snap = await getDocs(q);
-    selectHab.innerHTML = '<option value="">Seleccionar...</option>';
-    snap.forEach(doc => {
-        selectHab.innerHTML += `<option value="${doc.data().numero}">Hab. ${doc.data().numero}</option>`;
+// --- 3. CARGAR HABITACIONES DISPONIBLES EN SELECT ---
+onSnapshot(query(collection(db, "habitaciones"), orderBy("numero", "asc")), (snapshot) => {
+    selectHabitacion.innerHTML = '<option value="">Seleccionar...</option>';
+    snapshot.forEach(doc => {
+        const hab = doc.data();
+        if (hab.estado === "Libre") {
+            const opt = document.createElement("option");
+            opt.value = hab.numero;
+            opt.textContent = `Hab. ${hab.numero} - ${hab.tipo}`;
+            selectHabitacion.appendChild(opt);
+        }
     });
-}
+});
 
-function cargarSugerenciasHuespedes() {
-    onSnapshot(collection(db, "huespedes"), (snap) => {
-        datalist.innerHTML = '';
-        snap.forEach(doc => {
-            const opt = document.createElement('option');
-            opt.value = doc.data().nombre;
-            datalist.appendChild(opt);
-        });
-    });
-}
-
-// --- GUARDAR RESERVA ---
-form.onsubmit = async (e) => {
+// --- 4. GUARDAR NUEVA RESERVA ---
+formNuevaReserva.addEventListener("submit", async (e) => {
     e.preventDefault();
     
-    // Obtener el nombre del recepcionista logueado
-    const session = JSON.parse(localStorage.getItem("userSession"));
-    const nombreResponsable = session ? session.nombre : "Admin/Sistema";
-
-    const nombreHuesped = document.getElementById('resHuesped').value;
-
-    // Verificar si el huésped existe, si no, crearlo
-    const qH = query(collection(db, "huespedes"), where("nombre", "==", nombreHuesped));
-    const snapH = await getDocs(qH);
-    if (snapH.empty) {
-        await addDoc(collection(db, "huespedes"), {
-            nombre: nombreHuesped,
-            fechaRegistro: serverTimestamp(),
-            categoria: "Regular"
-        });
-    }
-
-    const reserva = {
-        huesped: nombreHuesped,
-        habitacion: document.getElementById('resHabitacion').value,
-        checkIn: document.getElementById('resCheckIn').value,
-        checkOut: document.getElementById('resCheckOut').value,
-        personas: document.getElementById('resPersonas').value,
-        total: document.getElementById('resPrecio').value,
+    const nuevaReserva = {
+        huesped: document.getElementById("resHuesped").value,
+        habitacion: document.getElementById("resHabitacion").value,
+        checkIn: document.getElementById("resCheckIn").value,
+        checkOut: document.getElementById("resCheckOut").value,
+        personas: document.getElementById("resPersonas").value,
+        total: document.getElementById("resPrecio").value,
         estado: "Confirmada",
-        fechaCreacion: serverTimestamp(),
-        registradoPor: nombreResponsable // <-- NUEVO CAMPO
+        createdAt: new Date()
     };
 
     try {
-        await addDoc(collection(db, "reservas"), reserva);
-        alert(`Reserva registrada con éxito por ${nombreResponsable}`);
-        cerrarModal();
-    } catch (err) { console.error(err); }
+        await addDoc(collection(db, "reservas"), nuevaReserva);
+        Swal.fire({ icon: 'success', title: '¡Reserva guardada!', confirmButtonColor: '#800020' });
+        modal.style.display = "none";
+        formNuevaReserva.reset();
+    } catch (error) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo guardar la reserva', confirmButtonColor: '#800020' });
+    }
+});
+
+// --- 5. RENDERIZAR TABLA EN TIEMPO REAL ---
+onSnapshot(query(collection(db, "reservas"), orderBy("createdAt", "desc")), (snapshot) => {
+    tablaReservasBody.innerHTML = "";
+    let total = 0, conf = 0, pend = 0, comp = 0;
+
+    snapshot.forEach(docSnap => {
+        const res = docSnap.data();
+        const id = docSnap.id;
+        
+        total++;
+        if (res.estado === "Confirmada") conf++;
+        else if (res.estado === "Pendiente") pend++;
+        else comp++;
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${res.huesped}</td>
+            <td>${res.habitacion}</td>
+            <td>${res.checkIn}</td>
+            <td>${res.checkOut}</td>
+            <td>${res.personas}</td>
+            <td>S/ ${res.total}</td>
+            <td>
+                <select class="status-select" onchange="actualizarEstado('${id}', this.value)">
+                    <option value="Pendiente" ${res.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                    <option value="Confirmada" ${res.estado === 'Confirmada' ? 'selected' : ''}>Confirmada</option>
+                    <option value="Completada" ${res.estado === 'Completada' ? 'selected' : ''}>Completada</option>
+                </select>
+            </td>
+            <td>
+                <button class="btn-del" onclick="eliminarReserva('${id}')"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        `;
+        tablaReservasBody.appendChild(row);
+    });
+
+    document.getElementById("resTotal").innerText = total;
+    document.getElementById("resConf").innerText = conf;
+    document.getElementById("resPend").innerText = pend;
+    document.getElementById("resComp").innerText = comp;
+});
+
+// --- 6. FUNCIONES GLOBALES (Llamadas desde el HTML) ---
+window.actualizarEstado = async (id, nuevoEstado) => {
+    try {
+        await updateDoc(doc(db, "reservas", id), { estado: nuevoEstado });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Estado actualizado', showConfirmButton: false, timer: 2000 });
+    } catch (error) {
+        Swal.fire({ icon: 'error', title: 'Error al actualizar', confirmButtonColor: '#800020' });
+    }
 };
 
-// --- RENDERIZAR TABLA EN TIEMPO REAL ---
-function renderReservas() {
-    const q = query(collection(db, "reservas"), orderBy("fechaCreacion", "desc"));
-    onSnapshot(q, (snapshot) => {
-        tablaBody.innerHTML = '';
-        let t = 0, c = 0, p = 0, co = 0;
-
-        snapshot.forEach(doc => {
-            const r = doc.data();
-            t++;
-            if(r.estado === "Confirmada") c++;
-            else if(r.estado === "Pendiente") p++;
-            else co++;
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="huesped-cell">
-                    <span>${r.huesped}</span>
-                    <small style="display:block; color:#94a3b8; font-size:11px;">Registró: ${r.registradoPor || 'N/A'}</small>
-                </td>
-                <td>Hab. ${r.habitacion}</td>
-                <td>${r.checkIn}</td>
-                <td>${r.checkOut}</td>
-                <td>${r.personas}</td>
-                <td>S/ ${r.total}</td>
-                <td><span class="status-pill status-${r.estado}">${r.estado}</span></td>
-                <td><div class="action-btns"><i class="fa-solid fa-trash"></i></div></td>
-            `;
-            tablaBody.appendChild(tr);
-        });
-
-        resTotal.innerText = t; resConf.innerText = c;
-        resPend.innerText = p; resComp.innerText = co;
+window.eliminarReserva = async (id) => {
+    const result = await Swal.fire({
+        title: '¿Está seguro?',
+        text: "No podrá recuperar esta reserva",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#800020',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, eliminar'
     });
-}
-
-renderReservas();
+    
+    if (result.isConfirmed) {
+        await deleteDoc(doc(db, "reservas", id));
+    }
+};
