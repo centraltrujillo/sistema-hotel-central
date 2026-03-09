@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro de Personal | Hotel Central</title>
+  <link rel="icon" type="image/png" href="img/logo.png">
+  
+  <link rel="stylesheet" href="css/colors.css">
+  <link rel="stylesheet" href="css/registro.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="register-container">
+    <img src="img/logo.png" alt="Logo" class="logo-reg">
+    <h2>Registro de Personal</h2>
+
+    <form id="formRegistro">
+      <input id="nombre" type="text" placeholder="Nombre Completo" required />
+      
+      <div class="select-group">
+        <label for="rol">Asignar Rol en el Hotel</label>
+        <select id="rol" required>
+          <option value="" disabled selected>Seleccione un cargo...</option>
+          <option value="Administrador">Administrador</option>
+          <option value="Recepcionista">Recepcionista</option>
+          <option value="Limpieza">Personal de Limpieza</option>
+        </select>
+      </div>
+
+      <input id="email" type="email" placeholder="Correo Electrónico Corporativo" required />
+
+      <div class="password-container">
+        <input id="password" type="password" placeholder="Contraseña (mín. 6 caracteres)" required />
+        <span class="toggle-password" id="togglePassword">MOSTRAR</span>
+      </div>
+
+      <button id="btnSubmit" type="submit">CREAR CUENTA</button>
+
+      <div class="login-link">
+        ¿Ya es parte del equipo? <a href="login.html">Inicie sesión aquí</a>
+      </div>
+    </form>
+  </div>
+
+  <script type="module" src="js/registro.js"></script>
+</body>
+</html>

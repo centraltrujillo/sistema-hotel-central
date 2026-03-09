@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Habitación | Hotel Central</title>
+    <link rel="icon" type="image/png" href="img/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/detalle.css">
+</head>
+<body>
+
+    <div class="simple-container">
+        <header class="main-header">
+            <img src="img/logo.png" alt="Logo Hotel Central" class="app-logo">
+            <h1 id="tituloHab">Habitación ...</h1>
+            <span id="estadoBadge" class="status-pill">Cargando...</span>
+        </header>
+
+        <form id="checkForm">
+            <div class="checklist-grid">
+                
+                <section class="form-section">
+                    <h2 class="section-title"><i class="fa-solid fa-broom"></i> Limpieza</h2>
+                    <div class="check-group">
+                        <label class="check-item">
+                            <span>Camas y blancos</span>
+                            <input type="checkbox" name="limpieza_camas">
+                        </label>
+                        <label class="check-item">
+                            <span>Baño desinfectado</span>
+                            <input type="checkbox" name="limpieza_bano">
+                        </label>
+                        <label class="check-item">
+                            <span>Pisos y polvo</span>
+                            <input type="checkbox" name="limpieza_pisos">
+                        </label>
+                        <label class="check-item">
+                            <span>Ventanas limpieza</span>
+                            <input type="checkbox" name="limpieza_pisos">
+                        </label>
+                        <label class="check-item">
+                            <span>Aire acondicinado</span>
+                            <input type="checkbox" name="limpieza_pisos">
+                        </label>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2 class="section-title"><i class="fa-solid fa-box-open"></i> Inventario</h2>
+                    <div class="check-group">
+                        <label class="check-item">
+                            <span>Controles TV / AC</span>
+                            <input type="checkbox" name="inv_controles">
+                        </label>
+                        <label class="check-item">
+                            <span>Telefono</span>
+                            <input type="checkbox" name="inv_minibar">
+                        </label>
+                        <label class="check-item">
+                            <span>Muebles en  buen estado</span>
+                            <input type="checkbox" name="inv_muebles">
+                        </label>
+                        <label class="check-item">
+                            <span>Tacho de basura</span>
+                            <input type="checkbox" name="inv_muebles">
+                        </label>
+                        <label class="check-item">
+                            <span>Cortinas</span>
+                            <input type="checkbox" name="inv_muebles">
+                        </label>
+                    </div>
+                </section>
+            </div>
+
+            <section class="form-section">
+                <h2 class="section-title"><i class="fa-solid fa-pen"></i> Observaciones</h2>
+                <textarea name="comentarios" rows="3" placeholder="¿Falta algo o hay algún detalle técnico?"></textarea>
+                
+                <label class="maintenance-toggle">
+                    <span class="danger-text">¿Reportar avería técnica?</span>
+                    <input type="checkbox" name="requiere_mantenimiento">
+                </label>
+            </section>
+
+            <div class="actions">
+                <button type="submit" class="btn-primary">GUARDAR REPORTE</button>
+                <a href="habitaciones.html" class="btn-link">Cancelar y volver</a>
+            </div>
+        </form>
+    </div>
+
+    <script type="module" src="js/detalle.js"></script>
+</body>
+</html>

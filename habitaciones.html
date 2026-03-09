@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habitaciones | Hotel Central</title>
+    <link rel="icon" type="image/png" href="img/logo.png" />
+    
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/dashboard.css"> 
+    <link rel="stylesheet" href="css/habitaciones.css"> 
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="logo-box">
+                <div class="logo-icon"><img src="img/logo.jpeg" alt="Logo" style="width: 100%; height: auto;"></div>
+                <div>
+                    <h3>Hotel Central</h3>
+                    <p>Sistema de Gestión</p>
+                </div>
+            </div>
+            <nav class="nav-menu">
+              <a href="dashboard.html" class="nav-link" data-view="dashboard"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+              <a href="habitaciones.html" class="nav-link active" data-view="habitaciones"><i class="fa-solid fa-bed"></i> Habitaciones</a>
+              <a href="reservas.html" class="nav-link" data-view="reservas"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+              <a href="huespedes.html" class="nav-link" data-view="huespedes"><i class="fa-solid fa-users"></i> Huéspedes</a>
+              <a href="checkin.html" class="nav-link"><i class="fa-solid fa-right-to-bracket"></i> Check-in/Out</a>
+              <a href="calendario.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Calendario</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h2>Gestión de Habitaciones</h2>
+            </div>
+
+            <div class="hab-stats">
+                <div class="stat-card-mini">
+                    <span>Total</span>
+                    <h3 id="stat-total">--</h3>
+                </div>
+                <div class="stat-card-mini">
+                    <span>Libres</span>
+                    <h3 id="stat-libres" style="color:#2e7d32">--</h3>
+                </div>
+                <div class="stat-card-mini">
+                    <span>Ocupadas</span>
+                    <h3 id="stat-ocupadas" style="color:#ef6c00">--</h3>
+                </div>
+                </div>
+
+            <div class="search-bar">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" id="searchHab" placeholder="Buscar por número (Ej: 101)...">
+            </div>
+
+            <div class="hab-grid" id="habGrid">
+                <div class="loading-state">Cargando habitaciones...</div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="js/habitaciones.js"></script>
+</body>
+</html>

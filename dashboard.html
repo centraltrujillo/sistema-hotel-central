@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control | Hotel Central</title>
+    <link rel="icon" type="image/png" href="img/logo.png" />
+
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="logo-box">
+                <div class="logo-icon">
+                    <img src="img/logo.jpeg" alt="Logo Hotel" style="width: 100%; height: auto; border-radius: 8px;">
+                </div>
+                <div>
+                    <h3>Hotel Central</h3>
+                    <p>Sistema de Gestión</p>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-link active"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+                <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
+                <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+                <a href="huespedes.html" class="nav-link"><i class="fa-solid fa-users"></i> Huéspedes</a>
+                <a href="checkin.html" class="nav-link"><i class="fa-solid fa-right-to-bracket"></i> Check-in/Out</a>
+                <a href="calendario.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Calendario</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h2 id="view-title">Panel de Control</h2>
+                <div class="user-info">
+                    <div class="text-right">
+                        <span id="userName" style="font-weight: 700; color: var(--vino-tinto);">Cargando...</span><br>
+                        <small id="userRole" style="color: var(--marron-zocalo); font-weight: 400;">Identificando...</small>
+                    </div>
+                    <button id="btnLogout" title="Cerrar Sesión">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-info">
+                        <span>Ocupación Actual</span>
+                        <h2 id="kpi-ocupacion">--/13</h2>
+                        <small class="trend">Habitaciones ocupadas</small>
+                    </div>
+                    <div class="kpi-icon blue"><i class="fa-solid fa-door-open"></i></div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-info">
+                        <span>Huéspedes Registrados</span>
+                        <h2 id="kpi-huespedes">--</h2>
+                        <small class="trend">Total histórico</small>
+                    </div>
+                    <div class="kpi-icon green"><i class="fa-solid fa-user-group"></i></div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-info">
+                        <span>Reservas del Día</span>
+                        <h2 id="kpi-reservas">--</h2>
+                        <small class="trend">Pendientes hoy</small>
+                    </div>
+                    <div class="kpi-icon purple"><i class="fa-solid fa-calendar-check"></i></div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-info">
+                        <span>Estado de Caja</span>
+                        <h2 id="kpi-ingresos">S/0.00</h2>
+                        <small class="trend">Ingresos acumulados</small>
+                    </div>
+                    <div class="kpi-icon orange"><i class="fa-solid fa-dollar-sign"></i></div>
+                </div>
+            </div>
+
+            <div class="dashboard-footer-grid">
+                <div class="chart-container card">
+                    <h3>Flujo de Ingresos</h3>
+                    <div id="chart-line"></div>
+                </div>
+                
+                <div class="checkins-container card">
+                    <h3>Actividad Reciente</h3>
+                    <div id="list-checkins" class="checkins-list">
+                        <p style="padding: 20px; color: #888; text-align: center;">Sincronizando con Firebase...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

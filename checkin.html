@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in / Check-out | Hotel Central</title>
+    <link rel="icon" type="image/png" href="img/logo.png" />
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/checkin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="logo-box">
+                <div class="logo-icon"><img src="img/logo.jpeg" alt="Logo" style="width: 100%; height: auto; border-radius: 8px;"></div>
+                <div>
+                    <h3>Hotel Central</h3>
+                    <p>Sistema de Gestión</p>
+                </div>
+            </div>
+            <nav class="nav-menu">
+              <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+              <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
+              <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+              <a href="huespedes.html" class="nav-link"><i class="fa-solid fa-users"></i> Huéspedes</a>
+              <a href="checkin.html" class="nav-link active"><i class="fa-solid fa-right-to-bracket"></i> Check-in/Out</a>
+              <a href="calendario.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Calendario</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h2>Check-in / Check-out</h2>
+                <p>Horarios: Check-in 13:00 | Check-out 12:00</p>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-ci" onclick="showForm('checkin')">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Realizar Check-in
+                </button>
+                <button class="tab-btn" id="tab-co" onclick="showForm('checkout')">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Realizar Check-out
+                </button>
+            </div>
+
+            <div class="forms-wrapper">
+                
+                <div class="form-card animated-fade" id="form-checkin">
+                    <div class="card-header ci-header">
+                        <h3><i class="fa-solid fa-user-plus"></i> Registro de Entrada</h3>
+                    </div>
+                    <form id="checkinForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Nombre del Huésped</label>
+                                <input type="text" id="ci_nombre" placeholder="Nombre completo" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Número de Habitación</label>
+                                <input type="text" id="ci_habitacion" placeholder="Ej: 101" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Documento (DNI/Pasaporte)</label>
+                                <input type="text" id="ci_doc" placeholder="Número de documento" required>
+                            </div>
+                            <div class="form-group">
+                                <label>N° de Huéspedes</label>
+                                <input type="number" id="ci_huespedes" min="1" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha de Salida Prevista</label>
+                                <input type="date" id="ci_fecha_salida" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Método de Pago</label>
+                                <select id="ci_pago">
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Tarjeta">Tarjeta de Crédito/Débito</option>
+                                    <option value="Transferencia">Transferencia</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary btn-checkin">Confirmar Entrada</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="form-card animated-fade" id="form-checkout" style="display:none;">
+                    <div class="card-header co-header">
+                        <h3><i class="fa-solid fa-door-closed"></i> Registro de Salida</h3>
+                    </div>
+                    <form id="checkoutForm">
+                        <div class="form-group full-width">
+                            <label>Ingrese Número de Habitación para liberar</label>
+                            <input type="text" id="co_habitacion" placeholder="Ej: 204" required>
+                            <small>Al confirmar, la habitación pasará a estado de 'Limpieza'.</small>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary btn-checkout">Confirmar Salida y Liberar</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="js/checkin.js"></script>
+</body>
+</html>

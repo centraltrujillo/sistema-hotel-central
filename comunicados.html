@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comunicados</title>
+  <link rel="icon" type="image/png" href="img/logo.png" />
+  
+  <link rel="stylesheet" href="css/colors.css" />
+  <link rel="stylesheet" href="css/comunicados.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">Comunicados</div>
+    <ul class="nav-links">
+      <li><a href="dashboard.html">Inicio</a></li>
+      <li><a href="recursos.html">Recursos</a></li>
+      <!--<li><a href="biblioteca.html">Biblioteca</a></li>-->
+      <li><a href="perfil.html">Perfil</a></li>
+    </ul>
+  </nav>
+
+  <main class="contenedor">
+    <!-- Formulario solo visible para admin -->
+    <section id="formulario-section" class="oculto">
+      <h2>Nuevo Comunicado</h2>
+      <form id="form-comunicado">
+        <input type="text" id="titulo" placeholder="Título del comunicado" required />
+        <input type="date" id="fecha" required />
+        <textarea id="descripcion" rows="4" placeholder="Detalle del comunicado" required></textarea>
+        <button type="submit" class="btn">Publicar</button>
+      </form>
+    </section>
+
+    <!-- Lista de comunicados -->
+    <section id="lista-section">
+      <h2>Comunicados recientes</h2>
+      <div id="lista-comunicados"></div>
+    </section>
+  </main>
+
+  <script type="module" src="js/comunicados.js"></script>
+</body>
+</html>

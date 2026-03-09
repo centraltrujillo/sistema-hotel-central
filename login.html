@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acceso Personal | Hotel Central</title>
+  <link rel="icon" type="image/png" href="img/logo.png" />
+
+  <link rel="stylesheet" href="css/colors.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: var(--font-main), sans-serif;
+      /* Degradado que conecta con el estilo del Index e Inicio */
+      background: linear-gradient(135deg, var(--vino-tinto), var(--marron-zocalo));
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: var(--blanco-colonial);
+    }
+
+    .login-container {
+      background: rgba(255, 255, 255, 0.07); /* Efecto Glassmorphism */
+      backdrop-filter: blur(15px);
+      padding: 40px;
+      border-radius: 4px; /* Bordes rectos para elegancia formal */
+      border: 1px solid rgba(212, 160, 23, 0.3);
+      box-shadow: 0px 20px 40px rgba(0,0,0,0.6);
+      width: 90%;
+      max-width: 400px;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .logo {
+      display: block;
+      margin: 0 auto 20px auto;
+      max-width: 90px;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+    }
+
+    .login-container h2 {
+      font-family: var(--font-titles), serif;
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--amarillo-ocre);
+      font-size: 26px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    /* Estilo de los campos de entrada */
+    .login-container input {
+      width: 100%;
+      padding: 14px;
+      margin: 12px 0;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      font-family: var(--font-main);
+      color: var(--negro);
+    }
+
+    .login-container input:focus {
+      border-color: var(--amarillo-ocre);
+      box-shadow: 0 0 10px rgba(212, 160, 23, 0.4);
+      outline: none;
+    }
+
+    .password-container { position: relative; width: 100%; }
+    
+    .toggle-password {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--marron-zocalo);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    /* Botón Principal */
+    button {
+      width: 100%;
+      padding: 16px;
+      background: var(--amarillo-ocre);
+      color: var(--marron-zocalo);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 20px;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    button:hover {
+      background: var(--blanco-colonial);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+
+    .error-msg {
+      color: #ff5252;
+      font-size: 13px;
+      text-align: center;
+      margin-top: 20px;
+      font-weight: 600;
+      min-height: 20px;
+    }
+
+    .register-link {
+      text-align: center;
+      margin-top: 25px;
+      font-size: 12px;
+      color: var(--blanco-colonial);
+      opacity: 0.7;
+    }
+
+    .register-link a {
+      color: var(--amarillo-ocre);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <img src="img/logo.png" alt="Logo" class="logo">
+    <h2>Acceso Personal</h2>
+
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="Correo Electrónico" required autocomplete="email" />
+
+      <div class="password-container">
+        <input type="password" id="password" placeholder="Contraseña" required autocomplete="current-password"/>
+        <span class="toggle-password" id="togglePassword">MOSTRAR</span>
+      </div>
+
+      <button type="submit">INGRESAR AL SISTEMA</button>
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="register-link">
+        ¿Aún no tiene credenciales? <a href="registro.html">Solicitar Registro</a>
+      </div>
+    </form>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./js/firebaseconfig.js";
+    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    const loginForm = document.getElementById("loginForm");
+    const errorMsg = document.getElementById("errorMsg");
+    const passwordInput = document.getElementById("password");
+    const togglePassword = document.getElementById("togglePassword");
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = passwordInput.value;
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Consultar el Rol en Firestore
+        const docRef = doc(db, "usuarios", user.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const datosUsuario = docSnap.data();
+          const rol = datosUsuario.rol; 
+
+          // Guardar en LocalStorage para el Dashboard
+          localStorage.setItem("usuario", JSON.stringify({
+            uid: user.uid,
+            nombre: datosUsuario.nombre,
+            correo: datosUsuario.correo,
+            rol: rol // 'Administrador', 'Recepcionista', 'Limpieza'
+          }));
+
+          // Redirección única al dashboard
+          window.location.href = "dashboard.html";
+        } else {
+          errorMsg.textContent = "Error: El perfil de usuario no existe en la base de datos.";
+        }
+
+      } catch (error) {
+        console.error(error);
+        let msg = "Error al intentar ingresar.";
+        if (error.code === "auth/invalid-email") msg = "El formato del correo es incorrecto.";
+        else if (error.code === "auth/user-not-found") msg = "Usuario no registrado.";
+        else if (error.code === "auth/wrong-password") msg = "La contraseña es incorrecta.";
+        else if (error.code === "auth/invalid-credential") msg = "Credenciales inválidas.";
+        errorMsg.textContent = msg;
+      }
+    });
+
+    // Toggle de contraseña
+    togglePassword.addEventListener("click", () => {
+      const isPassword = passwordInput.type === "password";
+      passwordInput.type = isPassword ? "text" : "password";
+      togglePassword.textContent = isPassword ? "OCULTAR" : "MOSTRAR";
+    });
+  </script>
+
+</body>
+</html>
