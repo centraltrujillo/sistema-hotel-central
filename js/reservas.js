@@ -10,79 +10,75 @@ const btnAbrirModal = document.getElementById("btnAbrirModal");
 const buscador = document.getElementById("buscarReserva");
 const filtro = document.getElementById("filtroReserva");
 
-let todasLasReservas = []; // Caché local para filtrado rápido
+let todasLasReservas = [];
 
-// 1. ESCUCHAR CAMBIOS DE FIREBASE
+// 1. ESCUCHAR FIREBASE Y ACTUALIZAR KPIs
 onSnapshot(query(collection(db, "reservas"), orderBy("createdAt", "desc")), (snapshot) => {
     todasLasReservas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    actualizarContadores();
     renderizarTabla();
 });
 
-// 2. FUNCIÓN DE RENDERIZADO (Con límite de 10)
+function actualizarContadores() {
+    document.getElementById("resTotal").innerText = todasLasReservas.length;
+    document.getElementById("resConf").innerText = todasLasReservas.filter(r => r.estado === "Confirmada").length;
+    document.getElementById("resPend").innerText = todasLasReservas.filter(r => r.estado === "Pendiente").length;
+    document.getElementById("resComp").innerText = todasLasReservas.filter(r => r.estado === "Completada").length;
+}
+
+// 2. RENDERIZAR CON CAMBIO DE ESTADO DINÁMICO
 function renderizarTabla() {
     const busqueda = buscador.value.toLowerCase();
-    const estado = filtro.value;
+    const estadoFiltro = filtro.value;
 
     const filtradas = todasLasReservas.filter(res => {
         const coincideBusqueda = res.huesped.toLowerCase().includes(busqueda) || res.habitacion.includes(busqueda);
-        const coincideEstado = (estado === "todos" || res.estado === estado);
+        const coincideEstado = (estadoFiltro === "todos" || res.estado === estadoFiltro);
         return coincideBusqueda && coincideEstado;
     });
 
-    // Lógica: Mostrar todo si hay búsqueda, sino solo las 10 últimas
-    const mostrarTodo = busqueda !== "" || estado !== "todos";
-    const listaFinal = mostrarTodo ? filtradas : filtradas.slice(0, 10);
+    const listaFinal = busqueda === "" && estadoFiltro === "todos" ? filtradas.slice(0, 10) : filtradas;
 
     tablaReservasBody.innerHTML = listaFinal.map(res => `
         <tr>
-            <td>${res.huesped}</td>
-            <td>${res.habitacion}</td>
+            <td><strong>${res.huesped}</strong></td>
+            <td>Hab. ${res.habitacion}</td>
             <td>${res.checkIn}</td>
             <td>${res.checkOut}</td>
             <td>${res.personas}</td>
-            <td>S/ ${res.total}</td>
-            <td>${res.estado}</td>
+            <td>S/ ${parseFloat(res.total).toFixed(2)}</td>
             <td>
-                <button class="btn-edit" data-id="${res.id}"><i class="fa-solid fa-edit"></i></button>
+                <select class="status-select select-dinamico" data-id="${res.id}" data-actual="${res.estado}">
+                    <option value="Pendiente" ${res.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                    <option value="Confirmada" ${res.estado === 'Confirmada' ? 'selected' : ''}>Confirmada</option>
+                    <option value="Completada" ${res.estado === 'Completada' ? 'selected' : ''}>Completada</option>
+                </select>
+            </td>
+            <td>
+                <button class="btn-edit" data-id="${res.id}"><i class="fa-solid fa-pen-to-square"></i></button>
                 <button class="btn-del" data-id="${res.id}"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>
     `).join('');
-
-    // Indicador si hay más ocultas
-    if (!mostrarTodo && filtradas.length > 10) {
-        tablaReservasBody.innerHTML += `
-            <tr>
-                <td colspan="8" style="text-align:center; color: #888; padding: 10px; font-style: italic;">
-                    Mostrando 10 de ${filtradas.length} reservas. Usa el buscador para ver más.
-                </td>
-            </tr>
-        `;
-    }
 }
 
-// 3. GESTIÓN DEL MODAL
-btnAbrirModal.onclick = () => {
-    form.reset();
-    form.removeAttribute("data-id");
-    modal.style.display = "flex";
-};
+// 3. EVENTOS DE TABLA (EDITAR, ELIMINAR, CAMBIAR ESTADO)
+tablaReservasBody.addEventListener("change", async (e) => {
+    if (e.target.classList.contains("select-dinamico")) {
+        const id = e.target.dataset.id;
+        const nuevoEstado = e.target.value;
+        await updateDoc(doc(db, "reservas", id), { estado: nuevoEstado });
+        Swal.fire({ title: "Estado actualizado", icon: "success", timer: 1000, showConfirmButton: false });
+    }
+});
 
-document.querySelector(".close-modal").onclick = () => modal.style.display = "none";
-document.querySelector(".btn-cancel").onclick = () => modal.style.display = "none";
-
-// 4. EVENTOS DE FILTRO
-buscador.addEventListener("input", renderizarTabla);
-filtro.addEventListener("change", renderizarTabla);
-
-// 5. ACCIONES (ELIMINAR Y EDITAR - DELEGACIÓN)
 tablaReservasBody.addEventListener("click", async (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
     const id = btn.dataset.id;
 
     if (btn.classList.contains("btn-del")) {
-        const result = await Swal.fire({ title: '¿Eliminar reserva?', icon: 'warning', showCancelButton: true });
+        const result = await Swal.fire({ title: '¿Eliminar reserva?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#800020' });
         if (result.isConfirmed) await deleteDoc(doc(db, "reservas", id));
     }
 
@@ -100,7 +96,7 @@ tablaReservasBody.addEventListener("click", async (e) => {
     }
 });
 
-// 6. GUARDAR / ACTUALIZAR
+// 4. GUARDAR (SIEMPRE PENDIENTE POR DEFECTO)
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = form.dataset.id;
@@ -111,17 +107,20 @@ form.addEventListener("submit", async (e) => {
         checkOut: document.getElementById("resCheckOut").value,
         personas: document.getElementById("resPersonas").value,
         total: document.getElementById("resPrecio").value,
-        estado: "Pendiente"
+        estado: id ? todasLasReservas.find(r => r.id === id).estado : "Pendiente"
     };
 
-    try {
-        if (id) await updateDoc(doc(db, "reservas", id), datos);
-        else await addDoc(collection(db, "reservas"), { ...datos, createdAt: new Date() });
-        
-        modal.style.display = "none";
-        form.reset();
-        Swal.fire("Éxito", "Operación realizada", "success");
-    } catch (error) {
-        Swal.fire("Error", "No se pudo guardar la reserva", "error");
-    }
+    if (id) await updateDoc(doc(db, "reservas", id), datos);
+    else await addDoc(collection(db, "reservas"), { ...datos, createdAt: new Date() });
+    
+    modal.style.display = "none";
+    form.reset();
+    Swal.fire("Éxito", "Reserva procesada correctamente", "success");
 });
+
+// Modal y Buscadores
+btnAbrirModal.onclick = () => { form.reset(); delete form.dataset.id; modal.style.display = "flex"; };
+document.querySelector(".close-modal").onclick = () => modal.style.display = "none";
+document.querySelector(".btn-cancel").onclick = () => modal.style.display = "none";
+buscador.addEventListener("input", renderizarTabla);
+filtro.addEventListener("change", renderizarTabla);

@@ -7,7 +7,7 @@ body {
   font-family: 'Lato', sans-serif;
   margin: 0;
   background-color: #f8fafc; /* Color de fondo del dashboard */
-  color: #1e293b;
+  color: var(--marron-zocalo);
   min-height: 100vh;
 }
 
