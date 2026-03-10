@@ -38,7 +38,19 @@ body {
   letter-spacing: 2px;
 }
 
-.register-container input,
+
+.register-container input {
+  width: 93%;
+  padding: 14px;
+  margin: 10px 0;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 15px;
+  font-family: var(--font-main);
+  color: var(--negro);
+  transition: all 0.3s ease;
+}
 .register-container select {
   width: 100%;
   padding: 14px;
