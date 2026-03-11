@@ -279,6 +279,42 @@
     font-size: 12px;
 }
 
+/* Badge para la habitación en la tabla */
+.hab-badge {
+    background: #f1f5f9;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    color: #4a3728;
+    border: 1px solid #e2e8f0;
+}
+
+/* Colores de los selects de estado */
+.status-select {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid #e2e8f0;
+}
+
+.status-pendiente { background: #fffbeb; color: #d4a017; border-color: #fef3c7; }
+.status-confirmada { background: #f0fdf4; color: #2e7d32; border-color: #dcfce7; }
+.status-completada { background: #eff6ff; color: #1565c0; border-color: #dbeafe; }
+.status-cancelada { background: #fef2f2; color: #d32f2f; border-color: #fee2e2; }
+
+.btn-edit-table {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.btn-edit-table:hover { color: #d4a017; }
+
 /* Responsivo para móviles */
 @media (max-width: 650px) {
     .form-grid-res { 
