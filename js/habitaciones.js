@@ -18,59 +18,50 @@ onAuthStateChanged(auth, (user) => {
 
 // 2. CARGAR HABITACIONES: Dinámico desde Firebase
 function cargarHabitaciones() {
-    // Escuchamos la colección "habitaciones" en tiempo real
-    const q = query(collection(db, "habitaciones"), orderBy("numero", "asc"));
+    // 1. Quitamos el orderBy temporalmente para asegurar que los datos fluyan
+    const q = query(collection(db, "habitaciones"));
 
     onSnapshot(q, (snapshot) => {
         if (!habGrid) return;
         
         habGrid.innerHTML = ''; 
-        
         let libres = 0;
         let ocupadas = 0;
-        const term = searchHab ? searchHab.value.toLowerCase() : "";
+        const term = searchHab ? searchHab.value.toLowerCase().trim() : "";
 
-        // Si la colección está vacía, mostramos un aviso
-        if (snapshot.empty) {
-            habGrid.innerHTML = '<p>No hay habitaciones registradas en la base de datos.</p>';
-            return;
-        }
+        // Si prefieres ordenar manualmente en el cliente para evitar problemas de índice:
+        const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        docs.sort((a, b) => a.numero - b.numero);
 
-        snapshot.forEach((docSnap) => {
-            const hab = docSnap.data();
-            
-            // Filtro de búsqueda por número
-            if (hab.numero.toString().toLowerCase().includes(term)) {
-                
-                // Actualizamos contadores en tiempo real
-                if (hab.estado === "Libre") libres++;
-                else if (hab.estado === "Ocupada") ocupadas++;
+        docs.forEach((hab) => {
+            // Convertimos a string de forma segura
+            const numHab = hab.numero ? hab.numero.toString() : "S/N";
+            const estadoHab = hab.estado || "Libre";
+
+            if (numHab.includes(term)) {
+                if (estadoHab === "Libre") libres++;
+                else if (estadoHab === "Ocupada") ocupadas++;
 
                 const card = document.createElement('div');
-                // La clase CSS se asigna dinámicamente según el estado
-                card.className = `hab-card ${hab.estado.toLowerCase()}`;
+                card.className = `hab-card ${estadoHab.toLowerCase()}`;
                 
                 card.innerHTML = `
                     <div class="hab-header">
-                        <span class="hab-number">${hab.numero}</span>
-                        <span class="hab-badge">${hab.estado}</span>
+                        <span class="hab-number">${numHab}</span>
+                        <span class="hab-badge">${estadoHab}</span>
                     </div>
                     <div class="hab-body">
                         <p><i class="fa-solid fa-layer-group"></i> Piso ${hab.piso || 'N/A'}</p>
-                        <p><i class="fa-solid fa-tags"></i> ${hab.tipo || 'Simple'}</p> 
-                    </div>
-                    <div class="hab-footer">
-                        <small style="font-size: 11px; color: #888;">
-                            <i class="fa-solid fa-sync"></i> Sincronizado con Reservas
-                        </small>
+                        <p><i class="fa-solid fa-tags"></i> ${hab.tipo || 'Estándar'}</p> 
                     </div>
                 `;
                 habGrid.appendChild(card);
             }
         });
 
-        // Actualizamos los KPIs superiores
-        actualizarMiniStats(snapshot.size, libres, ocupadas);
+        actualizarMiniStats(docs.length, libres, ocupadas);
+    }, (error) => {
+        console.error("Error detectado:", error);
     });
 }
 
