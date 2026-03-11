@@ -80,20 +80,71 @@
     padding: 12px 15px 12px 45px;
     border: 1px solid #ddd;
     border-radius: 6px;
-    font-size: 1rem;
+    font-size: 15px;
 }
 
 #filtroEstado {
     flex: 1;
     padding: 0 15px;
-    height: 48px; /* Altura igual al input */
+    height: 48px;
     border: 1px solid #ddd;
     border-radius: 6px;
     font-weight: 600;
     background: white;
 }
 
-/* --- MODAL (Corrección Visual) --- */
+/* --- TARJETAS DE HUÉSPEDES (NUEVO) --- */
+.huespedes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.huesped-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    transition: 0.3s;
+}
+
+.huesped-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+
+.h-avatar {
+    width: 50px; height: 50px;
+    background: var(--vino-tinto);
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1.2rem;
+}
+
+.h-info h4 { margin: 0; font-size: 16px; color: var(--marron-zocalo); }
+.h-info p { margin: 2px 0; font-size: 13px; color: #64748b; }
+
+.h-actions {
+    position: absolute;
+    top: 15px; right: 15px;
+    display: flex; gap: 8px;
+}
+
+.h-actions button {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--vino-tinto);
+    transition: 0.2s;
+}
+
+.h-actions button:hover { background: var(--vino-tinto); color: white; }
+
+/* --- MODAL Y FORMULARIO --- */
 .modal {
     display: none;
     position: fixed;
@@ -110,7 +161,7 @@
     padding: 0;
     border-radius: 8px;
     width: 90%;
-    max-width: 550px;
+    max-width: 650px; /* Un poco más ancho para los nuevos campos */
     overflow: hidden;
 }
 
@@ -129,6 +180,25 @@
     padding: 25px;
 }
 
+.full-width { grid-column: span 2; }
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: var(--marron-zocalo);
+}
+
+.form-group input:disabled, 
+.form-group select:disabled, 
+.form-group textarea:disabled {
+    background-color: #f1f5f9;
+    color: #475569;
+    cursor: not-allowed;
+    border-color: #e2e8f0;
+}
+
 .form-actions {
     padding: 15px 25px;
     background: #f9f9f9;
@@ -136,3 +206,14 @@
     justify-content: flex-end;
     gap: 10px;
 }
+
+/* --- BADGES --- */
+.badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.badge.vip { background: #fef3c7; color: #92400e; }
+.badge.regular { background: #f1f5f9; color: #475569; }

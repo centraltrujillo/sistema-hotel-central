@@ -3,7 +3,7 @@ import {
     collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// --- LÓGICA DE INTERFAZ (Cambiar entre Check-in y Check-out) ---
+// --- 1. LÓGICA DE INTERFAZ ---
 window.showForm = function(type) {
     const formCheckin = document.getElementById('form-checkin');
     const formCheckout = document.getElementById('form-checkout');
@@ -20,42 +20,48 @@ window.showForm = function(type) {
         tabs[1].classList.add('active');
         tabs[0].classList.remove('active');
     }
-}
+};
 
-// --- PROCESO DE CHECK-IN ---
+// --- 2. PROCESO DE CHECK-IN ---
 const checkinForm = document.getElementById('checkinForm');
-
 checkinForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const habitacionNum = document.getElementById('ci_habitacion').value;
-    const nombreHuesped = document.getElementById('ci_nombre').value;
+    const habitacionNum = document.getElementById('ci_habitacion').value.trim();
+    const nombreHuesped = document.getElementById('ci_nombre').value.trim();
 
     try {
-        // 1. Buscar la habitación en la base de datos
-        const q = query(collection(db, "habitaciones"), where("numero", "==", habitacionNum));
-        const querySnapshot = await getDocs(q);
+        // A. Buscar la habitación
+        const qHab = query(collection(db, "habitaciones"), where("numero", "==", habitacionNum));
+        const snapHab = await getDocs(qHab);
 
-        if (querySnapshot.empty) {
-            alert("La habitación no existe.");
-            return;
+        if (snapHab.empty) return Swal.fire("Error", "La habitación no existe.", "error");
+        
+        const habDoc = snapHab.docs[0];
+        if (habDoc.data().estado !== "Libre") {
+            return Swal.fire("Aviso", `La habitación ${habitacionNum} no está disponible.`, "warning");
         }
 
-        const habDoc = querySnapshot.docs[0];
-        const habData = habDoc.data();
+        // B. Buscar si existe reserva "Confirmada" para sincronizar
+        const qRes = query(
+            collection(db, "reservas"), 
+            where("habitacion", "==", habitacionNum),
+            where("estado", "==", "Confirmada")
+        );
+        const snapRes = await getDocs(qRes);
 
-        if (habData.estado !== "Libre") {
-            alert(`La habitación ${habitacionNum} no está disponible (Estado: ${habData.estado})`);
-            return;
-        }
-
-        // 2. Actualizar estado de la habitación a "Ocupada"
+        // C. Ejecutar actualizaciones
         await updateDoc(doc(db, "habitaciones", habDoc.id), {
             estado: "Ocupada",
             huespedActual: nombreHuesped
         });
 
-        // 3. Registrar el evento en una colección de "actividad" o "estancias"
+        // Si hay una reserva, marcar como completada
+        if (!snapRes.empty) {
+            await updateDoc(doc(db, "reservas", snapRes.docs[0].id), { estado: "Completada" });
+        }
+
+        // D. Registrar estancia
         await addDoc(collection(db, "estancias"), {
             huesped: nombreHuesped,
             habitacion: habitacionNum,
@@ -64,60 +70,54 @@ checkinForm.addEventListener('submit', async (e) => {
             metodoPago: document.getElementById('ci_pago').value
         });
 
-        alert("✅ Check-in realizado con éxito. Habitación actualizada.");
+        Swal.fire("¡Éxito!", "Check-in registrado y reserva sincronizada.", "success");
         checkinForm.reset();
 
     } catch (error) {
         console.error("Error en Check-in:", error);
-        alert("Hubo un error al procesar el Check-in.");
+        Swal.fire("Error", "No se pudo procesar el Check-in.", "error");
     }
 });
 
-// --- PROCESO DE CHECK-OUT ---
+// --- 3. PROCESO DE CHECK-OUT ---
 const checkoutForm = document.getElementById('checkoutForm');
-
 checkoutForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const habitacionNum = document.getElementById('co_habitacion').value;
+    const habitacionNum = document.getElementById('co_habitacion').value.trim();
 
     try {
-        // 1. Buscar la habitación
-        const q = query(collection(db, "habitaciones"), where("numero", "==", habitacionNum));
-        const querySnapshot = await getDocs(q);
+        const qHab = query(collection(db, "habitaciones"), where("numero", "==", habitacionNum));
+        const snapHab = await getDocs(qHab);
 
-        if (querySnapshot.empty) {
-            alert("La habitación no existe.");
-            return;
-        }
+        if (snapHab.empty) return Swal.fire("Error", "Habitación no encontrada.", "error");
 
-        const habDoc = querySnapshot.docs[0];
+        const habDoc = snapHab.docs[0];
         const habData = habDoc.data();
 
         if (habData.estado !== "Ocupada") {
-            alert("Esta habitación no figura como Ocupada.");
-            return;
+            return Swal.fire("Aviso", "Esta habitación no está marcada como ocupada.", "info");
         }
 
-        // 2. Actualizar estado a "Limpieza" (o Libre)
+        // Actualizar habitación a Limpieza
         await updateDoc(doc(db, "habitaciones", habDoc.id), {
-            estado: "Limpieza", // Recomendado para que el personal sepa que debe limpiar
+            estado: "Limpieza",
             huespedActual: ""
         });
 
-        // 3. Registrar salida
+        // Registrar salida
         await addDoc(collection(db, "estancias"), {
             habitacion: habitacionNum,
-            huesped: habData.huespedActual || "N/A",
+            huesped: habData.huespedActual || "Desconocido",
             tipo: "Check-out",
             fecha: serverTimestamp()
         });
 
-        alert(`✅ Check-out de la Hab. ${habitacionNum} realizado. Se ha marcado para Limpieza.`);
+        Swal.fire("¡Check-out realizado!", "Habitación marcada para limpieza.", "success");
         checkoutForm.reset();
 
     } catch (error) {
         console.error("Error en Check-out:", error);
-        alert("Hubo un error al procesar el Check-out.");
+        Swal.fire("Error", "No se pudo procesar el Check-out.", "error");
     }
 });

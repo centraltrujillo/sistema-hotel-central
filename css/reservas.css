@@ -254,6 +254,31 @@
     box-shadow: 0 15px 20px -3px rgba(128, 0, 32, 0.3);
 }
 
+/* Asegurar que el responsable no se vea amontonado */
+.res-table td strong {
+    font-size: 14px;
+    color: var(--marron-zocalo);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.res-table td small {
+    display: block;
+    font-size: 11px; /* El tamaño justo para que sea legible pero no destaque más que el huésped */
+    color: #64748b;
+    font-style: italic;
+}
+
+/* Mejora para el selector de estado */
+.select-dinamico {
+    cursor: pointer;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
 /* Responsivo para móviles */
 @media (max-width: 650px) {
     .form-grid-res { 

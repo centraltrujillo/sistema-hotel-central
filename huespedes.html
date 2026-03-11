@@ -66,40 +66,37 @@
     </div>
 
     <div id="modalHuesped" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Registrar Nuevo Huésped</h3>
-                <span class="close-btn" id="closeModalBtn">&times;</span>
-            </div>
-            <form id="formNuevoHuesped">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Nombre Completo</label>
-                        <input type="text" id="nombreH" placeholder="Ej: Juan Pérez" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Correo Electrónico</label>
-                        <input type="email" id="emailH" placeholder="correo@ejemplo.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Teléfono / DNI</label>
-                        <input type="text" id="telefonoH" placeholder="Documento o celular" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Categoría</label>
-                        <select id="estadoH">
-                            <option value="Regular">Regular</option>
-                            <option value="VIP">VIP</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn-secondary" id="cancelBtn">Cancelar</button>
-                    <button type="submit" class="btn-primary">Guardar Huésped</button>
-                </div>
-            </form>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Nuevo Huésped</h3>
+            <span class="close-btn" onclick="cerrarModal()">&times;</span>
         </div>
+        <form id="formHuesped">
+            <input type="hidden" id="huespedId"> <div class="form-grid">
+                <div class="form-group"><label>Nombre y Apellidos</label><input type="text" id="nombreH" required></div>
+                <div class="form-group"><label>Nacionalidad</label><input type="text" id="nacionalidadH"></div>
+                <div class="form-group">
+                    <label>Tipo Documento</label>
+                    <select id="tipoDocH">
+                        <option value="DNI">DNI</option>
+                        <option value="Pasaporte">Pasaporte</option>
+                        <option value="Carnet">Carnet de Extranjería</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>N° Documento</label><input type="text" id="documentoH"></div>
+                <div class="form-group"><label>Fecha Nacimiento</label><input type="date" id="fechaNacH"></div>
+                <div class="form-group"><label>Celular</label><input type="tel" id="celularH"></div>
+                <div class="form-group"><label>Residencia</label><input type="text" id="residenciaH"></div>
+                <div class="form-group"><label>Correo</label><input type="email" id="emailH"></div>
+                <div class="form-group full-width"><label>Motivo de Viaje</label><textarea id="motivoH"></textarea></div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </div>
+        </form>
     </div>
+</div>
 
     <script type="module" src="js/huespedes.js"></script>
 </body>

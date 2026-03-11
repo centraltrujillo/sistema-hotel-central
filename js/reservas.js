@@ -1,6 +1,6 @@
 import { db } from "./firebaseconfig.js";
 import { 
-    collection, addDoc, onSnapshot, query, orderBy, updateDoc, deleteDoc, doc, getDoc, where, getDocs, serverTimestamp 
+    collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc, getDoc, where, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const tablaReservasBody = document.getElementById("tablaReservasBody");
@@ -13,29 +13,56 @@ const selectHabitacion = document.getElementById("resHabitacion");
 
 let todasLasReservas = [];
 
-// --- 1. GESTIÓN DE HABITACIONES Y DISPONIBILIDAD ---
-const LISTA_HABITACIONES = ["201", "202", "203", "204", "301", "302", "303", "304", "401", "402", "403", "404", "405"];
-
-function cargarHabitaciones(valorSeleccionado = "") {
-    selectHabitacion.innerHTML = '<option value="" disabled selected>Seleccione habitación...</option>';
-    LISTA_HABITACIONES.forEach(hab => {
-        const option = document.createElement("option");
-        option.value = hab;
-        option.textContent = `Habitación ${hab}`;
-        if (hab === valorSeleccionado) option.selected = true;
-        selectHabitacion.appendChild(option);
-    });
+// --- 1. GESTIÓN DE HUÉSPED AUTOMÁTICA ---
+async function registrarHuespedTemporal(nombre) {
+    try {
+        const q = query(collection(db, "huespedes"), where("nombre", "==", nombre));
+        const snap = await getDocs(q);
+        
+        // Solo creamos si no existe previamente
+        if (snap.empty) {
+            await addDoc(collection(db, "huespedes"), {
+                nombre: nombre,
+                fechaRegistro: new Date(),
+                categoria: "Regular"
+            });
+        }
+    } catch (error) {
+        console.error("Error al sincronizar huésped:", error);
+    }
 }
 
+// --- 2. CARGA DINÁMICA DE HABITACIONES ---
+async function cargarHabitaciones(valorSeleccionado = "") {
+    try {
+        const q = query(collection(db, "habitaciones"), orderBy("numero", "asc"));
+        const snapshot = await getDocs(q);
+        
+        selectHabitacion.innerHTML = '<option value="" disabled selected>Seleccione habitación...</option>';
+        
+        snapshot.forEach(doc => {
+            const habData = doc.data();
+            const option = document.createElement("option");
+            option.value = habData.numero;
+            option.textContent = `Habitación ${habData.numero}`;
+            if (habData.numero.toString() === valorSeleccionado.toString()) option.selected = true;
+            selectHabitacion.appendChild(option);
+        });
+        actualizarDisponibilidad();
+    } catch (error) {
+        console.error("Error cargando habitaciones:", error);
+    }
+}
+
+// --- 3. VALIDACIÓN DE DISPONIBILIDAD ---
 function actualizarDisponibilidad() {
     const fechaInicio = document.getElementById("resCheckIn").value;
     const fechaFin = document.getElementById("resCheckOut").value;
-    const idEdicion = form.dataset.id;
-
     if (!fechaInicio || !fechaFin) return;
 
     const inicioJS = new Date(fechaInicio);
     const finJS = new Date(fechaFin);
+    const idEdicion = form.dataset.id;
 
     const habsOcupadas = todasLasReservas
         .filter(res => {
@@ -45,34 +72,31 @@ function actualizarDisponibilidad() {
             const resFin = new Date(res.checkOut);
             return (inicioJS < resFin && finJS > resInicio);
         })
-        .map(res => res.habitacion);
+        .map(res => res.habitacion.toString());
 
-    selectHabitacion.innerHTML = '<option value="" disabled selected>Seleccione habitación...</option>';
-    
-    LISTA_HABITACIONES.forEach(hab => {
-        const estaOcupada = habsOcupadas.includes(hab);
-        const option = document.createElement("option");
-        option.value = hab;
-        option.textContent = hab + (estaOcupada ? " (OCUPADA)" : " (Disponible)");
+    Array.from(selectHabitacion.options).forEach(option => {
+        if (option.value === "") return;
+        const estaOcupada = habsOcupadas.includes(option.value);
         option.disabled = estaOcupada;
-        if (estaOcupada) option.style.color = "#94a3b8";
-        selectHabitacion.appendChild(option);
+        option.textContent = option.value + (estaOcupada ? " (OCUPADA)" : " (Disponible)");
     });
 }
 
-// --- 2. FIREBASE Y UI ---
+// --- 4. SINCRONIZACIÓN DE ESTADO EN HABITACIONES ---
+async function sincronizarHabitacion(numeroHab, estadoReserva) {
+    const q = query(collection(db, "habitaciones"), where("numero", "==", numeroHab.toString()));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+        const nuevoEstado = (estadoReserva === "Confirmada") ? "Ocupada" : "Libre";
+        await updateDoc(doc(db, "habitaciones", snap.docs[0].id), { estado: nuevoEstado });
+    }
+}
+
+// --- 5. RENDERIZADO ---
 onSnapshot(query(collection(db, "reservas"), orderBy("createdAt", "desc")), (snapshot) => {
     todasLasReservas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    actualizarContadores();
     renderizarTabla();
 });
-
-function actualizarContadores() {
-    document.getElementById("resTotal").innerText = todasLasReservas.length;
-    document.getElementById("resConf").innerText = todasLasReservas.filter(r => r.estado === "Confirmada").length;
-    document.getElementById("resPend").innerText = todasLasReservas.filter(r => r.estado === "Pendiente").length;
-    document.getElementById("resComp").innerText = todasLasReservas.filter(r => r.estado === "Completada").length;
-}
 
 function renderizarTabla() {
     const busqueda = buscador.value.toLowerCase();
@@ -84,14 +108,12 @@ function renderizarTabla() {
         return coincideBusqueda && coincideEstado;
     });
 
-    tablaReservasBody.innerHTML = filtradas.slice(0, 10).map(res => `
+    tablaReservasBody.innerHTML = filtradas.map(res => `
         <tr>
-            <td><strong>${res.huesped}</strong><br><small style="color:gray">Por: ${res.registradoPor || 'Sistema'}</small></td>
+            <td><strong>${res.huesped}</strong></td>
             <td>Hab. ${res.habitacion}</td>
             <td>${res.checkIn}</td>
             <td>${res.checkOut}</td>
-            <td>${res.personas}</td>
-            <td>S/ ${parseFloat(res.total).toFixed(2)}</td>
             <td>
                 <select class="status-select select-dinamico" data-id="${res.id}">
                     <option value="Pendiente" ${res.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
@@ -101,82 +123,49 @@ function renderizarTabla() {
             </td>
             <td>
                 <button class="btn-edit" data-id="${res.id}"><i class="fa-solid fa-pen-to-square"></i></button>
-                <button class="btn-del" data-id="${res.id}"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>
     `).join('');
 }
 
-// --- 3. EVENTOS ---
-tablaReservasBody.addEventListener("change", async (e) => {
-    if (e.target.classList.contains("select-dinamico")) {
-        await updateDoc(doc(db, "reservas", e.target.dataset.id), { estado: e.target.value });
-        Swal.fire({ title: "Estado actualizado", icon: "success", timer: 1000, showConfirmButton: false });
-    }
-});
-
-tablaReservasBody.addEventListener("click", async (e) => {
-    const btn = e.target.closest("button");
-    if (!btn) return;
-    const id = btn.dataset.id;
-
-    if (btn.classList.contains("btn-del")) {
-        const result = await Swal.fire({ title: '¿Eliminar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#800020' });
-        if (result.isConfirmed) await deleteDoc(doc(db, "reservas", id));
-    }
-
-    if (btn.classList.contains("btn-edit")) {
-        const snap = await getDoc(doc(db, "reservas", id));
-        const data = snap.data();
-        document.getElementById("resHuesped").value = data.huesped;
-        document.getElementById("resCheckIn").value = data.checkIn;
-        document.getElementById("resCheckOut").value = data.checkOut;
-        document.getElementById("resPersonas").value = data.personas;
-        document.getElementById("resPrecio").value = data.total;
-        cargarHabitaciones(data.habitacion); // Cargamos y pre-seleccionamos
-        form.dataset.id = id;
-        modal.style.display = "flex";
-    }
-});
-
+// --- 6. EVENTOS Y SUBMIT ---
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const idExistente = form.dataset.id;
     const nombreHuesped = document.getElementById("resHuesped").value;
-    const nombreResponsable = JSON.parse(localStorage.getItem("userSession"))?.nombre || "Admin";
+    const datosReserva = {
+        huesped: nombreHuesped,
+        habitacion: selectHabitacion.value,
+        checkIn: document.getElementById("resCheckIn").value,
+        checkOut: document.getElementById("resCheckOut").value,
+        personas: document.getElementById("resPersonas").value,
+        total: document.getElementById("resPrecio").value
+    };
 
-    try {
-        const qH = query(collection(db, "huespedes"), where("nombre", "==", nombreHuesped));
-        const snapH = await getDocs(qH);
-        if (snapH.empty) {
-            await addDoc(collection(db, "huespedes"), { nombre: nombreHuesped, fechaRegistro: serverTimestamp() });
-        }
+    if (form.dataset.id) {
+        await updateDoc(doc(db, "reservas", form.dataset.id), datosReserva);
+    } else {
+        await addDoc(collection(db, "reservas"), { ...datosReserva, estado: "Pendiente", createdAt: serverTimestamp() });
+        // Sincronización automática a modulo huéspedes
+        await registrarHuespedTemporal(nombreHuesped);
+    }
 
-        const datosReserva = {
-            huesped: nombreHuesped,
-            habitacion: selectHabitacion.value,
-            checkIn: document.getElementById("resCheckIn").value,
-            checkOut: document.getElementById("resCheckOut").value,
-            personas: document.getElementById("resPersonas").value,
-            total: document.getElementById("resPrecio").value,
-            registradoPor: nombreResponsable
-        };
-
-        if (idExistente) await updateDoc(doc(db, "reservas", idExistente), datosReserva);
-        else await addDoc(collection(db, "reservas"), { ...datosReserva, estado: "Pendiente", createdAt: serverTimestamp() });
-
-        modal.style.display = "none";
-        form.reset();
-        Swal.fire("Éxito", "Proceso completado", "success");
-    } catch (e) { Swal.fire("Error", "No se pudo procesar", "error"); }
+    modal.style.display = "none";
+    Swal.fire("Éxito", "Reserva guardada", "success");
 });
 
-// Listeners de fechas para validar disponibilidad
-document.getElementById("resCheckIn").addEventListener("change", actualizarDisponibilidad);
-document.getElementById("resCheckOut").addEventListener("change", actualizarDisponibilidad);
+tablaReservasBody.addEventListener("change", async (e) => {
+    if (e.target.classList.contains("select-dinamico")) {
+        const id = e.target.dataset.id;
+        const nuevoEstado = e.target.value;
+        await updateDoc(doc(db, "reservas", id), { estado: nuevoEstado });
+        const resSnap = await getDoc(doc(db, "reservas", id));
+        await sincronizarHabitacion(resSnap.data().habitacion, nuevoEstado);
+    }
+});
 
 btnAbrirModal.onclick = () => { form.reset(); delete form.dataset.id; cargarHabitaciones(); modal.style.display = "flex"; };
 document.querySelector(".close-modal").onclick = () => modal.style.display = "none";
-document.querySelector(".btn-cancel").onclick = () => modal.style.display = "none";
+document.getElementById("resCheckIn").addEventListener("change", actualizarDisponibilidad);
+document.getElementById("resCheckOut").addEventListener("change", actualizarDisponibilidad);
 buscador.addEventListener("input", renderizarTabla);
 filtro.addEventListener("change", renderizarTabla);
