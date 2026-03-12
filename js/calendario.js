@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth'
+            right: 'dayGridMonth,timeGridWeek'
         },
         height: 'auto'
     });
@@ -22,26 +22,24 @@ document.addEventListener('DOMContentLoaded', function() {
         onSnapshot(collection(db, "eventos"), (snapEv) => {
             const eventosFull = [];
 
-            // 1. Reservas
             snapRes.docs.forEach(doc => {
                 const r = doc.data();
                 eventosFull.push({
-                    title: `${r.huesped} (Hab. ${r.habitacion})`,
+                    title: `👤 ${r.huesped} (Hab. ${r.habitacion})`,
                     start: r.checkIn,
                     end: r.checkOut,
-                    backgroundColor: r.estado === 'Confirmada' ? '#2e7d32' : '#d4a017'
+                    backgroundColor: r.estado === 'Confirmada' ? '#2e7d32' : '#d4a017',
+                    textColor: '#fff'
                 });
             });
 
-            // 2. Eventos (Mantenimiento, Limpieza, etc.)
             snapEv.docs.forEach(doc => {
                 const e = doc.data();
-                // Mapeamos el tipo a tu clase CSS (ej: "Mantenimiento" -> "type-mantenimiento")
-                const cssClass = `type-${e.tipo?.toLowerCase() || 'admin'}`;
                 eventosFull.push({
-                    title: e.titulo,
+                    title: `🛠️ ${e.titulo}`,
                     start: e.fecha,
-                    className: cssClass // Aquí aplica tus colores definidos en CSS
+                    className: `type-${e.tipo?.toLowerCase() || 'admin'}`,
+                    textColor: '#fff'
                 });
             });
 
