@@ -22,45 +22,41 @@
                 </div>
             </div>
             <nav class="nav-menu">
-              <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
-              <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
-              <a href="reservas.html" class="nav-link active"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
-              <a href="huespedes.html" class="nav-link"><i class="fa-solid fa-users"></i> Huéspedes</a>
-              <a href="checkin.html" class="nav-link"><i class="fa-solid fa-right-to-bracket"></i> Check-in/Out</a>
-              <a href="calendario.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Calendario</a>
+                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+                <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
+                <a href="reservas.html" class="nav-link active"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+                <a href="huespedes.html" class="nav-link"><i class="fa-solid fa-users"></i> Huéspedes</a>
+                <a href="checkin.html" class="nav-link"><i class="fa-solid fa-right-to-bracket"></i> Check-in/Out</a>
+                <a href="calendario.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Calendario</a>
             </nav>
         </aside>
 
         <main class="main-content">
             <div class="page-header">
-                <div>
-                    <h2>Gestión de Reservas</h2>
-                    <p>Administra todas las reservas del hotel</p>
-                </div>
-                <button class="btn-add" id="btnAbrirModal"><i class="fa-solid fa-plus"></i> Nueva Reserva</button>
+    <div>
+        <h2>Gestión de Reservas</h2>
+        <p>Panel operativo por medio de reserva</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-add" onclick="exportarExcel()" style="background-color: #10b981;">
+            <i class="fa-solid fa-file-excel"></i> Exportar
+        </button>
+        <button class="btn-add" id="btnAbrirModal">
+            <i class="fa-solid fa-plus"></i> Nueva Reserva
+        </button>
+    </div>
+</div>
+
+            <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+                <div class="stat-card"><span>Booking</span><h3 id="stat-booking">0</h3></div>
+                <div class="stat-card"><span>Airbnb</span><h3 id="stat-airbnb">0</h3></div>
+                <div class="stat-card"><span>Directas</span><h3 id="stat-directas">0</h3></div>
+                <div class="stat-card"><span>Expedia</span><h3 id="stat-expedia">0</h3></div>
+                <div class="stat-card"><span>Personal</span><h3 id="stat-personal">0</h3></div>
+                <div class="stat-card"><span>Day Use</span><h3 id="stat-dayuse">0</h3></div>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card"><span>Total Reservas</span><h3 id="stat-total">0</h3></div>
-                <div class="stat-card"><span>Pendientes</span><h3 id="stat-pendientes" style="color: #d4a017;">0</h3></div>
-                <div class="stat-card"><span>Confirmadas</span><h3 id="stat-confirmadas" style="color: #2e7d32;">0</h3></div>
-                <div class="stat-card"><span>Completadas</span><h3 id="stat-completadas" style="color: #1565c0;">0</h3></div>
-            </div>
-
-            <div class="search-section">
-                <div class="search-box">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="buscarReserva" placeholder="Buscar por huésped o habitación...">
-                </div>
-                <select id="filtroReserva">
-                    <option value="todos">Todos los estados</option>
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="Confirmada">Confirmada</option>
-                    <option value="Completada">Completada</option>
-                </select>
-            </div>
-
-            <div class="table-container">
+            <div class="table-container card">
                 <table class="res-table">
                     <thead>
                         <tr>
@@ -70,52 +66,68 @@
                             <th>CHECK-OUT</th>
                             <th>PERS.</th>
                             <th>TOTAL</th>
-                            <th>ESTADO</th>
+                            <th>MEDIO DE RESERVA</th>
                             <th>ACCIONES</th>
                         </tr>
                     </thead>
-                    <tbody id="tablaReservasBody"></tbody>
+                    <tbody id="tablaReservasBody">
+                        </tbody>
                 </table>
             </div>
         </main>
     </div>
 
     <div id="modalReserva" class="modal-reserva-overlay">
-        <div class="modal-reserva-content">
+        <div class="modal-reserva-content" style="max-width: 850px; width: 90%;">
             <div class="modal-reserva-header">
                 <h3 id="modalTitle">Nueva Reserva</h3>
                 <span class="close-modal">&times;</span>
             </div>
             <form id="formNuevaReserva">
-                <div class="form-grid-res">
-                    <div class="form-group full-width">
-                        <label>Huésped (Nombre Completo)</label>
-                        <input type="text" id="resHuesped" placeholder="Ej: Juan Pérez" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha Check-In</label>
-                        <input type="date" id="resCheckIn" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha Check-Out</label>
-                        <input type="date" id="resCheckOut" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Habitación</label>
+                <div class="form-grid-res" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group"><label>Nombres y Apellidos</label><input type="text" id="resHuesped" required></div>
+                    <div class="form-group"><label>DNI / PASSPORT</label><input type="text" id="resDoc"></div>
+                    <div class="form-group"><label>Fecha de Nacimiento</label><input type="date" id="resNacimiento"></div>
+                    <div class="form-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad"></div>
+                    <div class="form-group"><label>Teléfono</label><input type="tel" id="resTelefono"></div>
+                    <div class="form-group"><label>Correo</label><input type="email" id="resCorreo"></div>
+
+                    <div class="form-group"><label>Habitación</label>
                         <select id="resHabitacion" required>
-                            <option value="">Seleccione fechas primero...</option>
+                            <option value="">Cargando habitaciones...</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Número de Personas</label>
-                        <input type="number" id="resPersonas" min="1" value="1" required>
+                    <div class="form-group"><label>Medio de Reserva</label>
+                        <select id="resMedio" required>
+                            <option value="Personal">Personal</option>
+                            <option value="Booking">Booking</option>
+                            <option value="Expedia">Expedia</option>
+                            <option value="Day Use">Day Use</option>
+                            <option value="Mantenimiento">Mantenimiento</option>
+                            <option value="Gmail">Gmail</option>
+                            <option value="Directas">Directas</option>
+                            <option value="Airbnb">Airbnb</option>
+                        </select>
                     </div>
-                    <div class="form-group full-width">
-                        <label>Precio Total (S/)</label>
-                        <input type="number" id="resPrecio" step="0.01" placeholder="0.00" required>
-                    </div>
+                    <div class="form-group"><label>Check In</label><input type="date" id="resCheckIn" required></div>
+                    <div class="form-group"><label>Check Out</label><input type="date" id="resCheckOut" required></div>
+                    
+                    <div class="form-group"><label>Early Check-in</label><input type="time" id="resEarly"></div>
+                    <div class="form-group"><label>Late Check-out</label><input type="time" id="resLate"></div>
+                    <div class="form-group"><label>Número de Personas</label><input type="number" id="resPersonas" min="1" value="1"></div>
+                    <div class="form-group"><label>Tarifa Diaria (S/)</label><input type="number" id="resTarifa" step="0.01"></div>
+
+                    <div class="form-group"><label>Cuenta Total Alojamiento</label><input type="number" id="resTotal" step="0.01" value="0.00"></div>
+                    <div class="form-group"><label>Pagos Adelantados (Monto/Fecha)</label><input type="text" id="resAdelanto" placeholder="Ej: 140.00 Efectivo 11/03"></div>
+                    <div class="form-group"><label>Diferencia a Cancelar</label><input type="number" id="resDiferencia" readonly style="background: #f1f5f9;"></div>
+
+                    <div class="form-group"><label>Cochera</label><input type="text" id="resCochera" placeholder="SI/NO (Red Parking / Santa Mónica)"></div>
+                    <div class="form-group"><label>Traslado</label><input type="text" id="resTraslado"></div>
+                    <div class="form-group"><label>Información Importante</label><select id="resInfo"><option>CON DESAYUNO</option><option>SIN DESAYUNO</option></select></div>
+                    <div class="form-group"><label>Recepcionado por:</label><input type="text" id="resRecepcion"></div>
                 </div>
-                <div class="form-actions-res">
+
+                <div class="form-actions-res" style="margin-top: 20px;">
                     <button type="button" class="btn-cancel">Cancelar</button>
                     <button type="submit" class="btn-save">Guardar Reserva</button>
                 </div>
