@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Reservas | Hotel Central</title>
+    <title>Reservas | Hotel Central</title>
     <link rel="icon" type="image/png" href="img/logo.png" />
+    
     <link rel="stylesheet" href="css/colors.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/reservas.css">
@@ -86,10 +87,10 @@
             <form id="formNuevaReserva">
                 <div class="form-grid-res" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="form-group"><label>Nombres y Apellidos</label><input type="text" id="resHuesped" required></div>
-                    <div class="form-group"><label>DNI / PASSPORT</label><input type="text" id="resDoc"></div>
+                    <div class="form-group"><label>DNI / PASSPORT</label><input type="text" id="resDoc" required></div>
                     <div class="form-group"><label>Fecha de Nacimiento</label><input type="date" id="resNacimiento"></div>
                     <div class="form-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad"></div>
-                    <div class="form-group"><label>Teléfono</label><input type="tel" id="resTelefono"></div>
+                    <div class="form-group"><label>Teléfono</label><input type="tel" id="resTelefono" required></div>
                     <div class="form-group"><label>Correo</label><input type="email" id="resCorreo"></div>
 
                     <div class="form-group"><label>Habitación</label>
@@ -115,7 +116,7 @@
                     <div class="form-group"><label>Early Check-in</label><input type="time" id="resEarly"></div>
                     <div class="form-group"><label>Late Check-out</label><input type="time" id="resLate"></div>
                     <div class="form-group"><label>Número de Personas</label><input type="number" id="resPersonas" min="1" value="1"></div>
-                    <div class="form-group"><label>Tarifa Diaria (S/)</label><input type="number" id="resTarifa" step="0.01"></div>
+                    <div class="form-group"><label>Tarifa Diaria (S/)</label><input type="number" id="resTarifa" step="0.01" required></div>
 
                     <div class="form-group"><label>Cuenta Total Alojamiento</label><input type="number" id="resTotal" step="0.01" value="0.00"></div>
                     <div class="form-group"><label>Pagos Adelantados (Monto/Fecha)</label><input type="text" id="resAdelanto" placeholder="Ej: 140.00 Efectivo 11/03"></div>
@@ -124,7 +125,10 @@
                     <div class="form-group"><label>Cochera</label><input type="text" id="resCochera" placeholder="SI/NO (Red Parking / Santa Mónica)"></div>
                     <div class="form-group"><label>Traslado</label><input type="text" id="resTraslado"></div>
                     <div class="form-group"><label>Información Importante</label><select id="resInfo"><option>CON DESAYUNO</option><option>SIN DESAYUNO</option></select></div>
-                    <div class="form-group"><label>Recepcionado por:</label><input type="text" id="resRecepcion"></div>
+                    <div class="form-group"><label>Recepcionado por:</label><input type="text" id="resRecepcion" required></div>
+                    <div class="form-group"><label>Reserva confirmada por:</label><input type="text" id="resRecepcionconfi" required></div>
+
+
                 </div>
 
                 <div class="form-actions-res" style="margin-top: 20px;">
