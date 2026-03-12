@@ -175,6 +175,59 @@ body {
   cursor: pointer;
 }
 
+/* --- INTEGRACIÓN FULLCALENDAR CON TU DISEÑO --- */
+
+/* Asegura que el contenedor del calendario use tu estilo */
+#calendar {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Títulos (usando tu fuente 20px de diseño) */
+.fc .fc-toolbar-title { 
+    font-size: 20px !important; 
+    font-weight: 700;
+    color: #1e293b;
+    font-family: 'Playfair Display', serif;
+}
+
+/* Fuente base para los días y eventos (15px según tus reglas) */
+.fc .fc-daygrid-day-number {
+    font-size: 15px !important;
+    font-weight: 600;
+    color: #475569;
+}
+
+/* Estilo de los eventos (tu clase .event-item profesional) */
+.fc-event {
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 2px 8px !important;
+    font-size: 13px !important; /* Ajuste para que quepa bien en la celda */
+    font-family: 'Lato', sans-serif;
+}
+
+/* Asegurar botones del calendario con estilo de tus .nav-btn */
+.fc .fc-button-primary {
+    background-color: #f1f5f9 !important;
+    color: #64748b !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 8px 16px !important;
+}
+
+.fc .fc-button-primary:hover {
+    background-color: #1a56db !important;
+    color: #ffffff !important;
+}
+
+/* Quitar el borde por defecto de la grilla de FullCalendar para que se vea limpio */
+.fc-theme-standard td, .fc-theme-standard th {
+    border-color: #f1f5f9 !important;
+}
+
 /* ✨ Animaciones */
 @keyframes fadeIn {
   from { opacity: 0; }
