@@ -26,3 +26,15 @@ body { font-family: 'Lato', sans-serif; margin: 0; background-color: #f8fafc; co
 /* Botones */
 .fc .fc-button-primary { background-color: #f1f5f9 !important; color: #64748b !important; border: none !important; }
 .fc .fc-button-primary:hover { background-color: #1a56db !important; color: #ffffff !important; }
+
+/* Ajuste opcional en calendario.css */
+.fc-event {
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.fc-daygrid-event {
+    white-space: normal; /* Permite que el título se vea completo */
+}

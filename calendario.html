@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Calendario | Hotel Central</title>
     <link rel="icon" type="image/png" href="img/logo.png" />
+    
     <link rel="stylesheet" href="css/colors.css" />
     <link rel="stylesheet" href="css/dashboard.css" />
     <link rel="stylesheet" href="css/calendario.css" />
+    
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -16,7 +18,10 @@
         <aside class="sidebar">
             <div class="logo-box">
                 <div class="logo-icon"><img src="img/logo.jpeg" alt="Logo" style="width: 100%; height: auto; border-radius: 8px;"></div>
-                <div><h3>Hotel Central</h3><p>Sistema de Gestión</p></div>
+                <div>
+                    <h3>Hotel Central</h3>
+                    <p>Sistema de Gestión</p>
+                </div>
             </div>
             <nav class="nav-menu">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
@@ -27,11 +32,15 @@
         </aside>
 
         <main class="main-content">
-            <div class="page-header"><h2>Calendario de Eventos</h2></div>
+            <div class="page-header">
+                <h2>Calendario de Eventos</h2>
+            </div>
+            
             <div id="calendar" class="calendar-container"></div>
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <script type="module" src="js/calendario.js"></script>
 </body>

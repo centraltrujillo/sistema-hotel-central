@@ -52,24 +52,29 @@ const calcularMontos = () => {
     el.addEventListener("input", calcularMontos);
 });
 
+// --- FUNCIÓN PARA CONTAR POR MEDIO ---
+const actualizarContadores = (reservas) => {
+    const conteo = { booking: 0, airbnb: 0, directas: 0, personal: 0 };
+    reservas.forEach(r => {
+        const m = r.medio?.toLowerCase();
+        if (conteo.hasOwnProperty(m)) conteo[m]++;
+    });
+    Object.keys(conteo).forEach(key => {
+        const el = document.getElementById(`count-${key}`);
+        if (el) el.textContent = conteo[key];
+    });
+};
+
 // --- 3. FUNCIÓN: VERIFICAR DISPONIBILIDAD ---
 const verificarDisponibilidad = async (habNum, fIn, fOut, idActual = null) => {
     const q = query(collection(db, "reservas"), where("habitacion", "==", habNum));
     const querySnapshot = await getDocs(q);
-    
     let disponible = true;
-
     querySnapshot.forEach((docSnap) => {
-        if (docSnap.id === idActual) return; // Ignorar la reserva que estamos editando
-
+        if (docSnap.id === idActual) return;
         const res = docSnap.data();
-        // Lógica de cruce de fechas:
-        // (FechaIn Nueva < FechaOut Existente) Y (FechaOut Nueva > FechaIn Existente)
-        if (fIn < res.checkOut && fOut > res.checkIn) {
-            disponible = false;
-        }
+        if (fIn < res.checkOut && fOut > res.checkIn) disponible = false;
     });
-
     return disponible;
 };
 
@@ -81,7 +86,6 @@ form.addEventListener("submit", async (e) => {
     const fIn = inputCheckIn.value;
     const fOut = inputCheckOut.value;
 
-    // VALIDACIÓN DE CRUCE DE FECHAS
     const esDisponible = await verificarDisponibilidad(habNum, fIn, fOut, editId);
     
     if (!esDisponible) {
@@ -89,21 +93,18 @@ form.addEventListener("submit", async (e) => {
             title: "Habitación Ocupada",
             text: `La habitación ${habNum} ya tiene una reserva en las fechas seleccionadas.`,
             icon: "error",
-            confirmButtonColor: "#800020"
+            confirmButtonColor: "#800020",
+            zIndex: 10000 // Asegura que esté por encima del modal
         });
     }
 
-    const commonData = {
+    const reservaData = {
         huesped: document.getElementById("resHuesped").value,
         doc: document.getElementById("resDoc").value,
         nacimiento: document.getElementById("resNacimiento").value,
         nacionalidad: document.getElementById("resNacionalidad").value,
         telefono: document.getElementById("resTelefono").value,
         correo: document.getElementById("resCorreo").value,
-    };
-
-    const reservaData = {
-        ...commonData,
         habitacion: habNum,
         medio: document.getElementById("resMedio").value,
         checkIn: fIn,
@@ -120,28 +121,24 @@ form.addEventListener("submit", async (e) => {
         desayuno: document.getElementById("resInfo").value,
         recepcion: document.getElementById("resRecepcion").value,
         recepcionconfi: document.getElementById("resRecepcionconfi").value,
-        fechaRegistro: editId ? undefined : new Date().toISOString()
+        fechaRegistro: editId ? (listaReservasGlobal.find(r=>r.id === editId)?.fechaRegistro || new Date().toISOString()) : new Date().toISOString()
     };
 
     try {
         if (editId) {
             await updateDoc(doc(db, "reservas", editId), reservaData);
-            Swal.fire("Actualizado", "Reserva modificada correctamente", "success");
+            Swal.fire({ title: "Actualizado", icon: "success", zIndex: 10000 });
         } else {
             await addDoc(collection(db, "reservas"), reservaData);
-            if (commonData.doc) {
-                await setDoc(doc(db, "huespedes", commonData.doc), { ...commonData, ultimaVisita: new Date().toISOString() }, { merge: true });
-            }
-            Swal.fire("Éxito", "Reserva creada correctamente", "success");
+            Swal.fire({ title: "Éxito", icon: "success", zIndex: 10000 });
         }
         cerrarModal();
     } catch (error) {
-        Swal.fire("Error", "No se pudo guardar", "error");
+        Swal.fire({ title: "Error", text: "No se pudo guardar", icon: "error", zIndex: 10000 });
     }
 });
 
-// --- 5. RENDERIZADO, STATS Y EDICIÓN ---
-// (Mantiene la misma lógica anterior para dibujar la tabla y stats)
+// --- 5. RENDERIZADO ---
 onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), (snapshot) => {
     tablaBody.innerHTML = "";
     listaReservasGlobal = [];
@@ -149,7 +146,7 @@ onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), 
         const res = docSnap.data();
         const id = docSnap.id;
         listaReservasGlobal.push({ id, ...res });
-        // ... Renderizado de filas ...
+        
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
@@ -167,6 +164,7 @@ onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), 
             </td>`;
         tablaBody.appendChild(tr);
     });
+    actualizarContadores(listaReservasGlobal);
 });
 
 window.prepararEdicion = async (id) => {
@@ -175,7 +173,6 @@ window.prepararEdicion = async (id) => {
         const res = docRef.data();
         editId = id;
         document.getElementById("modalTitle").textContent = "Editar Reserva";
-        // Llenar campos...
         Object.keys(res).forEach(key => {
             const el = document.getElementById(`res${key.charAt(0).toUpperCase() + key.slice(1)}`);
             if (el) el.value = res[key];
@@ -185,14 +182,14 @@ window.prepararEdicion = async (id) => {
 };
 
 window.eliminarReserva = async (id) => {
-    const result = await Swal.fire({ title: '¿Eliminar?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, borrar' });
+    const result = await Swal.fire({ title: '¿Eliminar?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, borrar', zIndex: 10000 });
     if (result.isConfirmed) await deleteDoc(doc(db, "reservas", id));
 };
 
-// --- 6. EXPORTACIÓN POR FECHAS ---
+// --- 6. EXPORTACIÓN ---
 window.exportarExcel = async () => {
     const { value: fechas } = await Swal.fire({
-        title: 'Exportar Rango',
+        title: 'Exportar Rango', zIndex: 10000,
         html: '<input id="d1" class="swal2-input" type="date"><input id="d2" class="swal2-input" type="date">',
         preConfirm: () => [document.getElementById('d1').value, document.getElementById('d2').value]
     });
