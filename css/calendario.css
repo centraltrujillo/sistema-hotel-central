@@ -38,3 +38,97 @@ body { font-family: 'Lato', sans-serif; margin: 0; background-color: #f8fafc; co
 .fc-daygrid-event {
     white-space: normal; /* Permite que el título se vea completo */
 }
+ /*Leyenda de lo colores del calendario: MEDIO DE RESERVA*/
+.calendar-legend-container {
+    padding: 15px 25px;
+    margin-bottom: 20px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.legend-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+
+.legend-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--marron-zocalo);
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+/* Colores Sincronizados */
+.dot.booking { background: #3b82f6; }
+.dot.airbnb { background: #f43f5e; }
+.dot.directas { background: #8b5cf6; }
+.dot.expedia { background: #f59e0b; }
+.dot.personal { background: #10b981; }
+.dot.dayuse { background: #6366f1; }
+.dot.mantenimiento { background: #fa051a; }
+.dot.gmail { background: #59ea35; }
+
+/* Mejora en la tipografía de los días */
+.fc .fc-daygrid-day-number { 
+    font-size: 14px !important; 
+    color: #475569; 
+    font-weight: 600;
+}
+
+/* Efecto hover profesional en eventos */
+.fc-event {
+    transition: transform 0.2s, box-shadow 0.2s !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}
+
+.fc-event:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+    filter: brightness(1.05); /* Un pequeño brillo al pasar el mouse */
+}
+
+/* Asegurar que el evento 'blanco' (Check-in) sea visible */
+.fc-event-main:has(span) { 
+    color: #000 !important; 
+}
+
+/* Mejora los botones del toolbar */
+.fc .fc-button-primary { 
+    background-color: #ffffff !important; 
+    color: #475569 !important; 
+    border: 1px solid #e2e8f0 !important; 
+    font-size: 14px !important;
+    padding: 6px 12px !important;
+    transition: 0.3s;
+}
+
+.fc .fc-button-active {
+    background-color: #800020 !important; /* Vino tinto para el botón activo */
+    color: #ffffff !important;
+    border-color: #800020 !important;
+}
+
+/* Ajuste de scroll en eventos largos */
+.fc-daygrid-day-frame {
+    min-height: 100px !important;
+}

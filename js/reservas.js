@@ -121,7 +121,8 @@ form.addEventListener("submit", async (e) => {
         desayuno: document.getElementById("resInfo").value,
         recepcion: document.getElementById("resRecepcion").value,
         recepcionconfi: document.getElementById("resRecepcionconfi").value,
-        fechaRegistro: editId ? (listaReservasGlobal.find(r=>r.id === editId)?.fechaRegistro || new Date().toISOString()) : new Date().toISOString()
+        fechaRegistro: editId ? (listaReservasGlobal.find(r=>r.id === editId)?.fechaRegistro || new Date().toISOString()) : new Date().toISOString(),
+        estado: "reservada"
     };
 
     try {
