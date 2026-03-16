@@ -1,6 +1,6 @@
 import { db } from "./firebaseconfig.js";
 import { 
-    collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, query, orderBy, setDoc, getDoc, getDocs, where 
+    collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, query, orderBy, getDoc, getDocs, where 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // --- REFERENCIAS ---
@@ -14,6 +14,10 @@ const inputCheckOut = document.getElementById("resCheckOut");
 const inputTotal = document.getElementById("resTotal");
 const inputAdelanto = document.getElementById("resAdelanto");
 const inputDiferencia = document.getElementById("resDiferencia");
+
+// Nuevas referencias Moneda/TC
+const selectMoneda = document.getElementById("resMoneda");
+const inputTipoCambio = document.getElementById("resTipoCambio");
 
 let editId = null;
 let listaReservasGlobal = [];
@@ -34,7 +38,14 @@ onSnapshot(collection(db, "habitaciones"), (snapshot) => {
 const calcularMontos = () => {
     const fechaIn = new Date(inputCheckIn.value);
     const fechaOut = new Date(inputCheckOut.value);
-    const tarifa = parseFloat(inputTarifa.value) || 0;
+    let tarifa = parseFloat(inputTarifa.value) || 0;
+    const tc = parseFloat(inputTipoCambio.value) || 1;
+    const moneda = selectMoneda.value;
+
+    // Si es dólares, convertimos la tarifa base a soles para el cálculo total
+    if (moneda === "USD" && tc > 0) {
+        tarifa = tarifa * tc;
+    }
 
     if (inputCheckIn.value && inputCheckOut.value && fechaOut > fechaIn) {
         const diffTime = Math.abs(fechaOut - fechaIn);
@@ -48,19 +59,33 @@ const calcularMontos = () => {
     inputDiferencia.value = (total - adelantoMonto).toFixed(2);
 };
 
-[inputTarifa, inputCheckIn, inputCheckOut, inputAdelanto, inputTotal].forEach(el => {
+// Listeners para recálculo
+[inputTarifa, inputCheckIn, inputCheckOut, inputAdelanto, inputTotal, inputTipoCambio, selectMoneda].forEach(el => {
     el.addEventListener("input", calcularMontos);
+});
+
+// Lógica para habilitar/deshabilitar T.C. según moneda
+selectMoneda.addEventListener("change", () => {
+    if (selectMoneda.value === "PEN") {
+        inputTipoCambio.value = "";
+        inputTipoCambio.disabled = true;
+        inputTipoCambio.style.background = "#f1f5f9";
+    } else {
+        inputTipoCambio.disabled = false;
+        inputTipoCambio.style.background = "#fff";
+    }
+    calcularMontos();
 });
 
 // --- FUNCIÓN PARA CONTAR POR MEDIO ---
 const actualizarContadores = (reservas) => {
-    const conteo = { booking: 0, airbnb: 0, directas: 0, personal: 0 };
+    const conteo = { booking: 0, airbnb: 0, directas: 0, personal: 0, expedia: 0, dayuse: 0 };
     reservas.forEach(r => {
         const m = r.medio?.toLowerCase();
         if (conteo.hasOwnProperty(m)) conteo[m]++;
     });
     Object.keys(conteo).forEach(key => {
-        const el = document.getElementById(`count-${key}`);
+        const el = document.getElementById(`stat-${key}`); // Ajustado al ID de tu HTML
         if (el) el.textContent = conteo[key];
     });
 };
@@ -94,7 +119,7 @@ form.addEventListener("submit", async (e) => {
             text: `La habitación ${habNum} ya tiene una reserva en las fechas seleccionadas.`,
             icon: "error",
             confirmButtonColor: "#800020",
-            zIndex: 10000 // Asegura que esté por encima del modal
+            zIndex: 10000 
         });
     }
 
@@ -113,6 +138,8 @@ form.addEventListener("submit", async (e) => {
         late: document.getElementById("resLate").value,
         personas: document.getElementById("resPersonas").value,
         tarifa: document.getElementById("resTarifa").value,
+        moneda: selectMoneda.value,
+        tipoCambio: inputTipoCambio.value,
         total: document.getElementById("resTotal").value,
         adelanto: document.getElementById("resAdelanto").value,
         diferencia: document.getElementById("resDiferencia").value,
@@ -128,14 +155,15 @@ form.addEventListener("submit", async (e) => {
     try {
         if (editId) {
             await updateDoc(doc(db, "reservas", editId), reservaData);
-            Swal.fire({ title: "Actualizado", icon: "success", zIndex: 10000 });
+            Swal.fire({ title: "Actualizado", icon: "success" });
         } else {
             await addDoc(collection(db, "reservas"), reservaData);
-            Swal.fire({ title: "Éxito", icon: "success", zIndex: 10000 });
+            Swal.fire({ title: "Éxito", icon: "success" });
         }
         cerrarModal();
     } catch (error) {
-        Swal.fire({ title: "Error", text: "No se pudo guardar", icon: "error", zIndex: 10000 });
+        console.error(error);
+        Swal.fire({ title: "Error", text: "No se pudo guardar", icon: "error" });
     }
 });
 
@@ -174,35 +202,59 @@ window.prepararEdicion = async (id) => {
         const res = docRef.data();
         editId = id;
         document.getElementById("modalTitle").textContent = "Editar Reserva";
+        
+        // Llenado automático de campos
         Object.keys(res).forEach(key => {
             const el = document.getElementById(`res${key.charAt(0).toUpperCase() + key.slice(1)}`);
             if (el) el.value = res[key];
         });
+
+        // Caso especial para habilitar/deshabilitar TC en edición
+        if(res.moneda === "PEN") {
+            inputTipoCambio.disabled = true;
+            inputTipoCambio.style.background = "#f1f5f9";
+        } else {
+            inputTipoCambio.disabled = false;
+            inputTipoCambio.style.background = "#fff";
+        }
+
         modal.classList.add("active");
     }
 };
 
 window.eliminarReserva = async (id) => {
-    const result = await Swal.fire({ title: '¿Eliminar?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, borrar', zIndex: 10000 });
+    const result = await Swal.fire({ title: '¿Eliminar?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, borrar' });
     if (result.isConfirmed) await deleteDoc(doc(db, "reservas", id));
 };
 
 // --- 6. EXPORTACIÓN ---
 window.exportarExcel = async () => {
     const { value: fechas } = await Swal.fire({
-        title: 'Exportar Rango', zIndex: 10000,
+        title: 'Exportar Rango',
         html: '<input id="d1" class="swal2-input" type="date"><input id="d2" class="swal2-input" type="date">',
         preConfirm: () => [document.getElementById('d1').value, document.getElementById('d2').value]
     });
     if (fechas && fechas[0] && fechas[1]) {
         const filtradas = listaReservasGlobal.filter(r => r.checkIn >= fechas[0] && r.checkIn <= fechas[1]);
-        let excel = `<table><tr><th>HUÉSPED</th><th>HAB</th><th>IN</th><th>OUT</th><th>TOTAL</th></tr>`;
-        filtradas.forEach(r => excel += `<tr><td>${r.huesped}</td><td>${r.habitacion}</td><td>${r.checkIn}</td><td>${r.checkOut}</td><td>${r.total}</td></tr>`);
+        let excel = `<table><tr><th>HUÉSPED</th><th>HAB</th><th>IN</th><th>OUT</th><th>TOTAL</th><th>MEDIO</th></tr>`;
+        filtradas.forEach(r => excel += `<tr><td>${r.huesped}</td><td>${r.habitacion}</td><td>${r.checkIn}</td><td>${r.checkOut}</td><td>${r.total}</td><td>${r.medio}</td></tr>`);
         const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(excel + `</table>`);
-        const a = document.createElement("a"); a.href = url; a.download = `Reporte.xls`; a.click();
+        const a = document.createElement("a"); a.href = url; a.download = `Reporte_Reservas.xls`; a.click();
     }
 };
 
-const cerrarModal = () => { modal.classList.remove("active"); form.reset(); editId = null; };
+const cerrarModal = () => { 
+    modal.classList.remove("active"); 
+    form.reset(); 
+    editId = null;
+    inputTipoCambio.disabled = true; // Resetear estado de TC
+};
+
 document.querySelector(".close-modal").onclick = cerrarModal;
-document.getElementById("btnAbrirModal").onclick = () => { form.reset(); editId = null; modal.classList.add("active"); };
+document.getElementById("btnAbrirModal").onclick = () => { 
+    form.reset(); 
+    editId = null; 
+    document.getElementById("modalTitle").textContent = "Nueva Reserva";
+    inputTipoCambio.disabled = true;
+    modal.classList.add("active"); 
+};
