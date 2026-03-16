@@ -59,10 +59,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
 
+                        
                         <div style="background: #f0fdf4; padding: 15px; border-radius: 10px; border: 1px solid #dcfce7; margin-bottom: 15px;">
                             <h4 style="margin: 0 0 10px 0; color: #166534;">💰 Liquidación de Cuenta</h4>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                                <p style="margin:2px 0;"><b>Total:</b> S/ ${res.total}</p>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                                <p style="margin:2px 0;"><b>Total:</b> ${res.moneda === 'USD' ? '$' : 'S/'} ${res.total}</p>
+                                <p style="margin:2px 0;"><b>Moneda:</b> ${res.moneda === 'USD' ? 'Dólares ($)' : 'Soles (S/)'}</p>
+                                <p style="margin:2px 0;"><b>T.C.:</b> ${res.tipoCambio && res.moneda === 'USD' ? res.tipoCambio : 'N/A'}</p>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                                 <p style="margin:2px 0;"><b>Adelanto:</b> ${res.adelanto || '0.00'}</p>
                                 <p style="margin:2px 0; color: #dc2626;"><b>Pendiente:</b> S/ ${res.diferencia || '0.00'}</p>
                             </div>
@@ -109,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const esCheckIn = r.estado === 'checkin';
             const medioKey = r.medio?.toLowerCase().trim();
             
-            // TÍTULO DINÁMICO: Si ya entró, mostramos Habitación + Check + Nombre
             const tituloEvento = esCheckIn 
                 ? `[Hab. ${r.habitacion}] ✅ ${r.huesped}` 
                 : `Hab. ${r.habitacion} - ${r.huesped}`;
