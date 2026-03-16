@@ -26,33 +26,62 @@ document.addEventListener('DOMContentLoaded', function() {
             const esCheckIn = res.estado === 'checkin';
 
             Swal.fire({
-                title: `<span style="font-family: 'Playfair Display', serif; color: #800020;">Detalle de Reserva</span>`,
+                title: `<span style="font-family: 'Playfair Display', serif; color: #800020; font-size: 24px;">Detalle de la Reserva</span>`,
+                width: '850px',
                 html: `
-                    <div style="text-align: left; font-family: 'Lato', sans-serif; border-top: 2px solid #d4a017; padding-top: 15px;">
-                        <div style="margin-bottom: 15px; background: #fffaf0; padding: 10px; border-radius: 8px; border: 1px solid #fef3c7;">
-                            <strong style="color: #4a3728; font-size: 16px;">Huésped: ${res.huesped}</strong>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px; background: #f8fafc; padding: 15px; border-radius: 10px;">
-                            <p style="margin:0;"><b>Habitación:</b> <span class="badge-hab" style="color:#800020; font-weight:bold;">${res.habitacion}</span></p>
-                            <p style="margin:0;"><b>Medio:</b> ${res.medio.toUpperCase()}</p>
-                            <p style="margin:0;"><b>Entrada:</b> ${res.checkIn}</p>
-                            <p style="margin:0;"><b>Salida:</b> ${res.checkOut}</p>
-                        </div>
-                        <div style="margin-top: 15px; font-size: 14px; padding: 0 5px;">
-                            <p style="margin: 5px 0;"><b>Total:</b> <span style="color: #166534; font-weight: bold;">S/ ${res.total}</span></p>
-                            <p style="margin: 5px 0;"><b>Teléfono:</b> ${res.telefono || 'N/A'}</p>
-                        </div>
+                    <div style="text-align: left; font-family: 'Lato', sans-serif; border-top: 3px solid #d4a017; padding-top: 15px;">
                         
+                        <div style="background: #fffaf0; padding: 15px; border-radius: 10px; border: 1px solid #fef3c7; margin-bottom: 15px;">
+                            <h4 style="margin: 0 0 10px 0; color: #800020; border-bottom: 1px solid #fde68a; padding-bottom: 5px;">👤 Información del Huésped</h4>
+                            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                                <p style="margin:2px 0;"><b>Nombre:</b> ${res.huesped}</p>
+                                <p style="margin:2px 0;"><b>Doc:</b> ${res.doc || 'N/A'}</p>
+                                <p style="margin:2px 0;"><b>Nacionalidad:</b> ${res.nacionalidad || 'N/A'}</p>
+                                <p style="margin:2px 0;"><b>Teléfono:</b> ${res.telefono || 'N/A'}</p>
+                                <p style="margin:2px 0; grid-column: span 2;"><b>Correo:</b> ${res.correo || 'N/A'}</p>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                                <h4 style="margin: 0 0 10px 0; color: #1e293b;">🏨 Habitación y Medio</h4>
+                                <p style="margin:2px 0;"><b>Habitación:</b> <span style="background:#800020; color:white; padding:2px 8px; border-radius:4px;">${res.habitacion}</span></p>
+                                <p style="margin:2px 0;"><b>Medio:</b> ${res.medio?.toUpperCase()}</p>
+                                <p style="margin:2px 0;"><b>Pax:</b> ${res.personas || '1'}</p>
+                                <p style="margin:2px 0;"><b>Desayuno:</b> ${res.desayuno || 'N/A'}</p>
+                            </div>
+                            <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                                <h4 style="margin: 0 0 10px 0; color: #1e293b;">📅 Fechas y Horas</h4>
+                                <p style="margin:2px 0;"><b>Check-In:</b> ${res.checkIn} ${res.early ? '('+res.early+')' : ''}</p>
+                                <p style="margin:2px 0;"><b>Check-Out:</b> ${res.checkOut} ${res.late ? '('+res.late+')' : ''}</p>
+                                <p style="margin:2px 0;"><b>Cochera:</b> ${res.cochera || 'NO'}</p>
+                                <p style="margin:2px 0;"><b>Traslado:</b> ${res.traslado || 'N/A'}</p>
+                            </div>
+                        </div>
+
+                        <div style="background: #f0fdf4; padding: 15px; border-radius: 10px; border: 1px solid #dcfce7; margin-bottom: 15px;">
+                            <h4 style="margin: 0 0 10px 0; color: #166534;">💰 Liquidación de Cuenta</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                                <p style="margin:2px 0;"><b>Total:</b> S/ ${res.total}</p>
+                                <p style="margin:2px 0;"><b>Adelanto:</b> ${res.adelanto || '0.00'}</p>
+                                <p style="margin:2px 0; color: #dc2626;"><b>Pendiente:</b> S/ ${res.diferencia || '0.00'}</p>
+                            </div>
+                        </div>
+
+                        <div style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 10px;">
+                            Recepcionado por: ${res.recepcion} | Confirmado por: ${res.recepcionconfi}
+                        </div>
+
                         <div style="margin-top: 20px; display: flex; gap: 10px;">
                             ${!esCheckIn ? 
-                                `<button id="btnCheckIn" class="swal2-styled" style="background-color: #10b981; flex: 1; border: none; padding: 10px; border-radius: 8px; color: white; cursor: pointer;">
-                                    <i class="fa-solid fa-check"></i> Realizar Check-in
+                                `<button id="btnCheckIn" class="swal2-styled" style="background-color: #10b981; flex: 1; border: none; padding: 12px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">
+                                    🚀 REALIZAR CHECK-IN
                                 </button>` : 
-                                `<div style="flex: 1; text-align: center; padding: 10px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: bold;">
-                                    ✓ Huésped ya registrado
+                                `<div style="flex: 1; text-align: center; padding: 12px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: bold;">
+                                    ✅ HUÉSPED EN HABITACIÓN
                                 </div>`
                             }
-                            <button onclick="Swal.close()" class="swal2-styled" style="background-color: #64748b; flex: 1; border: none; padding: 10px; border-radius: 8px;">Cerrar</button>
+                            <button onclick="Swal.close()" class="swal2-styled" style="background-color: #64748b; flex: 1; border: none; padding: 12px; border-radius: 8px; color: white; cursor: pointer;">CERRAR DETALLES</button>
                         </div>
                     </div>
                 `,
@@ -80,9 +109,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const esCheckIn = r.estado === 'checkin';
             const medioKey = r.medio?.toLowerCase().trim();
             
+            // TÍTULO DINÁMICO: Si ya entró, mostramos Habitación + Check + Nombre
+            const tituloEvento = esCheckIn 
+                ? `[Hab. ${r.habitacion}] ✅ ${r.huesped}` 
+                : `Hab. ${r.habitacion} - ${r.huesped}`;
+
             eventosFull.push({
                 id: doc.id,
-                title: esCheckIn ? `✅ ${r.huesped}` : `Hab. ${r.habitacion} - ${r.huesped}`,
+                title: tituloEvento,
                 start: r.early ? `${r.checkIn}T${r.early}:00` : r.checkIn,
                 end: r.late ? `${r.checkOut}T${r.late}:00` : r.checkOut,
                 backgroundColor: esCheckIn ? '#ffffff' : (coloresMedio[medioKey] || '#800020'),
