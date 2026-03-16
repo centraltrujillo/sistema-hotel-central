@@ -1,13 +1,12 @@
 import { auth, db } from "./firebaseconfig.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { 
-    collection, onSnapshot, query, updateDoc, doc 
+    collection, onSnapshot, query, updateDoc, doc, getDocs, where 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const habGrid = document.getElementById('habGrid');
 const searchHab = document.getElementById('searchHab');
 
-// 1. PROTEGER RUTA
 onAuthStateChanged(auth, (user) => {
     if (user) {
         cargarHabitaciones();
@@ -16,19 +15,96 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// 2. FUNCIÓN PARA CAMBIAR ESTADO MANUALMENTE
-window.toggleEstado = async (id, estadoActual) => {
-    const nuevoEstado = estadoActual === "Libre" ? "Ocupada" : "Libre";
-    try {
-        await updateDoc(doc(db, "habitaciones", id), {
-            estado: nuevoEstado
-        });
-    } catch (error) {
-        console.error("Error al cambiar estado:", error);
-    }
-};
+// --- FUNCIÓN PARA MOSTRAR DETALLES Y CONSUMO ---
+async function gestionarHabitacion(hab) {
+    const estadoActual = hab.estado || "Libre";
 
-// 3. CARGAR HABITACIONES: Dinámico desde Firebase
+    if (estadoActual === "Libre") {
+        // Opción simple para ocupar
+        const { isConfirmed } = await Swal.fire({
+            title: `Habitación ${hab.numero}`,
+            text: "¿Deseas marcar esta habitación como ocupada manualmente?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ocupar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (isConfirmed) {
+            await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
+        }
+    } else {
+        // BUSCAR QUIÉN ESTÁ EN LA HABITACIÓN
+        // Buscamos en la colección "reservas" donde habitacion == numero y estado == "checkin"
+        const qReserva = query(
+            collection(db, "reservas"), 
+            where("habitacion", "==", hab.numero.toString()),
+            where("estado", "==", "checkin")
+        );
+        
+        const resSnap = await getDocs(qReserva);
+        let infoHuesped = "Huésped no registrado (Ocupación manual)";
+        let reservaId = null;
+        let totalConsumo = 0;
+
+        if (!resSnap.empty) {
+            const docRes = resSnap.docs[0];
+            const dataRes = docRes.data();
+            reservaId = docRes.id;
+            infoHuesped = dataRes.huesped;
+            totalConsumo = dataRes.consumo || 0;
+        }
+
+        Swal.fire({
+            title: `Habitación ${hab.numero} - OCUPADA`,
+            html: `
+                <div style="text-align: left; font-family: 'Lato', sans-serif;">
+                    <p><b>Huésped:</b> ${infoHuesped}</p>
+                    <hr>
+                    <div style="background: #f1f5f9; padding: 10px; border-radius: 8px;">
+                        <h4 style="margin-top:0;">🍕 Consumos Extra</h4>
+                        <p>Total Consumo: <b>S/ ${totalConsumo.toFixed(2)}</b></p>
+                        ${reservaId ? `
+                            <button id="btnAddConsumo" class="swal2-confirm swal2-styled" style="padding: 5px 10px; font-size: 12px;">+ Añadir Consumo</button>
+                        ` : '<small>No se puede añadir consumo a ocupaciones manuales</small>'}
+                    </div>
+                </div>
+            `,
+            showDenyButton: true,
+            confirmButtonText: 'Cerrar',
+            denyButtonText: 'Liberar Habitación',
+            didOpen: () => {
+                const btnConsumo = document.getElementById('btnAddConsumo');
+                if(btnConsumo) {
+                    btnConsumo.onclick = () => añadirConsumo(reservaId, totalConsumo);
+                }
+            }
+        }).then(async (result) => {
+            if (result.isDenied) {
+                await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Libre" });
+            }
+        });
+    }
+}
+
+// --- FUNCIÓN PARA AÑADIR CONSUMO A LA RESERVA ---
+async function añadirConsumo(resId, consumoActual) {
+    const { value: monto } = await Swal.fire({
+        title: 'Añadir consumo',
+        input: 'number',
+        inputLabel: 'Monto en Soles',
+        inputPlaceholder: '0.00',
+        showCancelButton: true
+    });
+
+    if (monto) {
+        const nuevoTotal = parseFloat(consumoActual) + parseFloat(monto);
+        const resRef = doc(db, "reservas", resId);
+        await updateDoc(resRef, { consumo: nuevoTotal });
+        Swal.fire('Guardado', `Se añadió S/ ${monto} al consumo.`, 'success');
+    }
+}
+
 function cargarHabitaciones() {
     const q = query(collection(db, "habitaciones"));
 
@@ -64,30 +140,26 @@ function cargarHabitaciones() {
                         <p><i class="fa-solid fa-layer-group"></i> Piso ${hab.piso || 'N/A'}</p>
                         <p><i class="fa-solid fa-tags"></i> ${hab.tipo || 'Estándar'}</p> 
                     </div>
-                    <div class="hab-footer" style="padding: 10px; font-size: 10px; opacity: 0.6; text-align: center;">
-                        Click para alternar estado
+                    <div class="hab-footer" style="padding: 10px; font-size: 10px; opacity: 0.8; text-align: center; color: ${estadoHab === 'Ocupada' ? '#ef6c00' : '#2e7d32'}; font-weight: bold;">
+                        ${estadoHab === 'Ocupada' ? 'VER DETALLE / CONSUMO' : 'HABITACIÓN LIBRE'}
                     </div>
                 `;
 
-                // Evento de clic para cambiar estado
-                card.onclick = () => toggleEstado(hab.id, estadoHab);
+                // Cambio de evento: ahora llama a gestionarHabitacion
+                card.onclick = () => gestionarHabitacion(hab);
                 
                 habGrid.appendChild(card);
             }
         });
 
         actualizarMiniStats(docs.length, libres, ocupadas);
-    }, (error) => {
-        console.error("Error detectado:", error);
     });
 }
 
-// 4. BUSCADOR
 if (searchHab) {
     searchHab.addEventListener('input', cargarHabitaciones);
 }
 
-// 5. ACTUALIZAR CONTADORES
 function actualizarMiniStats(total, libres, ocupadas) {
     const txtTotal = document.getElementById('stat-total');
     const txtLibres = document.getElementById('stat-libres');
