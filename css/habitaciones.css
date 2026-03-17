@@ -1,16 +1,79 @@
-/* --- Grid Principal --- */
+/* --- Contenedor de Estadísticas (Mini Cards) --- */
+.hab-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-card-mini {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    text-align: center;
+    border: 1px solid #eee;
+}
+
+.stat-card-mini span {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.stat-card-mini h3 {
+    margin: 0;
+    font-size: 25px;
+    font-family: 'Lato', sans-serif;
+}
+
+/* --- Barra de Búsqueda --- */
+.search-bar {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.search-bar i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-family: 'Lato', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.search-bar input:focus {
+    border-color: #5a1914;
+    box-shadow: 0 0 0 3px rgba(90, 25, 20, 0.1);
+}
+
+/* --- Grid Principal (ACTUALIZADO: Casitas más grandes) --- */
 .hab-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 20px;
+    /* Aumentado de 180px a 240px para que las columnas sean más anchas */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 25px;
     padding: 10px 0;
 }
 
 /* --- Tarjeta de Habitación (Casita) --- */
 .hab-card {
     background: #fff;
-    border-radius: 15px;
-    padding: 20px;
+    border-radius: 18px;
+    padding: 35px 20px; /* Aumentado padding para más altura */
     text-align: center;
     border: 1px solid #eee;
     transition: all 0.3s ease;
@@ -23,17 +86,17 @@
 }
 
 .hab-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 20px rgba(0,0,0,0.1);
 }
 
-/* Icono de Casita con FontAwesome */
+/* Icono de Casita (ACTUALIZADO: Más grande) */
 .hab-card::before {
-    content: '\f015'; /* Icono de casa */
+    content: '\f015'; 
     font-family: "Font Awesome 6 Free";
     font-weight: 900;
-    font-size: 50px;
-    margin-bottom: 10px;
+    font-size: 70px; /* Aumentado de 50px a 70px */
+    margin-bottom: 15px;
     display: block;
 }
 
@@ -41,40 +104,61 @@
 .hab-card.libre::before { color: #2e7d32; }
 .hab-card.ocupada::before { color: #800020; }
 
-.hab-card.libre { border-bottom: 5px solid #2e7d32; }
-.hab-card.ocupada { border-bottom: 5px solid #800020; }
+.hab-card.libre { border-bottom: 6px solid #2e7d32; }
+.hab-card.ocupada { border-bottom: 6px solid #800020; }
 
 .hab-number {
     font-family: 'Playfair Display', serif;
-    font-size: 24px;
+    font-size: 30px; /* Aumentado de 24px a 30px */
     font-weight: 800;
     color: #333;
 }
 
+.hab-body p {
+    margin: 4px 0;
+    color: #666;
+    font-size: 15px;
+}
+
 .hab-badge {
-    padding: 4px 10px;
+    display: inline-block;
+    padding: 5px 12px;
     border-radius: 20px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
-    margin-top: 5px;
+    margin-top: 8px;
 }
 
 .hab-card.libre .hab-badge { background: #e8f5e9; color: #2e7d32; }
 .hab-card.ocupada .hab-badge { background: #fff1f0; color: #800020; }
 
 .hab-footer {
-    margin-top: 15px;
-    font-size: 11px;
+    margin-top: 18px;
+    font-size: 12px;
     font-weight: 700;
     color: #999;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
+/* --- Estilos para el estado de carga --- */
+.loading-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px;
+    color: #666;
+}
+
+.loading-state i {
+    font-size: 40px;
+    margin-bottom: 15px;
+    color: #5a1914;
+}
+
 /* --- Modal de Consumos --- */
 .tabla-scroll {
-    max-height: 200px;
+    max-height: 250px;
     overflow-y: auto;
     border: 1px solid #eee;
     border-radius: 8px;
@@ -87,7 +171,7 @@
     justify-content: space-between;
     align-items: center;
     background: #5a1914;
-    padding: 12px;
+    padding: 14px;
     border-radius: 8px;
     color: white;
     margin-top: 10px;
@@ -98,11 +182,11 @@
     background-color: #444;
     color: white;
     border: none;
-    padding: 12px;
+    padding: 14px;
     border-radius: 8px;
     font-weight: 700;
     cursor: pointer;
-    margin-top: 10px;
+    margin-top: 12px;
     text-transform: uppercase;
 }
 
@@ -110,6 +194,6 @@
     color: #ff4d4f;
     border: none;
     background: none;
-    font-size: 18px;
+    font-size: 20px;
     cursor: pointer;
 }
