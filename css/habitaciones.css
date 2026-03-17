@@ -84,6 +84,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px; 
+    cursor: pointer;
 }
 
 .hab-card:hover { 
@@ -113,12 +114,28 @@
     text-transform: uppercase;
 }
 
-/* Estados Dinámicos */
-.hab-card.libre { border-top: 4px solid #2e7d32; }
-.hab-card.ocupada { border-top: 4px solid #ef6c00; }
+/* --- ESTADOS DINÁMICOS ACTUALIZADOS --- */
 
+/* 1. Libre */
+.hab-card.libre { border-top: 4px solid #2e7d32; }
 .hab-card.libre .hab-badge { background-color: #e8f5e9; color: #2e7d32; }
+
+/* 2. Ocupada */
+.hab-card.ocupada { border-top: 4px solid #ef6c00; }
 .hab-card.ocupada .hab-badge { background-color: #fff3e0; color: #ef6c00; }
+
+/* 3. Sucia (Mantenimiento) */
+.hab-card.sucia { border-top: 4px solid #d32f2f; }
+.hab-card.sucia .hab-badge { background-color: #ffebee; color: #d32f2f; }
+
+/* 4. Early Check-out (Salida anticipada - Azul) */
+.hab-card.early-check-out { border-top: 4px solid #0288d1; }
+.hab-card.early-check-out .hab-badge { background-color: #e1f5fe; color: #0288d1; }
+
+/* 5. Late Check-out (Salida tardía - Púrpura) */
+.hab-card.late-check-out { border-top: 4px solid #7b1fa2; }
+.hab-card.late-check-out .hab-badge { background-color: #f3e5f5; color: #7b1fa2; }
+
 
 /* Cuerpo de la tarjeta */
 .hab-body { 
@@ -139,70 +156,47 @@
 
 /* --- PERSONALIZACIÓN DE MODALES (SweetAlert2) --- */
 
-/* Contenedor del Modal */
 .swal2-popup {
     border-radius: 15px !important;
-    padding: 2rem !important;
+    padding: 1.5rem !important;
     font-family: 'Lato', sans-serif !important;
 }
 
-/* Títulos del Modal */
 .swal2-title {
     font-family: 'Playfair Display', serif !important;
     font-weight: 700 !important;
-    font-size: 24px !important;
-    margin-bottom: 20px !important;
+    font-size: 22px !important;
+    margin-bottom: 15px !important;
 }
 
-/* Estilo para los Inputs dentro del modal */
 .swal2-input, .swal2-select {
     border-radius: 8px !important;
     border: 1px solid #ddd !important;
     font-size: 14px !important;
     height: 45px !important;
     box-shadow: none !important;
-    transition: border-color 0.3s !important;
 }
 
-.swal2-input:focus, .swal2-select:focus {
-    border-color: var(--marron-zocalo) !important;
-}
-
-/* Botón de Confirmar (Check-in / Guardar) */
 .swal2-confirm {
     background-color: var(--marron-zocalo) !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
-    padding: 12px 30px !important;
     text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
+    letter-spacing: 0.5px !important;
 }
 
-/* Botón de Denegar (Check-out) */
 .swal2-deny {
-    background-color: #dc2626 !important; /* Rojo elegante para salida */
+    background-color: #444 !important; /* Gris oscuro profesional para Check-out */
     border-radius: 8px !important;
     font-weight: 600 !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     text-transform: uppercase !important;
 }
 
-/* Botón de Cancelar */
 .swal2-cancel {
     border-radius: 8px !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
     text-transform: uppercase !important;
-}
-
-/* Etiquetas de los campos en el modal (Check-in) */
-.swal2-html-container label {
-    display: block;
-    margin-bottom: 5px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--marron-zocalo);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
