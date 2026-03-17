@@ -71,20 +71,19 @@
 /* Grid de tarjetas */
 .hab-grid { 
     display: grid; 
-    /* Cambiado de 280px a 220px para permitir hasta 4 o 5 por fila */
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-    gap: 15px; /* Reduje un poco el gap para aprovechar mejor el espacio */
+    gap: 15px; 
 }
 
 .hab-card { 
     background-color: white; 
-    padding: 15px; /* Reducido de 20px */
-    border-radius: 12px; /* Un toque más moderno y compacto */
+    padding: 15px; 
+    border-radius: 12px; 
     border: 1px solid rgba(0,0,0,0.05); 
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Reducido de 15px */
+    gap: 10px; 
 }
 
 .hab-card:hover { 
@@ -114,7 +113,7 @@
     text-transform: uppercase;
 }
 
-/* Estados Dinámicos (Clases que pone el JS) */
+/* Estados Dinámicos */
 .hab-card.libre { border-top: 4px solid #2e7d32; }
 .hab-card.ocupada { border-top: 4px solid #ef6c00; }
 
@@ -138,26 +137,72 @@
     border-top: 1px solid #f5f5f5; 
 }
 
-.btn-change { 
-    width: 100%;
-    background-color: #f8f9fa;
-    border: 1px solid #ddd;
-    padding: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-family: 'Lato', sans-serif;
-    font-weight: 600;
-    font-size: 13px;
-    transition: 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: var(--marron-zocalo);
+/* --- PERSONALIZACIÓN DE MODALES (SweetAlert2) --- */
+
+/* Contenedor del Modal */
+.swal2-popup {
+    border-radius: 15px !important;
+    padding: 2rem !important;
+    font-family: 'Lato', sans-serif !important;
 }
 
-.btn-change:hover { 
-    background-color: var(--vino-tinto); 
-    color: white; 
-    border-color: var(--vino-tinto);
+/* Títulos del Modal */
+.swal2-title {
+    font-family: 'Playfair Display', serif !important;
+    font-weight: 700 !important;
+    font-size: 24px !important;
+    margin-bottom: 20px !important;
+}
+
+/* Estilo para los Inputs dentro del modal */
+.swal2-input, .swal2-select {
+    border-radius: 8px !important;
+    border: 1px solid #ddd !important;
+    font-size: 14px !important;
+    height: 45px !important;
+    box-shadow: none !important;
+    transition: border-color 0.3s !important;
+}
+
+.swal2-input:focus, .swal2-select:focus {
+    border-color: var(--marron-zocalo) !important;
+}
+
+/* Botón de Confirmar (Check-in / Guardar) */
+.swal2-confirm {
+    background-color: var(--marron-zocalo) !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    padding: 12px 30px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    font-size: 13px !important;
+}
+
+/* Botón de Denegar (Check-out) */
+.swal2-deny {
+    background-color: #dc2626 !important; /* Rojo elegante para salida */
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+}
+
+/* Botón de Cancelar */
+.swal2-cancel {
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+}
+
+/* Etiquetas de los campos en el modal (Check-in) */
+.swal2-html-container label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--marron-zocalo);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
