@@ -2,34 +2,24 @@ import { auth, db } from "./firebaseconfig.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { 
     collection, onSnapshot, query, updateDoc, doc, getDocs, 
-    where, addDoc, deleteDoc, serverTimestamp 
+    where, addDoc, deleteDoc 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const habGrid = document.getElementById('habGrid');
 
 onAuthStateChanged(auth, (user) => {
-    if (user) {
-        cargarHabitaciones();
-    } else {
-        window.location.href = "index.html";
-    }
+    if (user) { cargarHabitaciones(); } 
+    else { window.location.href = "index.html"; }
 });
 
-// --- 1. UTILIDADES ---
 function getHoyISO() {
-    return new Date().toISOString().split('T')[0];
+    const fecha = new Date();
+    const offset = fecha.getTimezoneOffset();
+    const ajustada = new Date(fecha.getTime() - (offset * 60 * 1000));
+    return ajustada.toISOString().split('T')[0];
 }
 
-// --- 2. GESTIÓN DE CLIC (ABRIR MODAL SEGÚN ESTADO) ---
-async function gestionarHabitacion(hab) {
-    if (hab.estado === "Ocupada") {
-        abrirModalGestionOcupada(hab);
-    } else {
-        abrirModalCheckIn(hab);
-    }
-}
-
-// --- 3. MODAL CHECK-IN (SOLO PARA ENTRADA) ---
+// --- GESTIÓN DE ENTRADA ---
 async function abrirModalCheckIn(hab) {
     const hoy = getHoyISO();
     const q = query(collection(db, "reservas"), 
@@ -38,13 +28,8 @@ async function abrirModalCheckIn(hab) {
               where("estado", "==", "reservado"));
     
     const snap = await getDocs(q);
-    let opciones = { "manual": "Ingreso Directo (Sin Reserva)" };
-    let reservaData = {};
-
-    snap.forEach(d => {
-        opciones[d.id] = `Reserva: ${d.data().huesped}`;
-        reservaData[d.id] = d.data();
-    });
+    let opciones = { "manual": "➕ Ingreso Directo" };
+    snap.forEach(d => { opciones[d.id] = `🏨 Reserva: ${d.data().huesped}`; });
 
     const { value: selectedId } = await Swal.fire({
         title: `Check-in Hab. ${hab.numero}`,
@@ -56,10 +41,8 @@ async function abrirModalCheckIn(hab) {
 
     if (selectedId) {
         if (selectedId !== "manual") {
-            // Actualizar reserva existente a checkin
             await updateDoc(doc(db, "reservas", selectedId), { estado: "checkin" });
         } else {
-            // Crear reserva manual rápida
             await addDoc(collection(db, "reservas"), {
                 huesped: "Huésped Directo",
                 habitacion: hab.numero.toString(),
@@ -68,13 +51,11 @@ async function abrirModalCheckIn(hab) {
             });
         }
         await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
-        Swal.fire('¡Check-in Exitoso!', '', 'success');
     }
 }
 
-// --- 4. MODAL GESTIÓN OCUPADA (CONSUMOS + EARLY/LATE) ---
+// --- GESTIÓN DE OCUPADA (CONSUMOS + SALIDA) ---
 async function abrirModalGestionOcupada(hab) {
-    // 1. Buscar la reserva activa para leer Early/Late
     const qRes = query(collection(db, "reservas"), 
                  where("habitacion", "==", hab.numero.toString()), 
                  where("estado", "==", "checkin"));
@@ -82,159 +63,112 @@ async function abrirModalGestionOcupada(hab) {
     if (snapRes.empty) return;
 
     const resDoc = snapRes.docs[0];
-    const rData = resDoc.data();
     const resId = resDoc.id;
+    const rData = resDoc.data();
 
-    // 2. Buscar consumos en la colección independiente
-    const qConsumos = query(collection(db, "consumos"), where("idReserva", "==", resId));
-    const snapCons = await getDocs(qConsumos);
-    const listaConsumos = snapCons.docs.map(d => ({ id: d.id, ...d.data() }));
-    const totalExtras = listaConsumos.reduce((acc, cur) => acc + cur.monto, 0);
+    const qCons = query(collection(db, "consumos"), where("idReserva", "==", resId));
+    const snapCons = await getDocs(qCons);
+    const lista = snapCons.docs.map(d => ({ id: d.id, ...d.data() }));
+    const total = lista.reduce((acc, cur) => acc + cur.monto, 0);
 
-    // 3. Construir el desglose de la tabla
-    let htmlDesglose = `
-        <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;">
-            <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
-                <thead style="background: #f4f4f4; position: sticky; top: 0;">
-                    <tr><th style="padding: 5px;">Desc.</th><th style="padding: 5px;">S/</th><th></th></tr>
-                </thead>
-                <tbody>`;
-    
-    listaConsumos.forEach(c => {
-        htmlDesglose += `
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 8px;">${c.descripcion}</td>
-                <td style="padding: 8px;">${c.monto.toFixed(2)}</td>
-                <td style="padding: 8px;">
-                    <button onclick="eliminarConsumo('${c.id}', '${hab.id}')" style="color:red; border:none; background:none; cursor:pointer;">×</button>
-                </td>
-            </tr>`;
+    let html = `<div class="tabla-scroll"><table style="width:100%">`;
+    lista.forEach(c => {
+        html += `<tr><td style="text-align:left; padding:8px;">${c.descripcion}</td>
+                 <td>S/ ${c.monto.toFixed(2)}</td>
+                 <td><button onclick="eliminarConsumo('${c.id}')" class="btn-del">×</button></td></tr>`;
     });
+    html += `</table></div><div class="total-caja"><span>TOTAL:</span><b>S/ ${total.toFixed(2)}</b></div>
+             <button id="btnNewCons" class="btn-main">+ AÑADIR CONSUMO</button>`;
 
-    if(listaConsumos.length === 0) htmlDesglose += `<tr><td colspan="3" style="text-align:center; padding:10px; color:#999;">Sin consumos</td></tr>`;
-    htmlDesglose += `</tbody></table></div>`;
-
-    // 4. Mostrar Modal Final
     Swal.fire({
         title: `Habitación ${hab.numero}`,
-        width: '500px',
-        html: `
-            <div style="text-align: left; font-family: 'Lato', sans-serif;">
-                <p><b>Huésped:</b> ${rData.huesped}</p>
-                <div style="margin-bottom: 10px;">
-                    ${rData.earlyCheckin ? '<span style="background:#fffbeb; color:#b45309; padding:4px 8px; border-radius:5px; font-size:11px; font-weight:bold; border:1px solid #fcd34d; margin-right:5px;">EARLY CHECK-IN</span>' : ''}
-                    ${rData.lateCheckout ? '<span style="background:#fffbeb; color:#b45309; padding:4px 8px; border-radius:5px; font-size:11px; font-weight:bold; border:1px solid #fcd34d;">LATE CHECK-OUT</span>' : ''}
-                </div>
-                <hr>
-                <h4 style="font-size: 14px; color: #5a1914;">DESGLOSE DE EXTRAS</h4>
-                ${htmlDesglose}
-                <div style="display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:10px; border-radius:5px;">
-                    <b>TOTAL EXTRAS:</b>
-                    <b style="font-size: 18px; color: #800020;">S/ ${totalExtras.toFixed(2)}</b>
-                </div>
-                <button id="addEx" class="swal2-confirm swal2-styled" style="width:100%; margin:10px 0 0 0; background:#5a1914;">+ AÑADIR PRODUCTO</button>
-            </div>
-        `,
+        html: `<p style="text-align:left"><b>Huésped:</b> ${rData.huesped}</p>${html}`,
         showDenyButton: true,
         confirmButtonText: 'Cerrar',
         denyButtonText: 'Procesar Check-out',
         didOpen: () => {
-            document.getElementById('addEx').onclick = () => registrarConsumo(resId, hab);
+            document.getElementById('btnNewCons').onclick = () => registrarConsumo(resId, hab);
         }
-    }).then((result) => {
-        if (result.isDenied) {
-            confirmarCheckOut(resId, hab.id, totalExtras);
-        }
+    }).then(result => {
+        if (result.isDenied) confirmarCheckOut(resId, hab.id, total);
     });
 }
 
-// --- 5. FUNCIONES DE CONSUMOS (COLECCIÓN 'consumos') ---
 async function registrarConsumo(resId, hab) {
-    const { value: formValues } = await Swal.fire({
+    const { value: val } = await Swal.fire({
         title: 'Nuevo Cargo',
         html: '<input id="d" class="swal2-input" placeholder="Producto"><input id="m" type="number" class="swal2-input" placeholder="S/">',
         preConfirm: () => ({ d: document.getElementById('d').value, m: document.getElementById('m').value })
     });
-
-    if (formValues && formValues.d && formValues.m) {
-        await addDoc(collection(db, "consumos"), {
-            idReserva: resId,
-            descripcion: formValues.d,
-            monto: parseFloat(formValues.m),
-            fecha: new Date().toISOString()
-        });
-        abrirModalGestionOcupada(hab); // Refrescar modal sin recargar página
+    if (val?.d && val?.m) {
+        await addDoc(collection(db, "consumos"), { idReserva: resId, descripcion: val.d, monto: parseFloat(val.m) });
+        abrirModalGestionOcupada(hab);
     }
 }
 
-window.eliminarConsumo = async (consId, habId) => {
-    await deleteDoc(doc(db, "consumos", consId));
-    Swal.fire('Eliminado', '', 'success').then(() => location.reload());
+window.eliminarConsumo = async (id) => {
+    await deleteDoc(doc(db, "consumos", id));
+    location.reload();
 };
 
-// --- 6. CHECK-OUT Y LIBERACIÓN ---
 async function confirmarCheckOut(resId, habId, total) {
-    const { value: decision } = await Swal.fire({
-        title: 'Finalizar Estadía',
-        text: `Total Extras acumulados: S/ ${total.toFixed(2)}`,
-        input: 'select',
-        inputOptions: { 'Sucia': 'Enviar a Limpieza', 'Libre': 'Disponible' },
+    const { isConfirmed } = await Swal.fire({
+        title: '¿Confirmar Salida?',
+        text: `Total extras: S/ ${total.toFixed(2)}`,
+        icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Cobrar y Salir'
+        confirmButtonColor: '#5a1914'
     });
-
-    if (decision) {
-        await updateDoc(doc(db, "reservas", resId), { 
-            estado: "finalizado", 
-            totalConsumos: total,
-            fechaSalidaReal: new Date().toISOString() 
-        });
-        await updateDoc(doc(db, "habitaciones", habId), { estado: decision });
-        Swal.fire('Check-out realizado', '', 'success');
+    if (isConfirmed) {
+        await updateDoc(doc(db, "reservas", resId), { estado: "finalizado" });
+        await updateDoc(doc(db, "habitaciones", habId), { estado: "Libre" });
     }
 }
 
-// --- 7. RENDERIZADO DE CARDS CON INDICADORES ---
+// --- CARGA DE DATOS ---
 function cargarHabitaciones() {
     const qHabs = query(collection(db, "habitaciones"));
     const hoy = getHoyISO();
 
     onSnapshot(qHabs, async (snapshot) => {
-        if (!habGrid) return;
         habGrid.innerHTML = '';
-        
-        // Consultar quién llega hoy para marcar las tarjetas libres
-        const qReservasHoy = query(collection(db, "reservas"), where("fechaIngreso", "==", hoy), where("estado", "==", "reservado"));
-        const snapRes = await getDocs(qReservasHoy);
-        const listaReservasHoy = snapRes.docs.map(d => d.data().habitacion);
+        let s = { t: snapshot.size, l: 0, o: 0 };
+
+        const qRes = query(collection(db, "reservas"), where("fechaIngreso", "==", hoy), where("estado", "==", "reservado"));
+        const snapRes = await getDocs(qRes);
+        const lRes = snapRes.docs.map(d => d.data().habitacion);
 
         const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         docs.sort((a, b) => a.numero - b.numero);
 
-        docs.forEach((hab) => {
-            const estado = hab.estado || "Libre";
-            const reservadaHoy = listaReservasHoy.includes(hab.numero.toString());
+        docs.forEach(hab => {
+            const est = hab.estado || "Libre";
+            est === "Libre" ? s.l++ : s.o++;
+            const rHoy = lRes.includes(hab.numero.toString());
 
             const card = document.createElement('div');
-            card.className = `hab-card ${estado.toLowerCase()}`;
+            card.className = `hab-card ${est.toLowerCase()}`;
             card.innerHTML = `
-                <div class="hab-header">
-                    <span class="hab-number">${hab.numero}</span>
-                    <span class="hab-badge">${estado}</span>
-                </div>
+                <span class="hab-number">${hab.numero}</span>
                 <div class="hab-body">
-                    <p>Piso ${hab.piso} - ${hab.tipo}</p>
-                    ${reservadaHoy && estado !== "Ocupada" ? 
-                      `<p style="color: #800020; font-weight: bold; font-size: 11px; margin-top: 5px;">
-                        <i class="fa-solid fa-calendar-day"></i> RESERVADA HOY
-                       </p>` : ''}
-                </div>
-                <div class="hab-footer">
-                    ${estado === 'Ocupada' ? 'VER GESTIÓN / CONSUMOS' : 'GESTIONAR ENTRADA'}
-                </div>
-            `;
-            card.onclick = () => gestionarHabitacion(hab);
+                    <p style="font-size:13px;">Piso ${hab.piso} - ${hab.tipo}</p>
+                    <span class="hab-badge">${est}</span>
+                    ${rHoy && est !== "Ocupada" ? '<p style="color:#800020; font-weight:bold; font-size:10px; margin-top:5px;">LLEGADA HOY</p>' : ''}
+                </div>`;
+            card.onclick = () => est === "Ocupada" ? abrirModalGestionOcupada(hab) : abrirModalCheckIn(hab);
             habGrid.appendChild(card);
         });
+
+        document.getElementById('stat-total').innerText = s.t;
+        document.getElementById('stat-libres').innerText = s.l;
+        document.getElementById('stat-ocupadas').innerText = s.o;
     });
 }
+
+// --- BUSCADOR ---
+document.getElementById('searchHab').addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    document.querySelectorAll('.hab-card').forEach(card => {
+        card.style.display = card.querySelector('.hab-number').innerText.includes(term) ? 'flex' : 'none';
+    });
+});
