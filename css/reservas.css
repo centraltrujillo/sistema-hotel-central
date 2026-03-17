@@ -152,7 +152,9 @@
 .type-mantenimiento { background: #fa051a; }
 .type-gmail { background: #59ea35; }
 
-/* 5. MODAL DE RESERVAS (ESTILO PREMIUM ACTUALIZADO) */
+/* --- HOTEL CENTRAL: GESTIÓN DE RESERVAS (CSS OPTIMIZADO PARA ESPACIO) --- */
+
+/* 5. MODAL DE RESERVAS (ESTILO PREMIUM - ENSANCHADO) */
 .modal-reserva-overlay {
     display: none;
     position: fixed;
@@ -168,131 +170,131 @@
 
 .modal-reserva-content {
     background: var(--amarillo-ocre);
-    border-radius: 24px; /* Un poco más curvo */
+    border-radius: 20px;
     width: 95%;
-    max-width: 950px; /* Ancho ajustado para 3 columnas */
+    /* Aumentamos el ancho máximo para que no se vea apretado */
+    max-width: 1100px; 
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
     animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideUp {
-    from { transform: translateY(30px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    border: 1px solid rgba(255,255,255,0.2);
 }
 
 .modal-reserva-header {
     background: var(--vino-tinto);
     color: white;
-    padding: 20px 40px;
+    padding: 18px 30px; /* Reducido un poco para ganar espacio vertical */
     display: flex;
     justify-content: space-between;
     align-items: center;
     position: sticky;
     top: 0;
     z-index: 10;
-    border-bottom: 4px solid var(--amarillo-ocre);
+    border-bottom: 3px solid rgba(0,0,0,0.1);
 }
 
-.modal-reserva-header h3 {
-    font-family: var(--font-titles);
-    font-size: 22px;
-    margin: 0;
-}
-
-.close-modal {
-    font-size: 30px;
-    cursor: pointer;
-    opacity: 0.8;
-    transition: 0.3s;
-}
-
-.close-modal:hover { opacity: 1; transform: rotate(90deg); }
-
-/* 6. FORMULARIO DENTRO DEL MODAL - 3 COLUMNAS */
+/* 6. FORMULARIO DENTRO DEL MODAL - 3 COLUMNAS MÁS AMPLIAS */
 .form-grid-res {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Cambio a 3 columnas */
-    gap: 18px 20px; /* Espaciado más equilibrado */
-    padding: 30px 40px;
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 20px 25px; /* Aumentamos el gap horizontal para que respiren los textos */
+    padding: 35px 40px;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 6px; /* Reducido para que el label esté más cerca */
+    gap: 8px;
+}
+
+/* Ocupar 2 columnas para campos largos como "Nombres y Apellidos" si lo deseas */
+.form-group.full-width {
+    grid-column: span 3;
+}
+
+.form-group.double-width {
+    grid-column: span 2;
 }
 
 .form-group label {
-    font-size: 10px; /* Un punto menos para que no se vea apretado en 3 cols */
+    font-size: 11px; /* Subimos un punto para legibilidad */
     font-weight: 800;
     color: var(--marron-zocalo);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
 
 .form-group input, 
 .form-group select {
     width: 100%;
-    height: 42px; /* Altura optimizada para formularios densos */
-    padding: 0 12px;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
+    height: 45px; /* Altura más cómoda para click/touch */
+    padding: 0 15px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
     font-size: 14px;
-    background: #fcfcfc;
+    background: #ffffff; /* Blanco puro para mejor contraste sobre el fondo ocre */
     transition: all 0.2s ease;
+    color: #334155;
 }
 
 .form-group input:focus, 
 .form-group select:focus {
-    background: white;
-    border-color: var(--amarillo-ocre);
+    border-color: var(--vino-tinto);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.1);
+    box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.15);
 }
 
-/* RESALTADO FINANCIERO */
+/* RESALTADO FINANCIERO (Inputs de solo lectura con estilo) */
+#resTotal, #resDiferencia {
+    font-family: var(--font-main);
+    font-size: 16px;
+    text-align: right;
+}
+
 #resTotal {
-    background: #f0fdf4 !important;
-    border-color: #bbf7d0;
-    font-weight: 700;
+    background: #f0fdf4 !important; /* Verde muy suave */
+    border: 2px solid #22c55e !important;
+    font-weight: 800;
     color: #166534;
 }
 
-#resDiferencia {
-    background: #fff1f2 !important;
-    border-color: #fecaca;
+/* Estilo para el input de Diferencia Pendiente en la imagen */
+.form-group input[style*="background-color: rgb(255, 235, 238)"] {
+    border: 2px solid #ef4444 !important;
+    color: #b91c1c !important;
     font-weight: 800;
-    color: var(--vino-tinto);
 }
 
 /* 7. ACCIONES Y FOOTER MODAL */
 .form-actions-res {
-    grid-column: span 3; /* Ocupa las 3 columnas */
+    grid-column: span 3;
     display: flex;
     justify-content: flex-end;
     gap: 15px;
-    padding: 20px 40px;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
+    padding: 25px 40px;
+    background: rgba(255, 255, 255, 0.5); /* Fondo semitransparente sobre el ocre */
+    border-top: 1px solid rgba(0,0,0,0.05);
 }
 
 .btn-save {
-    padding: 12px 45px;
+    padding: 14px 50px;
     background: var(--vino-tinto);
     color: white;
-    border-radius: 10px;
+    border-radius: 12px;
     font-weight: 700;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(128, 0, 32, 0.2);
-    transition: 0.3s;
+    box-shadow: 0 4px 14px rgba(128, 0, 32, 0.3);
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .btn-save:hover {
-    background: var(--marron-zocalo);
-    transform: translateY(-1px);
+    background: #600018;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(128, 0, 32, 0.4);
 }
 
 /* 8. RESPONSIVE */

@@ -20,61 +20,93 @@ function getHoyISO() {
     return new Date().toISOString().split('T')[0];
 }
 
-// --- 2. GESTIÓN DE CLIC EN HABITACIÓN ---
+
+// --- 2. GESTIÓN DE CLIC EN HABITACIÓN (CON ALERTA DE CONFLICTO) ---
 async function gestionarHabitacion(hab) {
     const estadoActual = hab.estado || "Libre";
 
-    // Permitir check-in si está libre, sucia o viene de un checkout previo
     if (estadoActual === "Libre" || estadoActual === "Sucia" || estadoActual.includes("Check-out")) {
-        const qReservas = query(
+        
+        // 1. Verificar si hay reservas para hoy (para la alerta)
+        const hoy = getHoyISO();
+        const qReservasHoy = query(
+            collection(db, "reservas"), 
+            where("habitacion", "==", hab.numero.toString()),
+            where("fechaIngreso", "==", hoy),
+            where("estado", "==", "reservado")
+        );
+        const snapConflictos = await getDocs(qReservasHoy);
+        const tieneReservaHoy = !snapConflictos.empty;
+
+        // 2. Buscamos todas las reservas pendientes (para el selector)
+        const qGeneral = query(
             collection(db, "reservas"), 
             where("habitacion", "==", hab.numero.toString()),
             where("estado", "==", "reservado")
         );
+        const resSnap = await getDocs(qGeneral);
         
-        const resSnap = await getDocs(qReservas);
-        
-        if (resSnap.empty) {
-            Swal.fire("Sin Reservas", "No hay reservas pendientes para esta habitación.", "info");
-            return;
-        }
+        if (!resSnap.empty) {
+            const opciones = {};
+            resSnap.forEach(doc => {
+                const d = doc.data();
+                opciones[doc.id] = `${d.huesped} [Entra: ${d.fechaIngreso}]`;
+            });
+            opciones["manual"] = "--- INGRESO DIRECTO (WALK-IN) ---";
 
-        const opciones = {};
-        resSnap.forEach(doc => {
-            const d = doc.data();
-            const fechaLabel = d.fechaIngreso ? `[Entra: ${d.fechaIngreso}]` : "";
-            opciones[doc.id] = `${d.huesped} ${fechaLabel}`;
-        });
+            const { value: reservaId } = await Swal.fire({
+                title: 'Gestión de Entrada',
+                text: tieneReservaHoy ? '⚠️ ESTA HABITACIÓN TIENE UNA RESERVA PARA HOY.' : 'Seleccione una opción:',
+                input: 'select',
+                inputOptions: opciones,
+                confirmButtonColor: '#5a1914',
+                showCancelButton: true
+            });
 
-        const { value: reservaId } = await Swal.fire({
-            title: 'Seleccionar Reserva',
-            text: 'Seleccione al huésped para iniciar el Check-in',
-            input: 'select',
-            inputOptions: opciones,
-            inputPlaceholder: 'Huéspedes con reserva...',
-            showCancelButton: true,
-            confirmButtonColor: '#5a1914'
-        });
-
-        if (reservaId) {
-            const reservaDoc = resSnap.docs.find(d => d.id === reservaId);
-            abrirModalCheckIn(hab, reservaId, reservaDoc.data());
+            if (reservaId === "manual") {
+                confirmarIngresoManual(hab, tieneReservaHoy);
+            } else if (reservaId) {
+                const reservaDoc = resSnap.docs.find(d => d.id === reservaId);
+                abrirModalCheckIn(hab, reservaId, reservaDoc.data());
+            }
+        } else {
+            // Si no hay reservas pero quieres entrar manual
+            confirmarIngresoManual(hab, tieneReservaHoy);
         }
     } else {
         abrirModalOcupada(hab);
     }
 }
 
-// --- 3. MODAL CHECK-IN ---
+// Función auxiliar para la advertencia de Walk-in
+async function confirmarIngresoManual(hab, conflicto) {
+    if (conflicto) {
+        const confirm = await Swal.fire({
+            title: '¿Está seguro?',
+            text: "Esta habitación está reservada para hoy. Si continúa, el huésped con reserva no tendrá habitación disponible.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ingresar manual',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#d33'
+        });
+        if (!confirm.isConfirmed) return;
+    }
+    abrirModalCheckIn(hab, null, { huesped: "", documento: "", fechaSalida: getHoyISO() });
+}
+
+// --- 3. MODAL CHECK-IN (AJUSTADO PARA MANUAL Y RESERVA) ---
 async function abrirModalCheckIn(hab, resId, rData) {
+    const esManual = resId === null;
+
     Swal.fire({
-        title: `<span style="font-family: 'Playfair Display', serif; color: #5a1914;">Check-in: Hab. ${hab.numero}</span>`,
+        title: `<span style="font-family: 'Playfair Display', serif; color: #5a1914;">${esManual ? 'Check-in Directo' : 'Check-in Reserva'}: Hab. ${hab.numero}</span>`,
         width: '700px',
         html: `
             <div style="text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 10px; font-family: 'Lato', sans-serif;">
                 <div>
                     <label style="font-size: 11px; font-weight: bold;">HUÉSPED</label>
-                    <input class="swal2-input" style="width:100%; margin:5px 0;" value="${rData.huesped}" readonly>
+                    <input id="swal-huesped" class="swal2-input" style="width:100%; margin:5px 0;" value="${rData.huesped}" ${!esManual ? 'readonly' : ''} placeholder="Nombre del huésped">
                 </div>
                 <div>
                     <label style="font-size: 11px; font-weight: bold;">HABITACIÓN</label>
@@ -93,16 +125,42 @@ async function abrirModalCheckIn(hab, resId, rData) {
         confirmButtonText: 'CONFIRMAR ENTRADA',
         confirmButtonColor: '#5a1914',
         showCancelButton: true,
+        preConfirm: () => {
+            const h = document.getElementById('swal-huesped').value;
+            const d = document.getElementById('swal-doc').value;
+            const o = document.getElementById('swal-out').value;
+            if (!h || !o) return Swal.showValidationMessage('Huésped y Fecha de Salida son obligatorios');
+            return { h, d, o };
+        }
     }).then(async (result) => {
         if (result.isConfirmed) {
-            await updateDoc(doc(db, "reservas", resId), {
-                estado: "checkin",
-                documento: document.getElementById('swal-doc').value,
-                fechaSalida: document.getElementById('swal-out').value,
-                consumo: 0,
-                detallesConsumo: [],
-                fechaCheckInReal: new Date().toISOString()
-            });
+            const { h, d, o } = result.value;
+            
+            if (esManual) {
+                // Crear nueva reserva directa
+                await addDoc(collection(db, "reservas"), {
+                    huesped: h,
+                    documento: d,
+                    habitacion: hab.numero.toString(),
+                    fechaIngreso: getHoyISO(),
+                    fechaSalida: o,
+                    estado: "checkin",
+                    consumo: 0,
+                    detallesConsumo: [],
+                    fechaCheckInReal: new Date().toISOString()
+                });
+            } else {
+                // Actualizar reserva existente
+                await updateDoc(doc(db, "reservas", resId), {
+                    estado: "checkin",
+                    documento: d,
+                    fechaSalida: o,
+                    consumo: 0,
+                    detallesConsumo: [],
+                    fechaCheckInReal: new Date().toISOString()
+                });
+            }
+            
             await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
             Swal.fire('¡Éxito!', 'Habitación ocupada correctamente.', 'success');
         }
@@ -179,7 +237,6 @@ async function abrirModalOcupada(hab) {
 // --- 5. FUNCIÓN CHECK-OUT AUTOMÁTICO ---
 async function procesarCheckOutAutomatico(resId, habId, habNumero, totalExtras, rData) {
     const ahora = new Date();
-    // Tomamos la fecha de salida prevista y asumimos las 12:00 PM como límite
     const fechaSalidaPrevista = new Date(`${rData.fechaSalida}T12:00:00`);
     
     let estadoAuto = "Libre";
@@ -189,7 +246,7 @@ async function procesarCheckOutAutomatico(resId, habId, habNumero, totalExtras, 
         estadoAuto = "Early Check-out";
         subMensaje = "Salida anticipada detectada.";
     } else {
-        const margen = new Date(fechaSalidaPrevista.getTime() + (60 * 60 * 1000)); // 1 hora de margen
+        const margen = new Date(fechaSalidaPrevista.getTime() + (60 * 60 * 1000));
         if (ahora > margen) {
             estadoAuto = "Late Check-out";
             subMensaje = "Salida después del horario límite.";
@@ -273,7 +330,6 @@ function cargarHabitaciones() {
         habGrid.innerHTML = '';
         let libres = 0, ocupadas = 0;
         
-        // Buscamos reservas para el indicador visual
         const qReservasHoy = query(collection(db, "reservas"), where("fechaIngreso", "==", hoy), where("estado", "==", "reservado"));
         const snapReservas = await getDocs(qReservasHoy);
         const habsReservadasHoy = snapReservas.docs.map(d => d.data().habitacion);
@@ -288,7 +344,6 @@ function cargarHabitaciones() {
             if (estadoHab === "Libre") libres++; else ocupadas++;
 
             const card = document.createElement('div');
-            // Formatear clase CSS para estados con espacios
             card.className = `hab-card ${estadoHab.toLowerCase().replace(/\s+/g, '-')}`;
             
             card.innerHTML = `

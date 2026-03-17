@@ -14,6 +14,7 @@ const inputCheckOut = document.getElementById("resCheckOut");
 const inputTotal = document.getElementById("resTotal");
 const inputAdelanto = document.getElementById("resAdelanto");
 const inputDiferencia = document.getElementById("resDiferencia");
+const inputDocDNI = document.getElementById("resDoc"); // Referencia para autocompletado
 
 // Nuevas referencias Moneda/TC
 const selectMoneda = document.getElementById("resMoneda");
@@ -21,6 +22,61 @@ const inputTipoCambio = document.getElementById("resTipoCambio");
 
 let editId = null;
 let listaReservasGlobal = [];
+
+// --- NUEVA FUNCIÓN: SINCRONIZAR PERFIL DE HUÉSPED ---
+const sincronizarPerfilHuesped = async (datos) => {
+    try {
+        const huespedesRef = collection(db, "huespedes");
+        const q = query(huespedesRef, where("documento", "==", datos.doc));
+        const snap = await getDocs(q);
+
+        const infoHuesped = {
+            nombre: datos.huesped,
+            documento: datos.doc,
+            fechaNacimiento: datos.nacimiento || "",
+            nacionalidad: datos.nacionalidad || "",
+            telefono: datos.telefono || "",
+            correo: datos.correo || "",
+            ultimaVisita: new Date().toISOString()
+        };
+
+        if (snap.empty) {
+            infoHuesped.fechaRegistro = new Date().toISOString();
+            await addDoc(huespedesRef, infoHuesped);
+        } else {
+            const docId = snap.docs[0].id;
+            await updateDoc(doc(db, "huespedes", docId), infoHuesped);
+        }
+    } catch (error) {
+        console.error("Error sincronizando huésped:", error);
+    }
+};
+
+// --- NUEVA FUNCIÓN: AUTOCOMPLETADO POR DNI ---
+inputDocDNI.addEventListener("blur", async () => {
+    const dni = inputDocDNI.value.trim();
+    if (dni.length < 5) return;
+
+    try {
+        const q = query(collection(db, "huespedes"), where("documento", "==", dni));
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+            const datos = snap.docs[0].data();
+            document.getElementById("resHuesped").value = datos.nombre || "";
+            document.getElementById("resNacimiento").value = datos.fechaNacimiento || "";
+            document.getElementById("resNacionalidad").value = datos.nacionalidad || "";
+            document.getElementById("resTelefono").value = datos.telefono || "";
+            document.getElementById("resCorreo").value = datos.correo || "";
+
+            Swal.fire({
+                toast: true, position: 'top-end', icon: 'info',
+                title: `Huésped frecuente: ${datos.nombre}`,
+                showConfirmButton: false, timer: 2000
+            });
+        }
+    } catch (e) { console.error("Error buscando huésped:", e); }
+});
 
 // --- 1. CARGAR HABITACIONES ---
 onSnapshot(collection(db, "habitaciones"), (snapshot) => {
@@ -42,7 +98,6 @@ const calcularMontos = () => {
     const tc = parseFloat(inputTipoCambio.value) || 1;
     const moneda = selectMoneda.value;
 
-    // Si es dólares, convertimos la tarifa base a soles para el cálculo total
     if (moneda === "USD" && tc > 0) {
         tarifa = tarifa * tc;
     }
@@ -59,12 +114,10 @@ const calcularMontos = () => {
     inputDiferencia.value = (total - adelantoMonto).toFixed(2);
 };
 
-// Listeners para recálculo
 [inputTarifa, inputCheckIn, inputCheckOut, inputAdelanto, inputTotal, inputTipoCambio, selectMoneda].forEach(el => {
     el.addEventListener("input", calcularMontos);
 });
 
-// Lógica para habilitar/deshabilitar T.C. según moneda
 selectMoneda.addEventListener("change", () => {
     if (selectMoneda.value === "PEN") {
         inputTipoCambio.value = "";
@@ -77,7 +130,6 @@ selectMoneda.addEventListener("change", () => {
     calcularMontos();
 });
 
-// --- FUNCIÓN PARA CONTAR POR MEDIO ---
 const actualizarContadores = (reservas) => {
     const conteo = { booking: 0, airbnb: 0, directas: 0, personal: 0, expedia: 0, dayuse: 0 };
     reservas.forEach(r => {
@@ -85,7 +137,7 @@ const actualizarContadores = (reservas) => {
         if (conteo.hasOwnProperty(m)) conteo[m]++;
     });
     Object.keys(conteo).forEach(key => {
-        const el = document.getElementById(`stat-${key}`); // Ajustado al ID de tu HTML
+        const el = document.getElementById(`stat-${key}`);
         if (el) el.textContent = conteo[key];
     });
 };
@@ -160,6 +212,10 @@ form.addEventListener("submit", async (e) => {
             await addDoc(collection(db, "reservas"), reservaData);
             Swal.fire({ title: "Éxito", icon: "success" });
         }
+        
+        // Sincronizar con la colección de huéspedes
+        await sincronizarPerfilHuesped(reservaData);
+        
         cerrarModal();
     } catch (error) {
         console.error(error);
@@ -203,13 +259,11 @@ window.prepararEdicion = async (id) => {
         editId = id;
         document.getElementById("modalTitle").textContent = "Editar Reserva";
         
-        // Llenado automático de campos
         Object.keys(res).forEach(key => {
             const el = document.getElementById(`res${key.charAt(0).toUpperCase() + key.slice(1)}`);
             if (el) el.value = res[key];
         });
 
-        // Caso especial para habilitar/deshabilitar TC en edición
         if(res.moneda === "PEN") {
             inputTipoCambio.disabled = true;
             inputTipoCambio.style.background = "#f1f5f9";
@@ -247,7 +301,7 @@ const cerrarModal = () => {
     modal.classList.remove("active"); 
     form.reset(); 
     editId = null;
-    inputTipoCambio.disabled = true; // Resetear estado de TC
+    inputTipoCambio.disabled = true;
 };
 
 document.querySelector(".close-modal").onclick = cerrarModal;
