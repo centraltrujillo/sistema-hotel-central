@@ -1,4 +1,4 @@
-/* --- VARIABLES LOCALES (Por si no cargan de colors.css) --- */
+/* --- VARIABLES LOCALES --- */
 :root {
     --vino-tinto: #800020;
     --amarillo-ocre: #cc9900;
@@ -28,9 +28,7 @@
     align-items: center;
 }
 
-.btn-add {
-    background: var(--amarillo-ocre);
-    color: var(--marron-zocalo);
+.btn-add, .btn-export {
     border: none;
     padding: 10px 20px;
     border-radius: 6px;
@@ -43,38 +41,14 @@
     transition: 0.3s;
 }
 
-.btn-add:hover {
-    background: var(--vino-tinto);
-    color: white;
-    transform: translateY(-2px);
-}
+.btn-add { background: var(--amarillo-ocre); color: var(--marron-zocalo); }
+.btn-add:hover { background: var(--vino-tinto); color: white; transform: translateY(-2px); }
 
-.btn-export {
-    background-color: #107c41; /* Verde Excel */
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 6px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    transition: 0.3s;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.btn-export:hover {
-    background-color: #0a5a2f;
-    transform: translateY(-2px);
-}
+.btn-export { background-color: #107c41; color: white; font-size: 14px; }
+.btn-export:hover { background-color: #0a5a2f; transform: translateY(-2px); }
 
 /* --- ESTADÍSTICAS (KPI) --- */
-.stats-container {
-    margin-bottom: 25px;
-}
-
+.stats-container { margin-bottom: 25px; }
 .stat-card-main {
     background: var(--vino-tinto);
     color: white;
@@ -87,7 +61,6 @@
     min-width: 320px;
     border-left: 6px solid var(--amarillo-ocre);
 }
-
 .stat-card-main i { font-size: 2.5rem; color: var(--amarillo-ocre); }
 .stat-card-main span { font-size: 0.8rem; text-transform: uppercase; opacity: 0.8; }
 .stat-card-main h3 { font-size: 2rem; margin: 0; }
@@ -102,16 +75,8 @@
     border-radius: 8px;
     border: 1px solid #eee;
 }
-
-.search-box {
-    flex: 3;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
+.search-box { flex: 3; position: relative; display: flex; align-items: center; }
 .search-box i { position: absolute; left: 15px; color: #888; }
-
 .search-box input {
     width: 100%;
     padding: 12px 15px 12px 45px;
@@ -120,24 +85,18 @@
     font-size: 15px;
     font-family: var(--font-body), sans-serif;
 }
-
 #filtroEstado {
-    flex: 1;
-    padding: 0 15px;
-    height: 48px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-weight: 600;
-    background: white;
+    flex: 1; padding: 0 15px; height: 48px;
+    border: 1px solid #ddd; border-radius: 6px;
+    font-weight: 600; background: white;
 }
 
-/* --- GRID DE TARJETAS --- */
+/* --- GRID Y TARJETAS --- */
 .huespedes-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
 }
-
 .huesped-card {
     background: white;
     padding: 20px;
@@ -162,11 +121,25 @@
     border-color: var(--amarillo-ocre);
 }
 
+/* --- EFECTO CUMPLEAÑOS --- */
+.birthday-highlight {
+    border: 2px solid #ff6b6b !important;
+    background: linear-gradient(145deg, #ffffff, #fff5f5) !important;
+}
+.birthday-ribbon {
+    position: absolute;
+    top: -10px; left: 20px;
+    background: #ff6b6b; color: white;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: bold;
+    box-shadow: 0 4px 8px rgba(255, 107, 107, 0.3);
+    z-index: 10;
+}
+
 .h-avatar {
     width: 50px; height: 50px;
     background: var(--vino-tinto);
-    color: white;
-    border-radius: 50%;
+    color: white; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 1.2rem;
 }
@@ -174,120 +147,73 @@
 .h-info h4 { margin: 0; font-size: 16px; color: var(--marron-zocalo); }
 .h-info p { margin: 2px 0; font-size: 13px; color: #64748b; }
 
-.h-actions {
-    position: absolute;
-    top: 15px; right: 15px;
-    display: flex; gap: 8px;
-}
-
+.h-actions { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; }
 .h-actions button {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    padding: 6px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    color: var(--vino-tinto);
-    transition: 0.2s;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    padding: 6px 10px; border-radius: 6px;
+    cursor: pointer; color: var(--vino-tinto); transition: 0.2s;
 }
+.h-actions button:hover { background: var(--vino-tinto); color: white; }
 
-.h-actions button:hover { 
-    background: var(--vino-tinto); 
-    color: white; 
-}
-
-/* --- BADGES DE CATEGORÍA --- */
+/* --- BADGES --- */
 .badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    margin-top: 5px;
+    display: inline-block; padding: 3px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 5px;
 }
 .badge.regular { background: #f1f5f9; color: #475569; }
 .badge.frecuente { background: #dcfce7; color: #166534; }
 .badge.vip { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
 .badge.corporativo { background: #e0f2fe; color: #075985; }
 
-/* --- MODAL Y FORMULARIO --- */
-.modal {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
-    z-index: 3000;
+/* --- PAGINACIÓN --- */
+.pagination-container {
+    display: flex;
     justify-content: center;
     align-items: center;
+    gap: 20px;
+    margin-top: 30px;
+    padding: 20px;
 }
-
-.modal-content {
+.pagination-container button {
     background: white;
+    border: 1px solid var(--vino-tinto);
+    color: var(--vino-tinto);
+    padding: 8px 16px;
     border-radius: 8px;
-    width: 90%;
-    max-width: 650px;
-    overflow: hidden;
-    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-}
-
-.modal-header {
-    background: var(--vino-tinto);
-    color: white;
-    padding: 15px 25px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.close-btn { cursor: pointer; font-size: 24px; }
-
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    padding: 25px;
-}
-
-.full-width { grid-column: span 2; }
-
-.form-group label {
-    display: block;
-    font-size: 12px;
+    cursor: pointer;
     font-weight: 700;
-    margin-bottom: 5px;
-    color: var(--marron-zocalo);
+    transition: 0.3s;
 }
+.pagination-container button:hover:not(:disabled) { background: var(--vino-tinto); color: white; }
+.pagination-container button:disabled { opacity: 0.4; cursor: not-allowed; border-color: #ccc; color: #888; }
+.pagination-container span { font-weight: 600; color: var(--marron-zocalo); font-size: 14px; }
 
-.form-group input, 
-.form-group select, 
-.form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 14px;
-    font-family: var(--font-body), sans-serif;
+/* --- MODAL Y FORMULARIO --- */
+.modal {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    z-index: 3000; justify-content: center; align-items: center;
 }
-
-/* Estado Deshabilitado (Modo Lectura) */
-.form-group input:disabled, 
-.form-group select:disabled, 
-.form-group textarea:disabled {
-    background-color: #f1f5f9;
-    color: #475569;
-    cursor: not-allowed;
-    border-color: #e2e8f0;
+.modal-content {
+    background: white; border-radius: 8px; width: 90%; max-width: 650px;
+    overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
 }
-
-.form-actions {
-    padding: 15px 25px;
-    background: #f9f9f9;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
+.modal-header {
+    background: var(--vino-tinto); color: white; padding: 15px 25px;
+    display: flex; justify-content: space-between; align-items: center;
 }
-
+.close-btn { cursor: pointer; font-size: 24px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 25px; }
+.full-width { grid-column: span 2; }
+.form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 5px; color: var(--marron-zocalo); }
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 14px; font-family: var(--font-body), sans-serif;
+}
+.form-group input:disabled, .form-group select:disabled, .form-group textarea:disabled {
+    background-color: #f1f5f9; color: #475569; cursor: not-allowed; border-color: #e2e8f0;
+}
+.form-actions { padding: 15px 25px; background: #f9f9f9; display: flex; justify-content: flex-end; gap: 10px; }
 .btn-primary { background: var(--vino-tinto); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 .btn-secondary { background: #e2e8f0; color: #475569; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 

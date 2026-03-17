@@ -38,10 +38,12 @@
                     <h2>Gestión de Huéspedes</h2>
                 </div>
                 <div class="header-buttons">
-                    <button class="btn-export" onclick="exportarHuespedesExcel()" style="background-color: #107c41; color: white; margin-right: 10px; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer;">
+                    <button class="btn-export" onclick="exportarHuespedesExcel()">
                         <i class="fa-solid fa-file-excel"></i> Exportar Excel
                     </button>
-                    <button class="btn-add" id="btnAbrirModalHuesped" onclick="abrirModalNuevo()"><i class="fa-solid fa-plus"></i> Nuevo Huésped</button>
+                    <button class="btn-add" onclick="abrirModalNuevo()">
+                        <i class="fa-solid fa-plus"></i> Nuevo Huésped
+                    </button>
                 </div>
             </div>
 
@@ -49,7 +51,7 @@
                 <div class="stat-card-main">
                     <i class="fa-solid fa-user-check"></i>
                     <div>
-                        <span>Huéspedes Totales</span>
+                        <span>Total de Huéspedes Registrados</span>
                         <h3 id="totalHuespedesHoy">0</h3>
                     </div>
                 </div>
@@ -58,7 +60,7 @@
             <div class="search-section">
                 <div class="search-box">
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="buscarHuesped" placeholder="Buscar por nombre, DNI o correo...">
+                    <input type="text" id="buscarHuesped" placeholder="Buscar por nombre o número de documento...">
                 </div>
                 <select id="filtroEstado">
                     <option value="todos">Ver Historial Completo</option>
@@ -66,8 +68,9 @@
                 </select>
             </div>
 
-            <div class="huespedes-grid" id="huespedesContainer">
-                </div>
+            <div class="huespedes-grid" id="huespedesContainer"></div>
+
+            <div id="paginacionControls" class="pagination-container"></div>
         </main>
     </div>
 
@@ -94,7 +97,7 @@
                     <div class="form-group"><label>Fecha Nacimiento</label><input type="date" id="fechaNacH"></div>
                     <div class="form-group"><label>Celular</label><input type="tel" id="celularH"></div>
                     <div class="form-group"><label>Residencia</label><input type="text" id="residenciaH"></div>
-                    <div class="form-group"><label>Correo</label><input type="email" id="emailH"></div>
+                    <div class="form-group"><label>Correo Electrónico</label><input type="email" id="emailH"></div>
                     
                     <div class="form-group">
                         <label>Categoría</label>
@@ -108,9 +111,9 @@
 
                     <div class="form-group full-width"><label>Motivo de Viaje</label><textarea id="motivoH" rows="2"></textarea></div>
                 </div>
-                <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <div class="form-actions">
                     <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-                    <button type="submit" class="btn-primary">Guardar</button>
+                    <button type="submit" class="btn-primary">Guardar Datos</button>
                 </div>
             </form>
         </div>
@@ -118,16 +121,19 @@
 
     <script type="module" src="js/huespedes.js"></script>
     <script>
-        // Función auxiliar para abrir el modal desde el botón de la página
+        // Función para resetear y abrir el modal correctamente
         function abrirModalNuevo() {
-            document.getElementById('formHuesped').reset();
+            const form = document.getElementById('formHuesped');
+            form.reset();
             document.getElementById('huespedId').value = "";
             document.getElementById('modalTitle').innerText = "Nuevo Huésped";
             
-            // Habilitar inputs por si venían de "ver detalles"
-            const inputs = document.getElementById('formHuesped').querySelectorAll('input, select, textarea');
+            // Habilitar campos (por si venían de 'ver detalles')
+            const inputs = form.querySelectorAll('input, select, textarea');
             inputs.forEach(i => i.disabled = false);
-            document.querySelector('.form-actions').style.display = 'flex';
+            
+            const actions = document.querySelector('.form-actions');
+            if (actions) actions.style.display = 'flex';
             
             document.getElementById('modalHuesped').style.display = 'flex';
         }
