@@ -7,13 +7,11 @@ import {
 
 const habGrid = document.getElementById('habGrid');
 
-// --- SEGURIDAD ---
 onAuthStateChanged(auth, (user) => {
     if (user) { cargarHabitaciones(); } 
     else { window.location.href = "index.html"; }
 });
 
-// --- UTILIDADES ---
 function getHoyISO() {
     const fecha = new Date();
     const offset = fecha.getTimezoneOffset();
@@ -21,7 +19,7 @@ function getHoyISO() {
     return ajustada.toISOString().split('T')[0];
 }
 
-// --- 1. CARGAR TABLERO DE HABITACIONES ---
+// --- 1. CARGAR TABLERO ---
 function cargarHabitaciones() {
     const qHabs = query(collection(db, "habitaciones"));
     const hoy = getHoyISO();
@@ -30,7 +28,6 @@ function cargarHabitaciones() {
         habGrid.innerHTML = '';
         let s = { l: 0, o: 0 };
 
-        // Buscamos si hay reservas que llegan hoy
         const qRes = query(collection(db, "reservas"), 
                      where("checkIn", "==", hoy), 
                      where("estado", "==", "reservada"));
@@ -55,7 +52,7 @@ function cargarHabitaciones() {
                     <p style="font-size:14px; font-weight:bold; margin:5px 0;">${hab.tipo}</p>
                     <span class="hab-badge">${est}</span>
                     ${tieneReservaHoy && est === "Libre" 
-                        ? '<p style="color:#800020; font-weight:bold; font-size:10px; margin-top:5px;">⚠️ LLEGADA HOY</p>' 
+                        ? '<p style="color:#800020; font-weight:bold; font-size:10px; margin-top:5px;">⚠️ RESERVA PARA HOY</p>' 
                         : ''}
                 </div>`;
 
@@ -66,7 +63,6 @@ function cargarHabitaciones() {
                     abrirModalCheckIn(hab);
                 }
             };
-
             habGrid.appendChild(card);
         });
 
@@ -75,9 +71,21 @@ function cargarHabitaciones() {
     });
 }
 
-// --- 2. MODAL CHECK-IN (INGRESO) ---
+// --- 2. MODAL CHECK-IN + ANTI OVERBOOKING ---
 async function abrirModalCheckIn(hab) {
     const hoy = getHoyISO();
+
+    // VALIDACIÓN ANTI-OVERBOOKING: Verificar si ya hay alguien con checkin en esta hab
+    const qCheck = query(collection(db, "reservas"), 
+                   where("habitacion", "==", hab.numero.toString()), 
+                   where("estado", "==", "checkin"));
+    const snapCheck = await getDocs(qCheck);
+
+    if (!snapCheck.empty) {
+        Swal.fire('Error', 'Esta habitación ya tiene un check-in activo en el sistema.', 'error');
+        return;
+    }
+
     const q = query(collection(db, "reservas"), 
               where("habitacion", "==", hab.numero.toString()), 
               where("checkIn", "==", hoy),
@@ -89,12 +97,10 @@ async function abrirModalCheckIn(hab) {
 
     const { value: choice } = await Swal.fire({
         title: `Check-in Hab. ${hab.numero}`,
-        text: 'Seleccione una reserva existente o registre ingreso directo',
         input: 'select',
         inputOptions: opciones,
         confirmButtonColor: '#5a1914',
-        showCancelButton: true,
-        cancelButtonText: 'Cancelar'
+        showCancelButton: true
     });
 
     if (choice) {
@@ -110,11 +116,12 @@ async function abrirModalCheckIn(hab) {
         } else {
             await updateDoc(doc(db, "reservas", choice), { estado: "checkin" });
         }
+        // CRÍTICO: Esto hace que la casita cambie a color vino
         await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
     }
 }
 
-// --- 3. MODAL GESTIÓN OCUPADA (DATOS + CONSUMOS) ---
+// --- 3. MODAL GESTIÓN (DATOS COMPLETOS - ACTUALIZADO) ---
 async function abrirModalGestionOcupada(hab) {
     const qRes = query(collection(db, "reservas"), 
                  where("habitacion", "==", hab.numero.toString()), 
@@ -124,115 +131,225 @@ async function abrirModalGestionOcupada(hab) {
     if (snapRes.empty) return;
 
     const resDoc = snapRes.docs[0];
-    const rData = resDoc.data();
+    const r = resDoc.data(); 
 
-    // Consultar consumos vinculados a esta estadía
+    // Consultar consumos
     const qCons = query(collection(db, "consumos"), where("idReserva", "==", resDoc.id));
     const snapCons = await getDocs(qCons);
-    let totalConsumos = 0;
-    let tablaConsumos = '<table style="width:100%; font-size:13px; margin-top:10px; border-collapse:collapse;">';
+    let totalCons = 0;
+    let tablaCons = '';
 
     snapCons.forEach(c => {
         const item = c.data();
-        totalConsumos += parseFloat(item.precio);
-        tablaConsumos += `
-            <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:5px;">${item.descripcion}</td>
-                <td style="text-align:right;">S/ ${parseFloat(item.precio).toFixed(2)}</td>
-            </tr>`;
+        totalCons += parseFloat(item.precio);
+        // Usamos la clase consumo-row del CSS
+        tablaCons += `
+            <div class="consumo-row">
+                <span>${item.descripcion}</span>
+                <b>S/ ${parseFloat(item.precio).toFixed(2)}</b>
+            </div>`;
     });
-    tablaConsumos += '</table>';
 
     Swal.fire({
-        title: `<span style="color:#800020">Habitación ${hab.numero}</span>`,
-        width: '500px',
+        title: `<span style="font-family: var(--font-titles); color: var(--vino-tinto);">Habitación ${hab.numero}</span>`,
+        width: '750px', 
         html: `
-            <div style="text-align:left; font-family:'Lato', sans-serif;">
-                <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:15px;">
-                    <p style="margin:2px 0;"><b>Huésped:</b> ${rData.huesped}</p>
-                    <p style="margin:2px 0;"><b>Ingreso:</b> ${rData.checkIn}</p>
-                    <p style="margin:2px 0;"><b>Medio:</b> ${rData.medio || 'Directo'}</p>
+            <div class="cuenta-modal-container">
+                <div class="info-huesped-grid">
+                    <div>
+                        <h4>Huésped</h4>
+                        <p><b>Nombre:</b> ${r.huesped}</p>
+                        <p><b>Doc:</b> ${r.doc || 'N/A'}</p>
+                        <p><b>Tel:</b> ${r.telefono || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <h4>Estadía</h4>
+                        <p><b>Ingreso:</b> ${r.checkIn}</p>
+                        <p><b>Salida:</b> ${r.checkOut}</p>
+                        <p><b>Pax:</b> ${r.personas || '1'} | 🚗: ${r.cochera || 'No'}</p>
+                    </div>
                 </div>
-                <h4 style="margin:0; border-bottom:2px solid #5a1914; padding-bottom:5px;">🛒 Consumos Extra</h4>
-                ${snapCons.empty ? '<p style="font-size:12px; color:#666;">No hay consumos registrados.</p>' : tablaConsumos}
-                <div style="text-align:right; margin-top:10px; font-weight:bold; color:#2e7d32;">
-                    Total Extras: S/ ${totalConsumos.toFixed(2)}
+
+                <h4 style="font-family: var(--font-titles); margin-top: 20px; color: var(--marron-zocalo);">🛒 Consumos Extra</h4>
+                
+                <div class="consumos-scroll-area">
+                    ${tablaCons || '<p style="text-align:center; color:#94a3b8; padding: 20px;">No hay consumos registrados aún.</p>'}
                 </div>
-                <button id="btnAddConsumo" style="width:100%; margin-top:15px; background:#2e7d32; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer;">
-                    + AGREGAR CONSUMO
+                
+                <div class="liquidacion-footer">
+                    <span>TOTAL EXTRAS:</span>
+                    <span class="monto-total">S/ ${totalCons.toFixed(2)}</span>
+                </div>
+
+                <button id="btnAddConsumo" class="btn-dorado-full">
+                    + REGISTRAR NUEVO CONSUMO
                 </button>
             </div>
         `,
         showDenyButton: true,
-        denyButtonText: '🏁 REALIZAR CHECK-OUT',
-        denyButtonColor: '#800020',
-        confirmButtonText: 'Cerrar',
-        confirmButtonColor: '#64748b',
+        denyButtonText: '🏁 FINALIZAR ESTADÍA (CHECK-OUT)',
+        confirmButtonText: 'CERRAR VENTANA',
+        confirmButtonColor: 'var(--gris-antracita)',
+        customClass: {
+            denyButton: 'btn-checkout-final' // Clase vino tinto para el botón de salida
+        },
         didOpen: () => {
             document.getElementById('btnAddConsumo').onclick = () => agregarConsumo(resDoc.id, hab);
         }
     }).then(result => {
-        if (result.isDenied) {
-            realizarCheckOut(resDoc.id, hab, rData, totalConsumos);
-        }
+        if (result.isDenied) realizarCheckOut(resDoc.id, hab, r, totalCons);
     });
 }
 
-// --- 4. AGREGAR CONSUMO ---
+// --- 4. AGREGAR CONSUMO (Igual) ---
 async function agregarConsumo(resId, hab) {
-    const { value: formValues } = await Swal.fire({
-        title: 'Registrar Consumo',
-        html:
-            '<input id="c-desc" class="swal2-input" placeholder="Descripción">' +
-            '<input id="c-price" class="swal2-input" type="number" placeholder="Precio S/">',
-        showCancelButton: true,
-        confirmButtonColor: '#2e7d32',
-        preConfirm: () => {
-            const d = document.getElementById('c-desc').value;
-            const p = document.getElementById('c-price').value;
-            if (!d || !p) return Swal.showValidationMessage('Complete ambos campos');
-            return { descripcion: d, precio: parseFloat(p) };
-        }
+    const { value: f } = await Swal.fire({
+        title: 'Nuevo Consumo',
+        html: '<input id="c-desc" class="swal2-input" placeholder="Qué compró?"><input id="c-price" class="swal2-input" type="number" placeholder="Precio S/">',
+        preConfirm: () => ({ d: document.getElementById('c-desc').value, p: document.getElementById('c-price').value })
     });
-
-    if (formValues) {
-        await addDoc(collection(db, "consumos"), {
-            idReserva: resId,
-            descripcion: formValues.descripcion,
-            precio: formValues.precio,
-            fecha: new Date().toISOString()
-        });
-        abrirModalGestionOcupada(hab); // Refrescar
+    if (f && f.d && f.p) {
+        await addDoc(collection(db, "consumos"), { idReserva: resId, descripcion: f.d, precio: parseFloat(f.p), fecha: new Date().toISOString() });
+        abrirModalGestionOcupada(hab);
     }
 }
 
-// --- 5. CHECK-OUT Y LIMPIEZA ---
+// --- 5. CHECK-OUT ---
 async function realizarCheckOut(resId, hab, rData, totalConsumos) {
-    const subtotalHospedaje = parseFloat(rData.total) || 0;
-    const granTotal = subtotalHospedaje + totalConsumos;
+    const subHosp = parseFloat(rData.total) || 0;
+    const granTotal = subHosp + totalConsumos;
 
-    const { isConfirmed } = await Swal.fire({
-        title: 'Confirmar Salida',
+    const qCons = query(collection(db, "consumos"), where("idReserva", "==", resId));
+    const snapCons = await getDocs(qCons);
+    const listaConsumos = snapCons.docs.map(d => d.data());
+
+    const { value: metodo, isConfirmed } = await Swal.fire({
+        title: `<span style="font-family: var(--font-titles); color: var(--vino-tinto);">Finalizar Estadía</span>`,
         html: `
-            <div style="text-align:left; background:#fff5f5; padding:15px; border-radius:10px; border:1px solid #feb2b2;">
-                <p><b>Hospedaje:</b> S/ ${subtotalHospedaje.toFixed(2)}</p>
-                <p><b>Extras:</b> S/ ${totalConsumos.toFixed(2)}</p>
-                <hr>
-                <h2 style="margin:0; color:#800020; text-align:center;">Total: S/ ${granTotal.toFixed(2)}</h2>
-            </div>
-            <p style="font-size:12px; margin-top:10px; color:#666;">Al confirmar, la habitación quedará LIBRE.</p>
-        `,
-        icon: 'warning',
+            <div class="checkout-container">
+                <div class="checkout-resumen">
+                    <p>Hospedaje: <b>S/ ${subHosp.toFixed(2)}</b></p>
+                    <p>Extras: <b>S/ ${totalConsumos.toFixed(2)}</b></p>
+                    <span class="checkout-total-destacado">TOTAL: S/ ${granTotal.toFixed(2)}</span>
+                </div>
+                
+                <label class="checkout-select-label">Método de Pago:</label>
+                <select id="metodoPago" class="swal2-select custom-select-pago">
+                    <option value="Efectivo">💵 Efectivo</option>
+                    <option value="Tarjeta">💳 Tarjeta (Visa/MC)</option>
+                    <option value="Transferencia">📱 Yape / Plin / Transferencia</option>
+                </select>
+            </div>`,
+        icon: 'info',
         showCancelButton: true,
-        confirmButtonText: 'PAGAR Y LIBERAR',
-        confirmButtonColor: '#2e7d32'
+        confirmButtonText: '✅ PAGAR E IMPRIMIR',
+        showDenyButton: true,
+        denyButtonText: 'SÓLO REGISTRAR PAGO',
+        customClass: {
+            confirmButton: 'btn-pagar-imprimir',
+            denyButton: 'btn-solo-pagar'
+        },
+        preConfirm: () => document.getElementById('metodoPago').value
     });
 
-    if (isConfirmed) {
-        // Marcamos reserva como finalizada y liberamos habitación
-        await updateDoc(doc(db, "reservas", resId), { estado: "finalizado" });
-        await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Libre" });
-        
-        Swal.fire('¡Check-out exitoso!', `La habitación ${hab.numero} está lista.`, 'success');
+
+    if (isConfirmed || Swal.getDenyButton().classList.contains('swal2-deny')) {
+        try {
+            // A. REGISTRO EN COLECCIÓN DE PAGOS 
+            await addDoc(collection(db, "pagos"), {
+                idReserva: resId,
+                huesped: rData.huesped,
+                habitacion: hab.numero,
+                montoHospedaje: subHosp,
+                montoExtras: totalConsumos,
+                montoTotal: granTotal,
+                metodoPago: metodo || "No especificado",
+                fechaPago: new Date() 
+            });
+
+            // B. ¿IMPRIMIR TICKET? (Solo si eligió el botón verde)
+            if (isConfirmed) {
+                imprimirTicket(rData, listaConsumos, totalConsumos, granTotal);
+            }
+
+            // C. ACTUALIZAR ESTADOS EN FIREBASE
+            await updateDoc(doc(db, "reservas", resId), { estado: "finalizado" });
+            await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Libre" });
+
+            Swal.fire('¡Check-out Exitoso!', 'Ingreso guardado y habitación liberada.', 'success');
+
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'Hubo un problema al procesar el pago.', 'error');
+        }
     }
+}
+
+function imprimirTicket(rData, consumos, totalConsumos, granTotal) {
+    const ventana = window.open('', '_blank');
+    const fechaActual = new Date().toLocaleString();
+    
+    // Generar filas de consumos
+    let filasConsumos = consumos.map(c => `
+        <tr>
+            <td style="padding: 5px 0;">${c.descripcion}</td>
+            <td style="text-align: right;">S/ ${parseFloat(c.precio).toFixed(2)}</td>
+        </tr>
+    `).join('');
+
+    ventana.document.write(`
+        <html>
+        <head>
+            <title>Ticket de Pago - Hab ${rData.habitacion}</title>
+            <style>
+                body { font-family: 'Courier New', Courier, monospace; width: 300px; margin: 0 auto; padding: 20px; color: #000; }
+                .text-center { text-align: center; }
+                .divider { border-top: 1px dashed #000; margin: 10px 0; }
+                table { width: 100%; font-size: 12px; }
+                .total { font-size: 16px; font-weight: bold; }
+                @media print { .no-print { display: none; } }
+            </style>
+        </head>
+        <body onload="window.print(); window.close();">
+            <div class="text-center">
+                <h2 style="margin:0;">HOTEL CENTRAL</h2>
+                <p style="font-size:10px;">RUC: 10XXXXXXXXX<br>Calle Principal 123 - Trujillo</p>
+            </div>
+            
+            <div class="divider"></div>
+            <p style="font-size:12px;">
+                <b>Ticket de Salida</b><br>
+                Fecha: ${fechaActual}<br>
+                Huésped: ${rData.huesped}<br>
+                Habitación: ${rData.habitacion}
+            </p>
+            <div class="divider"></div>
+            
+            <table>
+                <thead>
+                    <tr><th align="left">Concepto</th><th align="right">Importe</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 5px 0;">Estadía (${rData.checkIn} al ${rData.checkOut})</td>
+                        <td style="text-align: right;">S/ ${parseFloat(rData.total).toFixed(2)}</td>
+                    </tr>
+                    ${filasConsumos}
+                </tbody>
+            </table>
+            
+            <div class="divider"></div>
+            <table>
+                <tr>
+                    <td class="total">TOTAL A PAGAR</td>
+                    <td class="total" align="right">S/ ${granTotal.toFixed(2)}</td>
+                </tr>
+            </table>
+            
+            <div class="divider"></div>
+            <p class="text-center" style="font-size:10px;">¡Gracias por su preferencia!<br>Vuelva pronto.</p>
+        </body>
+        </html>
+    `);
+    ventana.document.close();
 }

@@ -1,5 +1,8 @@
 import { db } from "./firebaseconfig.js";
-import { collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+// 1. IMPORTACIONES CORRECTAS DESDE EL INICIO
+import { 
+    collection, onSnapshot, doc, updateDoc, query, where, getDocs 
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
@@ -23,8 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const resId = info.event.id;
             if (!res) return;
 
-            const esCheckIn = res.estado === 'checkin';
-            // Variable para el símbolo de moneda dinámico
+            const esCheckIn = res.estado === 'checkin' || res.estado === 'finalizado';
             const simbolo = res.moneda === 'USD' ? '$' : 'S/';
 
             Swal.fire({
@@ -32,7 +34,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 width: '850px',
                 html: `
                     <div style="text-align: left; font-family: 'Lato', sans-serif; border-top: 3px solid #d4a017; padding-top: 15px;">
-                        
                         <div style="background: #fffaf0; padding: 15px; border-radius: 10px; border: 1px solid #fef3c7; margin-bottom: 15px;">
                             <h4 style="margin: 0 0 10px 0; color: #800020; border-bottom: 1px solid #fde68a; padding-bottom: 5px;">👤 Información del Huésped</h4>
                             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
@@ -50,33 +51,19 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <p style="margin:2px 0;"><b>Habitación:</b> <span style="background:#800020; color:white; padding:2px 8px; border-radius:4px;">${res.habitacion}</span></p>
                                 <p style="margin:2px 0;"><b>Medio:</b> ${res.medio?.toUpperCase()}</p>
                                 <p style="margin:2px 0;"><b>Pax:</b> ${res.personas || '1'}</p>
-                                <p style="margin:2px 0;"><b>Desayuno:</b> ${res.desayuno || 'N/A'}</p>
                             </div>
                             <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
                                 <h4 style="margin: 0 0 10px 0; color: #1e293b;">📅 Fechas y Horas</h4>
                                 <p style="margin:2px 0;"><b>Check-In:</b> ${res.checkIn} ${res.early ? '('+res.early+')' : ''}</p>
                                 <p style="margin:2px 0;"><b>Check-Out:</b> ${res.checkOut} ${res.late ? '('+res.late+')' : ''}</p>
                                 <p style="margin:2px 0;"><b>Cochera:</b> ${res.cochera || 'NO'}</p>
-                                <p style="margin:2px 0;"><b>Traslado:</b> ${res.traslado || 'N/A'}</p>
                             </div>
                         </div>
 
                         <div style="background: #f0fdf4; padding: 15px; border-radius: 10px; border: 1px solid #dcfce7; margin-bottom: 15px;">
                             <h4 style="margin: 0 0 10px 0; color: #166534;">💰 Liquidación de Cuenta</h4>
-                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                                <p style="margin:2px 0;"><b>Moneda:</b> ${res.moneda === 'USD' ? 'Dólares ($)' : 'Soles (S/)'}</p>
-                                <p style="margin:2px 0;"><b>Tarifa Diaria:</b> ${simbolo} ${res.tarifa}</p>
-                                <p style="margin:2px 0;"><b>Tipo de Cambio:</b> ${res.tipoCambio ? res.tipoCambio : 'N/A'}</p>
-                                <p style="margin:2px 0;"><b>Total Alojamiento:</b> ${simbolo} ${res.total}</p>
-                            </div>
-                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #bbf7d0;">
-                                <p style="margin:2px 0;"><b>Adelanto:</b> ${res.adelanto || '0.00'}</p>
-                                <p style="margin:2px 0; font-size: 1.1em; color: #dc2626;"><b>Diferencia Pendiente:</b> S/ ${res.diferencia || '0.00'}</p>
-                            </div>
-                        </div>
-
-                        <div style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 10px;">
-                            Recepcionado por: ${res.recepcion} | Confirmado por: ${res.recepcionconfi}
+                            <p style="margin:2px 0;"><b>Total:</b> ${simbolo} ${res.total}</p>
+                            <p style="margin:2px 0; color: #dc2626;"><b>Pendiente:</b> S/ ${res.diferencia || '0.00'}</p>
                         </div>
 
                         <div style="margin-top: 20px; display: flex; gap: 10px;">
@@ -85,10 +72,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                     🚀 REALIZAR CHECK-IN
                                 </button>` : 
                                 `<div style="flex: 1; text-align: center; padding: 12px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: bold;">
-                                    ✅ HUÉSPED EN HABITACIÓN
+                                    ${res.estado === 'checkin' ? '✅ HUÉSPED EN CASA' : '🏁 ESTADÍA FINALIZADA'}
                                 </div>`
                             }
-                            <button onclick="Swal.close()" class="swal2-styled" style="background-color: #64748b; flex: 1; border: none; padding: 12px; border-radius: 8px; color: white; cursor: pointer;">CERRAR DETALLES</button>
+                            <button onclick="Swal.close()" class="swal2-styled" style="background-color: #64748b; flex: 1; border: none; padding: 12px; border-radius: 8px; color: white; cursor: pointer;">CERRAR</button>
                         </div>
                     </div>
                 `,
@@ -97,9 +84,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     const btn = document.getElementById('btnCheckIn');
                     if(btn) {
                         btn.addEventListener('click', async () => {
-                            const ref = doc(db, "reservas", resId);
-                            await updateDoc(ref, { estado: "checkin" });
-                            Swal.close();
+                            try {
+                                // 1. Actualizar Reserva
+                                await updateDoc(doc(db, "reservas", resId), { estado: "checkin" });
+
+                                // 2. Actualizar Habitación (Uso de Number para evitar fallos)
+                                const qHab = query(collection(db, "habitaciones"), where("numero", "==", Number(res.habitacion)));
+                                const snapHab = await getDocs(qHab);
+                                
+                                if (!snapHab.empty) {
+                                    await updateDoc(doc(db, "habitaciones", snapHab.docs[0].id), { estado: "Ocupada" });
+                                }
+
+                                Swal.fire('¡Éxito!', 'Check-in registrado.', 'success');
+                            } catch (e) {
+                                console.error(e);
+                                Swal.fire('Error', 'No se pudo actualizar.', 'error');
+                            }
                         });
                     }
                 }
@@ -109,30 +110,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     calendar.render();
 
-    onSnapshot(collection(db, "reservas"), (snapRes) => {
-        const eventosFull = [];
-        snapRes.docs.forEach(doc => {
-            const r = doc.data();
-            const esCheckIn = r.estado === 'checkin';
-            const medioKey = r.medio?.toLowerCase().trim();
+    // --- ESCUCHADOR EN TIEMPO REAL ---
+    onSnapshot(collection(db, "reservas"), (snapshot) => {
+        const eventos = [];
+        snapshot.docs.forEach(docSnap => {
+            const r = docSnap.data();
+            const esPasado = (r.estado === 'checkin' || r.estado === 'finalizado');
             
-            const tituloEvento = esCheckIn 
-                ? `[Hab. ${r.habitacion}] ✅ ${r.huesped}` 
-                : `Hab. ${r.habitacion} - ${r.huesped}`;
+            let titulo = `Hab. ${r.habitacion} - ${r.huesped}`;
+            if(r.estado === 'checkin') titulo = `✅ [Hab. ${r.habitacion}] ${r.huesped}`;
+            if(r.estado === 'finalizado') titulo = `🏁 [Hab. ${r.habitacion}] ${r.huesped}`;
 
-            eventosFull.push({
-                id: doc.id,
-                title: tituloEvento,
+            eventos.push({
+                id: docSnap.id,
+                title: titulo,
                 start: r.early ? `${r.checkIn}T${r.early}:00` : r.checkIn,
                 end: r.late ? `${r.checkOut}T${r.late}:00` : r.checkOut,
-                backgroundColor: esCheckIn ? '#ffffff' : (coloresMedio[medioKey] || '#800020'),
-                textColor: esCheckIn ? '#000000' : '#ffffff',
-                borderColor: esCheckIn ? '#cbd5e1' : 'transparent',
-                extendedProps: { dataReserva: { ...r, id: doc.id } }
+                backgroundColor: esPasado ? '#ffffff' : (coloresMedio[r.medio?.toLowerCase().trim()] || '#800020'),
+                textColor: esPasado ? '#475569' : '#ffffff',
+                borderColor: esPasado ? '#cbd5e1' : 'transparent',
+                extendedProps: { dataReserva: { ...r, id: docSnap.id } }
             });
         });
-
         calendar.removeAllEvents();
-        calendar.addEventSource(eventosFull);
+        calendar.addEventSource(eventos);
     });
 });

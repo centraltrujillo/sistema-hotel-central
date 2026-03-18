@@ -1,207 +1,244 @@
-/* ============================================================
-   1. ESTRUCTURA GLOBAL (VISTA DE PÁJARO - SIN SCROLL)
-   ============================================================ */
-html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow: hidden; 
-    background-color: #f8fafc;
-    font-family: 'Lato', sans-serif;
-}
-
-.main-content {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-.header-flex {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
-    flex-shrink: 0;
-}
-
-/* ============================================================
-   2. ESTADÍSTICAS Y GRID (13 HABITACIONES)
-   ============================================================ */
-.hab-stats {
+/* --- 1. CONTENEDOR PRINCIPAL --- */
+#habGrid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    margin-bottom: 20px;
-    flex-shrink: 0;
-}
-
-.stat-card-mini {
-    background: white;
-    padding: 10px;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-    text-align: center;
-    border: 1px solid #e2e8f0;
-}
-
-.stat-card-mini span {
-    display: block;
-    font-size: 11px;
-    color: #94a3b8;
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-.stat-card-mini h3 {
-    margin: 5px 0 0 0;
-    font-size: 22px;
-    color: #1e293b;
-}
-
-.hab-grid {
-    display: grid;
-    /* Ajuste dinámico para que entren las 13 sin scroll */
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    flex-grow: 1;
-    align-content: start;
-}
-
-/* ============================================================
-   3. LA "CASITA" (TARJETA DE HABITACIÓN)
-   ============================================================ */
-.hab-card {
-    background: #fff;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--bg-overlay);
     border-radius: 15px;
-    padding: 20px 15px;
-    text-align: center;
-    border: 1px solid #e2e8f0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- 2. TARJETA DE HABITACIÓN (La "Casita") --- */
+.hab-card {
+    background-color: var(--blanco);
+    border-radius: 12px;
+    border-bottom: 5px solid #ccc; /* Color base antes del estado */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
     cursor: pointer;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    position: relative;
+    min-height: 140px;
 }
 
 .hab-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.15);
 }
 
-.hab-card::before {
-    content: '\f015'; 
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    font-size: 50px;
-    margin-bottom: 10px;
-    transition: color 0.3s;
-}
-
-/* Estados Visuales */
-.hab-card.libre::before { color: #10b981; }
-.hab-card.ocupada::before { color: #800020; }
-
-.hab-card.libre { border-top: 6px solid #10b981; }
-.hab-card.ocupada { border-top: 6px solid #800020; }
-
+/* --- 3. CABECERA (Número de Habitación) --- */
 .hab-number {
-    font-family: 'Playfair Display', serif;
-    font-size: 28px;
-    font-weight: 800;
-    color: #1e293b;
+    background-color: var(--gris-antracita);
+    color: var(--blanco);
+    font-family: var(--font-titles);
+    font-size: 20px; /* Tamaño de logo/título según tu estándar */
+    padding: 8px;
+    text-align: center;
+    font-weight: bold;
 }
 
+/* --- 4. CUERPO DE LA TARJETA --- */
+.hab-body {
+    padding: var(--spacing-sm);
+    text-align: center;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-family: var(--font-main);
+}
+
+.hab-body p {
+    font-size: 15px; /* Tamaño base profesional */
+    color: var(--marron-zocalo);
+    margin: 4px 0;
+}
+
+/* --- 5. BADGES DE ESTADO (KPIs internos) --- */
 .hab-badge {
-    margin-top: 10px;
-    padding: 4px 12px;
+    display: inline-block;
+    padding: 4px 10px;
     border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 12px; /* Tamaño para etiquetas KPI */
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-top: 5px;
+}
+
+/* --- 6. DINÁMICA DE COLORES POR ESTADO --- */
+
+/* LIBRE (Verde Colonial / Limpio) */
+.hab-card.libre {
+    border-bottom-color: #2e7d32;
+}
+.hab-card.libre .hab-badge {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* OCUPADA (Tu Vino Tinto de Identidad) */
+.hab-card.ocupada {
+    border-bottom-color: var(--vino-tinto);
+}
+.hab-card.ocupada .hab-number {
+    background-color: var(--vino-tinto);
+}
+.hab-card.ocupada .hab-badge {
+    background-color: #fce4ec;
+    color: var(--vino-tinto);
+}
+
+/* MANTENIMIENTO / LIMPIEZA */
+.hab-card.mantenimiento {
+    border-bottom-color: var(--amarillo-ocre);
+    background-color: #fffdf0;
+}
+.hab-card.mantenimiento .hab-badge {
+    background-color: var(--amarillo-ocre);
+    color: var(--blanco);
+}
+
+/* --- 7. INDICADOR DE RESERVA PARA HOY --- */
+.reserva-tag {
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--rojo-vibrante);
+    background: #ffebee;
+    padding: 2px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--rojo-vibrante);
+    margin-top: 8px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* --- 8. ESTADÍSTICAS DEL HEADER (KPIs Superiores) --- */
+.hab-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    font-family: var(--font-main);
+}
+
+.stat-item {
+    background: var(--blanco);
+    padding: var(--spacing-md);
+    border-radius: 8px;
+    border-left: 4px solid var(--amarillo-ocre);
+    flex: 1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.stat-item label {
+    display: block;
+    font-size: 12px;
+    color: var(--gris-antracita);
     text-transform: uppercase;
 }
 
-.hab-card.libre .hab-badge { background: #d1fae5; color: #065f46; }
-.hab-card.ocupada .hab-badge { background: #fee2e2; color: #991b1b; }
-
-/* ============================================================
-   4. ESTILOS DE MODALES (SWEETALERT & CONSUMOS)
-   ============================================================ */
-
-/* Contenedor de la lista de consumos dentro del modal */
-.consumos-container {
-    text-align: left;
-    background: #f8fafc;
-    border-radius: 10px;
-    padding: 15px;
-    margin-top: 15px;
-    border: 1px solid #e2e8f0;
+.stat-item span {
+    font-size: 25px; /* Tamaño para números KPI */
+    font-weight: bold;
+    color: var(--marron-zocalo);
 }
 
-.consumo-item {
+/* --- 1. CONTENEDOR DE LA CUENTA (MODAL) --- */
+.cuenta-modal-container {
+    text-align: left;
+    font-family: var(--font-main);
+    color: var(--marron-zocalo);
+    padding: var(--spacing-sm);
+}
+
+/* --- 2. CABECERA DE DATOS DEL HUÉSPED --- */
+.info-huesped-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    background-color: var(--blanco-colonial);
+    padding: var(--spacing-md);
+    border-radius: 10px;
+    border: 1px solid var(--amarillo-ocre);
+    margin-bottom: var(--spacing-md);
+}
+
+.info-huesped-grid h4 {
+    font-family: var(--font-titles);
+    color: var(--vino-tinto);
+    margin: 0 0 8px 0;
+    border-bottom: 1px solid var(--amarillo-ocre);
+    font-size: 16px; /* Subtítulos internos */
+}
+
+/* --- 3. LISTA DE CONSUMOS (TIPO TICKET) --- */
+.consumos-scroll-area {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px dashed var(--marron-zocalo);
+    padding: var(--spacing-sm);
+    background: #fff;
+    margin: 10px 0;
+}
+
+.consumo-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.consumo-row b {
+    color: #2e7d32; /* Verde para precios */
+}
+
+/* --- 4. SECCIÓN DE TOTALES --- */
+.liquidacion-footer {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--gris-antracita);
+    color: var(--blanco);
+    border-radius: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #e2e8f0;
 }
 
-.consumo-item:last-child {
-    border-bottom: none;
+.liquidacion-footer .monto-total {
+    font-size: 25px; /* Tamaño KPI */
+    font-family: var(--font-titles);
+    color: var(--amarillo-ocre);
 }
 
-.consumo-nombre {
-    font-size: 14px;
-    color: #334155;
+/* --- 5. BOTONES PERSONALIZADOS --- */
+.btn-dorado-full {
+    width: 100%;
+    background: var(--amarillo-ocre) !important;
+    color: var(--marron-zocalo) !important;
+    font-weight: bold !important;
+    border: none !important;
+    padding: 12px !important;
+    margin-top: 10px !important;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s;
 }
 
-.consumo-precio {
-    font-weight: 700;
-    color: #0f172a;
+.btn-dorado-full:hover {
+    background: var(--marron-zocalo) !important;
+    color: var(--amarillo-ocre) !important;
 }
 
-/* Resumen de totales en Check-out */
-.resumen-checkout {
-    background: #fff5f5;
-    border: 2px dashed #feb2b2;
-    padding: 20px;
-    border-radius: 12px;
-    margin-top: 15px;
-}
-
-.total-destacado {
-    font-size: 24px;
-    color: #800020;
-    font-weight: 800;
-    text-align: center;
-    margin-top: 10px;
-    display: block;
-}
-
-/* Botones personalizados dentro de SweetAlert */
-.btn-consumo-add {
-    background-color: #2e7d32 !important;
-    color: white !important;
-    border-radius: 8px !important;
-    font-weight: 700 !important;
-}
-
-.btn-checkout-final {
-    background-color: #800020 !important;
-    color: white !important;
-    border-radius: 8px !important;
-}
-
-/* Animación de carga */
-.loading-state {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 200px;
-    color: #64748b;
+/* Botón de Check-out (Vino) */
+.swal2-deny.btn-checkout-final {
+    background-color: var(--vino-tinto) !important;
+    font-family: var(--font-titles) !important;
+    letter-spacing: 1px;
 }

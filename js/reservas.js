@@ -223,19 +223,30 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-// --- 5. RENDERIZADO ---
+
+
+// --- 5. RENDERIZADO (CORREGIDO) ---
 onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), (snapshot) => {
     tablaBody.innerHTML = "";
     listaReservasGlobal = [];
+    
     snapshot.docs.forEach(docSnap => {
         const res = docSnap.data();
         const id = docSnap.id;
         listaReservasGlobal.push({ id, ...res });
         
+        // Definir color por estado para la tabla
+        const coloresEstado = {
+            'reservada': '#3b82f6', // Azul
+            'checkin': '#10b981',   // Verde
+            'finalizado': '#64748b' // Gris
+        };
+        const colorActual = coloresEstado[res.estado] || '#800020';
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
-            <td><span class="badge-hab">Hab. ${res.habitacion}</span></td>
+            <td><span class="badge-hab" style="background:${colorActual}; color:white; padding:2px 8px; border-radius:4px;">Hab. ${res.habitacion}</span></td>
             <td>${res.checkIn}</td>
             <td>${res.checkOut}</td>
             <td style="text-align:center">${res.personas}</td>
@@ -251,6 +262,11 @@ onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), 
     });
     actualizarContadores(listaReservasGlobal);
 });
+
+// IMPORTANTE: Asegúrate de que estas funciones estén en el scope global (window)
+window.prepararEdicion = prepararEdicion;
+window.eliminarReserva = eliminarReserva;
+window.exportarExcel = exportarExcel;
 
 window.prepararEdicion = async (id) => {
     const docRef = await getDoc(doc(db, "reservas", id));
