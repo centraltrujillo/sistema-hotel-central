@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Habitaciones | Hotel Central</title>
+    <title>Panel de Control | Hotel Central</title>
     <link rel="icon" type="image/png" href="img/logo.png" />
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
     <link rel="stylesheet" href="css/colors.css">
     <link rel="stylesheet" href="css/dashboard.css"> 
     <link rel="stylesheet" href="css/habitaciones.css"> 
@@ -15,6 +13,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
+        /* Ajuste para evitar el scroll y maximizar pantalla */
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Adiós al scroll */
+        }
+        .main-content {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 15px 25px;
+            box-sizing: border-box;
+        }
         .btn-back {
             display: flex;
             align-items: center;
@@ -23,62 +34,38 @@
             height: 35px;
             background-color: white;
             border-radius: 8px;
-            color: var(--marron-zocalo, #5a1914);
+            color: #5a1914;
             text-decoration: none;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
-        .btn-back:hover {
-            background-color: var(--marron-zocalo, #5a1914);
-            color: white;
-            transform: translateX(-3px);
-        }
-        .header-flex {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
         }
     </style>
 </head>
+<body>
 
-        <main class="main-content">
-            <div class="header-flex">
-                <a href="dashboard.html" class="btn-back" title="Volver al Dashboard">
-                    <i class="fa-solid fa-arrow-left"></i>
-                </a>
-                <div>
-                    <h2 style="margin:0; font-family:'Playfair Display', serif;">Gestión de Habitaciones</h2>
-                    <p id="current-date" style="font-size: 0.8rem; color: #666; margin:0;"></p>
-                </div>
+    <main class="main-content">
+        <div class="header-flex" style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+            <a href="dashboard.html" class="btn-back"><i class="fa-solid fa-arrow-left"></i></a>
+            <div>
+                <h2 style="margin:0; font-family:'Playfair Display', serif; font-size: 1.5rem;">Panel Real-Time</h2>
+                <p id="current-date" style="font-size: 0.75rem; color: #666; margin:0;"></p>
             </div>
+        </div>
 
-        
-                <div class="stat-card-mini">
-                    <span>Libres</span>
-                    <h3 id="stat-libres" style="color:#2e7d32">--</h3>
-                </div>
-                <div class="stat-card-mini">
-                    <span>Ocupadas</span>
-                    <h3 id="stat-ocupadas" style="color:#800020">--</h3>
-                </div>
+        <div class="hab-stats" style="margin-bottom: 15px;">
+            <div class="stat-card-mini"><span>Libres</span><h3 id="stat-libres" style="color:#2e7d32">--</h3></div>
+            <div class="stat-card-mini"><span>Ocupadas</span><h3 id="stat-ocupadas" style="color:#800020">--</h3></div>
+            <div class="stat-card-mini"><span>Total</span><h3>13</h3></div>
+        </div>
+
+        <div class="hab-grid" id="habGrid" style="flex-grow: 1;">
             </div>
-
-
-            <div class="hab-grid" id="habGrid">
-                <div class="loading-state">
-                    <i class="fa-solid fa-spinner fa-spin"></i>
-                    <p>Cargando casitas...</p>
-                </div>
-            </div>
-        </main>
-    </div>
+    </main>
 
     <script type="module" src="js/habitaciones.js"></script>
-
     <script>
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', options);
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+        });
     </script>
 </body>
 </html>
