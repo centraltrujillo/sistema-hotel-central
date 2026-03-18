@@ -1,4 +1,5 @@
-body { font-family: 'Lato', sans-serif; margin: 0; background-color: #f8fafc; color: #334155; min-height: 100vh; }
+/* --- ESTILOS GENERALES DEL CALENDARIO --- */
+body { font-family: 'Lato', sans-serif; background-color: #f8fafc; margin: 0; }
 
 .calendar-container {
     background: #ffffff;
@@ -8,127 +9,77 @@ body { font-family: 'Lato', sans-serif; margin: 0; background-color: #f8fafc; co
     margin-top: 20px;
 }
 
-#calendar { min-height: 600px; }
+/* --- ESTILOS DEL FORMULARIO DE EDICIÓN (SWEETALERT) --- */
+#swal-form-reserva {
+    text-align: left;
+    font-family: 'Lato', sans-serif;
+}
 
-/* Títulos y fuentes profesionales */
-.fc .fc-toolbar-title { font-size: 20px !important; font-weight: 700; font-family: 'Playfair Display', serif; }
-.fc .fc-daygrid-day-number { font-size: 15px !important; color: #475569; }
+#swal-form-reserva label {
+    display: block;
+    font-weight: 800;
+    margin-bottom: 3px;
+    color: #800020; /* Color Vino */
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
 
-/* Estilo de eventos */
-.fc-event { border: none !important; border-radius: 6px !important; padding: 2px 8px !important; font-size: 13px !important; }
+#swal-form-reserva .swal2-input, 
+#swal-form-reserva .swal2-select {
+    height: 32px !important;
+    margin: 0 0 8px 0 !important;
+    font-size: 13px !important;
+    border-radius: 4px !important;
+    border: 1px solid #d1d5db !important;
+    width: 100% !important;
+    box-shadow: none !important;
+}
 
-/* Colores personalizados */
-.type-mantenimiento { background-color: #ef4444 !important; }
-.type-limpieza { background-color: #10b981 !important; }
-.type-evento { background-color: #f59e0b !important; }
-.type-admin { background-color: #6366f1 !important; }
+#swal-form-reserva .swal2-input:focus {
+    border-color: #d4a017 !important; /* Color Dorado */
+    box-shadow: 0 0 0 2px rgba(212, 160, 23, 0.1) !important;
+}
 
-/* Botones */
-.fc .fc-button-primary { background-color: #f1f5f9 !important; color: #64748b !important; border: none !important; }
-.fc .fc-button-primary:hover { background-color: #1a56db !important; color: #ffffff !important; }
+#swal-form-reserva input[readonly] {
+    background-color: #f1f5f9 !important;
+    border-style: dashed !important;
+    font-weight: 700;
+    color: #1e293b;
+}
 
-/* Ajuste opcional en calendario.css */
+/* --- ESTILOS DE EVENTOS Y BOTONES --- */
+.fc-toolbar-title { font-family: 'Playfair Display', serif; font-weight: 700; color: #800020; }
+
 .fc-event {
     cursor: pointer;
-    padding: 2px 5px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-}
-
-.fc-daygrid-event {
-    white-space: normal; /* Permite que el título se vea completo */
-}
- /*Leyenda de lo colores del calendario: MEDIO DE RESERVA*/
-.calendar-legend-container {
-    padding: 15px 25px;
-    margin-bottom: 20px;
-    background: #fff;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-}
-
-.legend-title {
-    font-size: 11px;
-    font-weight: 800;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-}
-
-.legend-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--marron-zocalo);
-}
-
-.dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 8px;
-}
-
-/* Colores Sincronizados */
-.dot.booking { background: #3b82f6; }
-.dot.airbnb { background: #f43f5e; }
-.dot.directas { background: #8b5cf6; }
-.dot.expedia { background: #f59e0b; }
-.dot.personal { background: #10b981; }
-.dot.dayuse { background: #6366f1; }
-.dot.mantenimiento { background: #fa051a; }
-.dot.gmail { background: #59ea35; }
-
-/* Mejora en la tipografía de los días */
-.fc .fc-daygrid-day-number { 
-    font-size: 14px !important; 
-    color: #475569; 
+    transition: all 0.2s;
+    border: none !important;
     font-weight: 600;
 }
 
-/* Efecto hover profesional en eventos */
-.fc-event {
-    transition: transform 0.2s, box-shadow 0.2s !important;
-    border: none !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-}
-
 .fc-event:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
-    filter: brightness(1.05); /* Un pequeño brillo al pasar el mouse */
+    transform: scale(1.02);
+    filter: brightness(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
 }
 
-/* Asegurar que el evento 'blanco' (Check-in) sea visible */
-.fc-event-main:has(span) { 
-    color: #000 !important; 
-}
-
-/* Mejora los botones del toolbar */
-.fc .fc-button-primary { 
-    background-color: #ffffff !important; 
-    color: #475569 !important; 
-    border: 1px solid #e2e8f0 !important; 
-    font-size: 14px !important;
-    padding: 6px 12px !important;
-    transition: 0.3s;
+.fc .fc-button-primary {
+    background-color: #ffffff !important;
+    color: #800020 !important;
+    border: 1px solid #e2e8f0 !important;
+    text-transform: capitalize;
+    font-weight: 700;
 }
 
 .fc .fc-button-active {
-    background-color: #800020 !important; /* Vino tinto para el botón activo */
+    background-color: #800020 !important;
     color: #ffffff !important;
-    border-color: #800020 !important;
 }
 
-/* Ajuste de scroll en eventos largos */
-.fc-daygrid-day-frame {
-    min-height: 100px !important;
+/* Estilo para los Check-ins (Eventos blancos) */
+.fc-h-event[style*="background-color: #ffffff"],
+.fc-h-event[style*="background-color: rgb(255, 255, 255)"] {
+    color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important;
 }

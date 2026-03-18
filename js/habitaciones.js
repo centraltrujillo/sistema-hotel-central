@@ -103,21 +103,98 @@ async function abrirModalCheckIn(hab) {
         showCancelButton: true
     });
 
-    if (choice) {
-        if (choice === "directo") {
-            await addDoc(collection(db, "reservas"), {
-                huesped: "Huésped Directo",
-                habitacion: hab.numero.toString(),
-                checkIn: hoy,
-                estado: "checkin",
-                total: 0,
-                fechaRegistro: new Date().toISOString()
-            });
-        } else {
-            await updateDoc(doc(db, "reservas", choice), { estado: "checkin" });
-        }
-        // CRÍTICO: Esto hace que la casita cambie a color vino
+if (choice) {
+    if (choice === "directo") {
+        // En lugar de guardar aquí, abrimos el nuevo modal completo
+        modalCheckInDirecto(hab); 
+    } else {
+        await updateDoc(doc(db, "reservas", choice), { estado: "checkin" });
         await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
+    }
+}
+
+// MODAL PARA INGRESAR DATOS 
+async function modalCheckInDirecto(hab) {
+    const hoy = getHoyISO();
+    
+    const { value: formValues } = await Swal.fire({
+        title: `<span style="font-family: var(--font-titles); color: var(--vino-tinto);">Check-in: Habitación ${hab.numero}</span>`,
+        width: '600px',
+        html: `
+            <div style="text-align: left; font-family: var(--font-main); display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 10px;">
+                <div style="grid-column: span 2;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">NOMBRE COMPLETO DEL HUÉSPED</label>
+                    <input id="ni-nombre" class="swal2-input" style="width: 100%; margin: 5px 0;" placeholder="Juan Pérez">
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">DNI / CE</label>
+                    <input id="ni-doc" class="swal2-input" style="width: 100%; margin: 5px 0;" placeholder="Documento">
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">TELÉFONO</label>
+                    <input id="ni-tel" class="swal2-input" style="width: 100%; margin: 5px 0;" placeholder="999 999 999">
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">FECHA SALIDA (ESTIMADA)</label>
+                    <input id="ni-out" type="date" class="swal2-input" style="width: 100%; margin: 5px 0;" value="${hoy}">
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">PRECIO POR NOCHE (S/)</label>
+                    <input id="ni-precio" type="number" class="swal2-input" style="width: 100%; margin: 5px 0;" value="${hab.precio || 0}">
+                </div>
+                <div style="grid-column: span 2;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">OBSERVACIONES / PLACA</label>
+                    <textarea id="ni-notas" class="swal2-textarea" style="width: 100%; margin: 5px 0; font-family: var(--font-main);" placeholder="Ej: Auto ABC-123, toallas extra..."></textarea>
+                </div>
+            </div>`,
+        confirmButtonText: 'CONFIRMAR INGRESO',
+        confirmButtonColor: 'var(--vino-tinto)',
+        showCancelButton: true,
+        cancelButtonText: 'CANCELAR',
+        preConfirm: () => {
+            const nombre = document.getElementById('ni-nombre').value;
+            const docu = document.getElementById('ni-doc').value;
+            const out = document.getElementById('ni-out').value;
+            const precio = document.getElementById('ni-precio').value;
+            
+            if (!nombre || !docu || !out || !precio) {
+                Swal.showValidationMessage('Por favor, completa los campos obligatorios');
+                return false;
+            }
+            return {
+                huesped: nombre,
+                doc: docu,
+                telefono: document.getElementById('ni-tel').value,
+                checkOut: out,
+                total: parseFloat(precio),
+                notas: document.getElementById('ni-notas').value
+            };
+        }
+    });
+
+    if (formValues) {
+        // 1. Guardar en la colección de Reservas (como un checkin activo)
+        await addDoc(collection(db, "reservas"), {
+            ...formValues,
+            habitacion: hab.numero.toString(),
+            checkIn: hoy,
+            estado: "checkin",
+            fechaRegistro: new Date().toISOString(),
+            tipoVenta: "Directa"
+        });
+
+        // 2. Opcional: Guardar/Actualizar en base de datos de Huespedes para historial
+        await addDoc(collection(db, "huespedes"), {
+            nombre: formValues.huesped,
+            documento: formValues.doc,
+            telefono: formValues.telefono,
+            ultimaVisita: hoy
+        });
+
+        // 3. Cambiar estado de la habitación
+        await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
+        
+        Swal.fire('¡Éxito!', 'Huésped registrado y habitación ocupada', 'success');
     }
 }
 
@@ -139,16 +216,29 @@ async function abrirModalGestionOcupada(hab) {
     let totalCons = 0;
     let tablaCons = '';
 
+    // ... dentro de abrirModalGestionOcupada ...
     snapCons.forEach(c => {
         const item = c.data();
         totalCons += parseFloat(item.precio);
-        // Usamos la clase consumo-row del CSS
+
+        // FORMATEAR FECHA: Para que se vea "18 Mar, 10:41"
+        const f = item.fechaConsumo ? new Date(item.fechaConsumo) : new Date();
+        const fechaAmigable = f.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) + 
+                             `, ${f.getHours()}:${f.getMinutes().toString().padStart(2, '0')}`;
+
+        // DISEÑO DE FILA: Ahora incluye cantidad y fecha
         tablaCons += `
-            <div class="consumo-row">
-                <span>${item.descripcion}</span>
-                <b>S/ ${parseFloat(item.precio).toFixed(2)}</b>
+            <div class="consumo-row" style="align-items: center; padding: 8px 0;">
+                <div style="display: flex; flex-direction: column; text-align: left;">
+                    <span style="font-weight: bold; color: var(--marron-zocalo);">
+                        ${item.cantidad || 1}x ${item.descripcion}
+                    </span>
+                    <small style="font-size: 10px; color: #888;">${fechaAmigable}</small>
+                </div>
+                <b style="color: #2e7d32;">S/ ${parseFloat(item.precio).toFixed(2)}</b>
             </div>`;
     });
+    
 
     Swal.fire({
         title: `<span style="font-family: var(--font-titles); color: var(--vino-tinto);">Habitación ${hab.numero}</span>`,
@@ -201,16 +291,65 @@ async function abrirModalGestionOcupada(hab) {
     });
 }
 
-// --- 4. AGREGAR CONSUMO (Igual) ---
 async function agregarConsumo(resId, hab) {
-    const { value: f } = await Swal.fire({
-        title: 'Nuevo Consumo',
-        html: '<input id="c-desc" class="swal2-input" placeholder="Qué compró?"><input id="c-price" class="swal2-input" type="number" placeholder="Precio S/">',
-        preConfirm: () => ({ d: document.getElementById('c-desc').value, p: document.getElementById('c-price').value })
+    const ahora = new Date();
+    // Ajuste de zona horaria para que el input datetime-local muestre la hora actual de Perú
+    const offset = ahora.getTimezoneOffset() * 60000;
+    const fechaLocal = new Date(ahora - offset).toISOString().slice(0, 16);
+
+    const { value: formValues } = await Swal.fire({
+        title: `<span style="font-family: var(--font-titles); color: var(--marron-zocalo); font-size: 18px;">Nuevo Cargo</span>`,
+        html: `
+            <div style="text-align: left; font-family: var(--font-main); padding: 5px;">
+                <label style="font-size: 12px; color: var(--gris-antracita); font-weight: bold;">DESCRIPCIÓN</label>
+                <input id="swal-input1" class="swal2-input" style="margin-top:5px; font-size:15px;" placeholder="Ej. Agua San Mateo">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                    <div>
+                        <label style="font-size: 12px; color: var(--gris-antracita); font-weight: bold;">CANTIDAD</label>
+                        <input id="swal-input2" type="number" class="swal2-input" value="1" min="1" style="font-size:15px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; color: var(--gris-antracita); font-weight: bold;">PRECIO UNIT. (S/)</label>
+                        <input id="swal-input3" type="number" step="0.10" class="swal2-input" placeholder="0.00" style="font-size:15px;">
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <label style="font-size: 12px; color: var(--gris-antracita); font-weight: bold;">FECHA Y HORA</label>
+                    <input id="swal-input4" type="datetime-local" class="swal2-input" value="${fechaLocal}" style="font-size:14px;">
+                </div>
+            </div>`,
+        focusConfirm: false,
+        confirmButtonText: 'REGISTRAR',
+        confirmButtonColor: 'var(--vino-tinto)',
+        showCancelButton: true,
+        preConfirm: () => {
+            const desc = document.getElementById('swal-input1').value;
+            const cant = document.getElementById('swal-input2').value;
+            const precio = document.getElementById('swal-input3').value;
+            const fecha = document.getElementById('swal-input4').value;
+
+            if (!desc || !cant || !precio || !fecha) {
+                Swal.showValidationMessage('Todos los campos son obligatorios');
+                return false;
+            }
+            return { desc, cant: parseInt(cant), precio: parseFloat(precio), fecha };
+        }
     });
-    if (f && f.d && f.p) {
-        await addDoc(collection(db, "consumos"), { idReserva: resId, descripcion: f.d, precio: parseFloat(f.p), fecha: new Date().toISOString() });
-        abrirModalGestionOcupada(hab);
+
+    if (formValues) {
+        const totalItem = formValues.cant * formValues.precio;
+        await addDoc(collection(db, "consumos"), {
+            idReserva: resId,
+            descripcion: formValues.desc,
+            cantidad: formValues.cant,
+            precioUnitario: formValues.precio,
+            precio: totalItem, // Total para facilitar la suma del gran total
+            fechaConsumo: formValues.fecha
+        });
+        
+        abrirModalGestionOcupada(hab); // Recargamos para ver el cambio
     }
 }
 
@@ -289,10 +428,10 @@ function imprimirTicket(rData, consumos, totalConsumos, granTotal) {
     const ventana = window.open('', '_blank');
     const fechaActual = new Date().toLocaleString();
     
-    // Generar filas de consumos
+    // Generar filas de consumos con cantidad
     let filasConsumos = consumos.map(c => `
         <tr>
-            <td style="padding: 5px 0;">${c.descripcion}</td>
+            <td style="padding: 5px 0;">${c.cantidad || 1}x ${c.descripcion}</td>
             <td style="text-align: right;">S/ ${parseFloat(c.precio).toFixed(2)}</td>
         </tr>
     `).join('');
@@ -352,4 +491,5 @@ function imprimirTicket(rData, consumos, totalConsumos, granTotal) {
         </html>
     `);
     ventana.document.close();
+}
 }

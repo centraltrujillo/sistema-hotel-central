@@ -242,3 +242,17 @@
     font-family: var(--font-titles) !important;
     letter-spacing: 1px;
 }
+
+.swal2-input {
+    height: 38px !important;
+    padding: 0 10px !important;
+    margin: 5px 0 !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    font-family: var(--font-main);
+}
+
+.swal2-validation-message {
+    font-family: var(--font-main);
+    font-size: 13px;
+}
