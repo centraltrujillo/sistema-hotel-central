@@ -154,7 +154,7 @@ async function modalCheckInDirecto(hab) {
                     <input id="ni-nombre" class="swal2-input" style="width: 100%; margin: 5px 0;">
                 </div>
                 <div>
-                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">DNI / CE</label>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">DNI / CE / PASAPORTE</label>
                     <input id="ni-doc" class="swal2-input" style="width: 100%; margin: 5px 0;">
                 </div>
                 <div>
@@ -498,7 +498,7 @@ function imprimirTicket(rData, consumos, totalConsumos, granTotal) {
         <body onload="window.print(); window.close();">
             <div class="text-center">
                 <h2 style="margin:0;">HOTEL CENTRAL</h2>
-                <p style="font-size:10px;">RUC: 10XXXXXXXXX<br>Calle Principal 123 - Trujillo</p>
+                <p style="font-size:10px;">RUC: 20601852153<br>Jr. Simon Bolivar 355 - Trujillo</p>
             </div>
             
             <div class="divider"></div>

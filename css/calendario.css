@@ -83,3 +83,39 @@ body { font-family: 'Lato', sans-serif; background-color: #f8fafc; margin: 0; }
     color: #1e293b !important;
     border: 1px solid #cbd5e1 !important;
 }
+
+/* --- COLORES DE LA LEYENDA (Deben coincidir con JS) --- */
+.dot.booking { background-color: #3b82f6; }       /* Azul */
+.dot.airbnb { background-color: #f43f5e; }        /* Rosa/Rojo */
+.dot.directas { background-color: #8b5cf6; }      /* Morado */
+.dot.expedia { background-color: #f59e0b; }       /* Naranja/Dorado */
+.dot.personal { background-color: #10b981; }      /* Verde */
+.dot.dayuse { background-color: #6366f1; }        /* Índigo */
+.dot.mantenimiento { background-color: #fa051a; } /* Rojo fuerte */
+.dot.gmail { background-color: #59ea35; }         /* Verde lima */
+
+/* Estilo para los elementos de la leyenda */
+.legend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #475569;
+}
+
+.dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}

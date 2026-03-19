@@ -155,39 +155,68 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
             // --- VISTA INICIAL DE DETALLES ---
+            const mSymbol = res.moneda === 'USD' ? '$' : 'S/';
+            // Cálculo visual de conversión si es Dólares
+            const totalSoles = res.moneda === 'USD' ? (parseFloat(res.total) * parseFloat(res.tipoCambio || 1)).toFixed(2) : res.total;
+
             Swal.fire({
-                title: `<span style="font-family: 'Playfair Display'; color: #800020; font-size: 24px;">Detalle de la Reserva</span>`,
-                width: '850px',
+                title: `<span style="font-family: 'Playfair Display'; color: #800020; font-size: 26px;">Detalle de la Reserva</span>`,
+                width: '900px',
                 html: `
                     <div style="text-align: left; font-family: 'Lato'; border-top: 3px solid #d4a017; padding-top: 15px;">
+                        
                         <div style="background: #fffaf0; padding: 15px; border-radius: 10px; border: 1px solid #fef3c7; margin-bottom: 15px;">
-                            <h4 style="margin: 0 0 10px 0; color: #800020;">👤 Información del Huésped</h4>
-                            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
-                                <p><b>Nombre:</b> ${res.huesped}</p>
-                                <p><b>Doc:</b> ${res.doc || 'N/A'}</p>
+                            <h4 style="margin: 0 0 10px 0; color: #800020; border-bottom: 1px solid #fde68a;">👤 Información del Huésped</h4>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 14px;">
+                                <p style="grid-column: span 2;"><b>Nombre:</b> ${res.huesped}</p>
+                                <p><b>Documento:</b> ${res.doc || 'N/A'}</p>
                                 <p><b>Teléfono:</b> ${res.telefono || 'N/A'}</p>
                                 <p><b>Nacionalidad:</b> ${res.nacionalidad || 'N/A'}</p>
+                                <p><b>F. Nacimiento:</b> ${res.nacimiento || 'N/A'}</p>
+                                <p style="grid-column: span 3;"><b>Correo:</b> ${res.correo || 'N/A'}</p>
                             </div>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 15px;">
                             <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-                                <h4 style="color: #1e293b;">🏨 Estancia</h4>
-                                <p><b>Habitación:</b> <span style="background:#800020; color:white; padding:2px 8px; border-radius:4px;">${res.habitacion}</span></p>
-                                <p><b>Entrada:</b> ${res.checkIn}</p>
-                                <p><b>Salida:</b> ${res.checkOut}</p>
+                                <h4 style="color: #1e293b; margin-top:0;">🏨 Estancia y Habitación</h4>
+                                <div style="font-size: 14px; line-height: 1.6;">
+                                    <p><b>Habitación:</b> <span style="background:#800020; color:white; padding:2px 8px; border-radius:4px;">${res.habitacion} (${res.tipoHab})</span></p>
+                                    <p><b>Check-In:</b> ${res.checkIn} ${res.early ? `<span style="color:#3b82f6;">(Early: ${res.early})</span>` : ''}</p>
+                                    <p><b>Check-Out:</b> ${res.checkOut} ${res.late ? `<span style="color:#f43f5e;">(Late: ${res.late})</span>` : ''}</p>
+                                    <p><b>Medio:</b> <span style="text-transform: uppercase; font-weight:bold; color:#6366f1;">${res.medio}</span></p>
+                                    <p><b>Desayuno:</b> ${res.desayuno || 'N/A'}</p>
+                                </div>
                             </div>
+
                             <div style="background: #f0fdf4; padding: 15px; border-radius: 10px; border: 1px solid #dcfce7;">
-                                <h4 style="color: #166534;">💰 Cuenta</h4>
-                                <p><b>Total:</b> ${simbolo} ${res.total}</p>
-                                <p style="color: #dc2626;"><b>Pendiente:</b> S/ ${res.diferencia || '0.00'}</p>
+                                <h4 style="color: #166534; margin-top:0;">💰 Resumen Económico</h4>
+                                <div style="font-size: 14px; line-height: 1.6;">
+                                    <p><b>Tarifa Diaria:</b> ${mSymbol}${res.tarifa}</p>
+                                    <p><b>Total Alojamiento:</b> <span style="font-size: 16px; font-weight: bold;">${mSymbol}${res.total}</span></p>
+                                    ${res.moneda === 'USD' ? `<p style="color: #065f46; font-size: 12px; margin-top:-5px;">(Equivale a: <b>S/ ${totalSoles}</b> al T.C. ${res.tipoCambio})</p>` : ''}
+                                    <p><b>Adelanto:</b> ${res.adelanto || 'Ninguno'}</p>
+                                    <hr style="border:0; border-top:1px solid #bbf7d0; margin: 8px 0;">
+                                    <p style="color: #dc2626; font-size: 16px;"><b>Pendiente:</b> S/ ${res.diferencia || '0.00'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 15px; background: #f1f5f9; padding: 12px; border-radius: 10px; font-size: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <p><b>🚗 Cochera:</b> ${res.cochera || 'NO'}</p>
+                                <p><b>✈️ Traslado:</b> ${res.traslado || 'NO'}</p>
+                            </div>
+                            <div>
+                                <p><b>🔑 Recibido por:</b> ${res.recepcion || 'N/A'}</p>
+                                <p><b>✔️ Confirmado por:</b> ${res.recepcionconfi || 'N/A'}</p>
                             </div>
                         </div>
 
                         <div style="margin-top: 20px; display: flex; gap: 10px;">
                             ${!esCheckIn ? 
-                                `<button id="btnCheckIn" class="swal2-styled" style="background-color: #10b981; flex: 1.5; font-weight: bold;">🚀 CHECK-IN</button>` : 
-                                `<div style="flex: 1.5; text-align: center; padding: 12px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: bold;">${res.estado === 'checkin' ? '✅ EN CASA' : '🏁 FINALIZADA'}</div>`
+                                `<button id="btnCheckIn" class="swal2-styled" style="background-color: #10b981; flex: 1.5; font-weight: bold;">🚀 REALIZAR CHECK-IN</button>` : 
+                                `<div style="flex: 1.5; text-align: center; padding: 12px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: bold;">${res.estado === 'checkin' ? '✅ EL HUÉSPED ESTÁ EN CASA' : '🏁 RESERVA FINALIZADA'}</div>`
                             }
                             <button id="btnOpenEdit" class="swal2-styled" style="background-color: #3b82f6; flex: 1;">📝 EDITAR</button>
                             <button id="btnEliminarRes" class="swal2-styled" style="background-color: #ef4444; flex: 1;">🗑️ ELIMINAR</button>
@@ -196,6 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 `,
                 showConfirmButton: false,
                 didOpen: () => {
+                    // (Tus funciones de botones existentes se mantienen igual)
                     document.getElementById('btnOpenEdit').onclick = () => abrirEdicionIntegral();
                     
                     const btnCheck = document.getElementById('btnCheckIn');
