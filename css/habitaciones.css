@@ -33,59 +33,52 @@ body {
     margin: 0;
     padding: 20px;
 }
-
-/* ==========================================================================
-   2. DASHBOARD HEADER (Título y Contadores)
-   ========================================================================== */
-.main-content header {
+/* Estructura de la cabecera */
+.header-flex {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
     padding-bottom: 15px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 2px solid var(--ocre-oro); /* Un detalle más elegante */
 }
 
-.main-content header h1 {
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Título (Cambiado a h1 para coincidir con el HTML anterior o ajustado a h2) */
+.main-title {
     font-family: var(--font-titulos);
     color: var(--gris-antracita);
     font-size: 28px;
     margin: 0;
-}
-
-/* KPIs de estadísticas */
-.hab-stats {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
-}
-
-.stat-item {
-    background: var(--blanco-puro);
-    padding: 15px 25px;
-    border-radius: 12px;
-    box-shadow: var(--shadow-premium);
-    border-left: 4px solid var(--ocre-oro);
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-item label {
-    font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+}
+
+.date-text {
+    font-size: 14px;
     color: #718096;
-    margin-bottom: 5px;
 }
 
-.stat-item span {
-    font-family: var(--font-titulos);
-    font-size: 32px;
-    font-weight: 700;
-    color: var(--gris-antracita);
+/* Botones de navegación superior */
+.btn-header {
+    text-decoration: none;
+    color: var(--vino-tinto); /* O el color de tu marca */
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.3s;
 }
 
+.btn-header:hover {
+    background: #f7fafc;
+}
 /* ================= ==========================================================
    3. GRID DE HABITACIONES
    ========================================================================== */

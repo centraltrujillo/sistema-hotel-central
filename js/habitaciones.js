@@ -238,14 +238,21 @@ async function modalCheckInDirecto(hab) {
                 </div>
 
                 <div class="reserva-footer">
-                    <div style="font-size: 12px; color: #666; text-align: left;">
-                        Registrado por: <input type="text" id="resRecepcion" required style="border:none; border-bottom:1px solid #ccc; outline:none; width:120px;">
-                    </div>
-                    <div class="botones">
-                        <button type="button" id="btnCancelarCheckIn" class="btn-secundario">CANCELAR</button>
-                        <button type="submit" class="btn-primario">CONFIRMAR INGRESO</button>
-                    </div>
-                </div>
+    <div style="font-size: 12px; color: #666; text-align: left; display: flex; gap: 10px;">
+        <div>
+            Registrado por: 
+            <input type="text" id="resRecepcion" required style="border:none; border-bottom:1px solid #ccc; outline:none; width:100px;">
+        </div>
+        <div>
+            Confirmado por: 
+            <input type="text" id="resRecepcionconfi" required style="border:none; border-bottom:1px solid #ccc; outline:none; width:100px;">
+        </div>
+    </div>
+    <div class="botones">
+        <button type="button" id="btnCancelarCheckIn" class="btn-secundario">CANCELAR</button>
+        <button type="submit" class="btn-primario">CONFIRMAR INGRESO</button>
+    </div>
+</div>
             </form>
         `,
         didOpen: () => {
@@ -762,7 +769,7 @@ function imprimirTicket(rData, consumos, totalConsumos, granTotal, metodoPago) {
             <div class="text-center" style="font-size: 10px;">
                 *** Gracias por su visita ***<br>
                 Trujillo - La Libertad<br>
-                <b>www.hotelcentral.com.pe</b>
+                <b>www.hotelcentraltrujillo.com</b>
             </div>
         </body>
         </html>

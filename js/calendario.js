@@ -117,7 +117,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             nacionalidad: document.getElementById('sw-nacionalidad').value,
                             telefono: document.getElementById('sw-telefono').value,
                             correo: document.getElementById('sw-correo').value,
-                            tipoHab: document.getElementById('sw-tipoHab').value,
                             checkIn: document.getElementById('sw-in').value,
                             checkOut: document.getElementById('sw-out').value,
                             medio: document.getElementById('sw-medio').value,
