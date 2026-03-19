@@ -159,76 +159,94 @@ async function abrirModalCheckIn(hab) {
 }
 
 // --- 3. MODAL PARA INGRESO DIRECTO ---
+
 async function modalCheckInDirecto(hab) {
     const hoy = getHoyISO();
     
     const { value: formValues } = await Swal.fire({
-        title: `<span style="font-family: var(--font-titles); color: var(--vino-tinto); font-size: 28px;">Nueva Reserva Directa - Hab. ${hab.numero}</span>`,
-        width: '1100px',
+        title: `<div style="text-align:left; border-bottom: 2px solid var(--vino-tinto); padding-bottom:10px;">
+                    <span style="font-family: var(--font-titles); color: var(--vino-tinto); font-size: 24px; font-weight: bold;">
+                        <i class="fas fa-door-open"></i> Nueva Reserva Directa - Hab. ${hab.numero}
+                    </span>
+                </div>`,
+        width: '1000px',
         showConfirmButton: false, 
-        customClass: {
-            popup: 'hotel-modal-custom'
-        },
+        customClass: { popup: 'hotel-modal-custom' },
         html: `
-            <div id="swal-form-reserva">
-                <form id="formCheckInDirecto" class="reserva-grid-layout">
-                    
-                    <div class="reserva-separator grid-span-4">Información del Huésped</div>
-                    
-                    <div>
-                        <label>DNI / PASSPORT (Buscar)</label>
-                        <input type="text" id="resDoc" class="swal2-input" required placeholder="Presione Tab para buscar" style="border: 2px solid var(--amarillo-ocre) !important;">
+            <form id="formCheckInDirecto" class="reserva-grid-compacto">
+                
+                <div class="reserva-header-section">Información del Huésped</div>
+                <div class="grid-row">
+                    <div class="f-group">
+                        <label>DNI / PASSPORT</label>
+                        <input type="text" id="resDoc" class="f-input highlight" required placeholder="Buscar...">
                     </div>
-                    <div class="grid-span-2">
+                    <div class="f-group span-2">
                         <label>Nombres y Apellidos</label>
-                        <input type="text" id="resHuesped" class="swal2-input" required>
+                        <input type="text" id="resHuesped" class="f-input" required>
                     </div>
-                    <div>
-                        <label>Fecha de Nacimiento</label>
-                        <input type="date" id="resNacimiento" class="swal2-input">
+                    <div class="f-group">
+                        <label>Nacimiento</label>
+                        <input type="date" id="resNacimiento" class="f-input">
                     </div>
+                </div>
 
-                    <div><label>Nacionalidad</label><input type="text" id="resNacionalidad" class="swal2-input"></div>
-                    <div><label>Teléfono</label><input type="tel" id="resTelefono" class="swal2-input" required></div>
-                    <div class="grid-span-2"><label>Correo Electrónico</label><input type="email" id="resCorreo" class="swal2-input"></div>
+                <div class="grid-row">
+                    <div class="f-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad" class="f-input"></div>
+                    <div class="f-group"><label>Teléfono</label><input type="tel" id="resTelefono" class="f-input" required></div>
+                    <div class="f-group span-2"><label>Correo Electrónico</label><input type="email" id="resCorreo" class="f-input"></div>
+                </div>
 
-                    <div class="reserva-separator grid-span-4">Detalles de la Estancia</div>
-
-                    <div>
-                        <label>Habitación</label>
-                        <input type="text" id="resHabitacion" class="swal2-input" value="${hab.numero}" readonly style="background: var(--blanco-colonial);">
-                    </div>
-                    <div><label>Check In</label><input type="date" id="resCheckIn" class="swal2-input" value="${hoy}" readonly style="background: var(--blanco-colonial);"></div>
-                    <div><label>Check Out</label><input type="date" id="resCheckOut" class="swal2-input" value="${hoy}"></div>
-                    <div>
+                <div class="reserva-header-section">Detalles de la Estancia</div>
+                <div class="grid-row">
+                    <div class="f-group"><label>Habitación</label><input type="text" id="resHabitacion" class="f-input readonly" value="${hab.numero}" readonly></div>
+                    <div class="f-group"><label>Check In</label><input type="date" id="resCheckIn" class="f-input readonly" value="${hoy}" readonly></div>
+                    <div class="f-group"><label>Check Out</label><input type="date" id="resCheckOut" class="f-input" value="${hoy}"></div>
+                    <div class="f-group">
                         <label>Medio de Reserva</label>
-                        <select id="resMedio" class="swal2-select">
-                            <option value="directas" selected>DIRECTAS</option>
-                            <option value="whatsapp">WHATSAPP</option>
+    <select id="resMedio" class="swal2-select" required>
+        <option value="" disabled selected>Seleccione un medio...</option>
+        <option value="personal">Personal</option>
+        <option value="booking">Booking</option>
+        <option value="expedia">Expedia</option>
+        <option value="dayuse">Day Use</option>
+        <option value="mantenimiento">Mantenimiento</option>
+        <option value="gmail">Gmail</option>
+        <option value="directas">Directas</option>
+        <option value="airbnb">Airbnb</option>
+    </select>
+                    </div>
+                </div>
+
+                <div class="reserva-header-section">Tarifas y Extras</div>
+                <div class="grid-row">
+                    <div class="f-group"><label>N° Personas</label><input type="number" id="resPersonas" class="f-input" min="1" value="1"></div>
+                    <div class="f-group"><label>Tarifa x Noche</label><input type="number" id="resTarifa" class="f-input" value="${hab.precio || 0}"></div>
+                    <div class="f-group"><label>Total</label><input type="number" id="resTotal" class="f-input total-bold" value="${hab.precio || 0}"></div>
+                    <div class="f-group"><label>Cochera</label><input type="text" id="resCochera" class="f-input" placeholder="No / Placa"></div>
+                </div>
+
+                <div class="grid-row">
+                    <div class="f-group span-2"><label>Adelantos / Notas</label><input type="text" id="resAdelanto" class="f-input" placeholder="Ej: 50.00 Efectivo"></div>
+                    <div class="f-group"><label>Desayuno</label>
+                        <select id="resDesayuno" class="f-select">
+                            <option value="SIN DESAYUNO" selected>Sin Desayuno</option>
+                            <option value="CON DESAYUNO">Con Desayuno</option>
                         </select>
                     </div>
+                    <div class="f-group"><label>Diferencia</label><input type="text" id="resDiferencia" class="f-input readonly alert" value="0.00" readonly></div>
+                </div>
 
-                    <div class="reserva-separator grid-span-4">Tarifas y Pagos</div>
-
-                    <div><label>N° Personas</label><input type="number" id="resPersonas" class="swal2-input" min="1" value="1"></div>
-                    <div><label>Tarifa Diaria</label><input type="number" id="resTarifa" class="swal2-input" value="${hab.precio || 0}" step="0.01"></div>
-                    <div><label>Total Alojamiento</label><input type="number" id="resTotal" class="swal2-input" value="${hab.precio || 0}" step="0.01" style="color: var(--vino-tinto); font-weight: bold;"></div>
-                    <div><label>Diferencia Pendiente</label><input type="number" id="resDiferencia" class="swal2-input" readonly value="0.00" style="background: var(--blanco-colonial); color: var(--amarillo-ocre); font-weight: bold;"></div>
-
-                    <div class="grid-span-2"><label>Pagos Adelantados (Monto/Fecha/Medio)</label><input type="text" id="resAdelanto" class="swal2-input" placeholder="Ej: 50.00 Efectivo"></div>
-                    <div><label>Cochera</label><input type="text" id="resCochera" class="swal2-input" placeholder="SI/NO"></div>
-                    <div><label>Desayuno</label><select id="resDesayuno" class="swal2-select"><option value="CON DESAYUNO">CON DESAYUNO</option><option value="SIN DESAYUNO" selected>SIN DESAYUNO</option></select></div>
-
-                    <div class="reserva-separator grid-span-4">Control de Recepción</div>
-                    <div class="grid-span-2"><label>Recepcionado por:</label><input type="text" id="resRecepcion" class="swal2-input" required></div>
-                    <div class="grid-span-2"><label>Confirmada por:</label><input type="text" id="resRecepcionconfi" class="swal2-input" required></div>
-
-                    <div class="grid-span-4" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
-                        <button type="button" id="btnCancelarCheckIn" class="btn-cancelar-soft" style="border:none; cursor:pointer;">CANCELAR</button>
-                        <button type="submit" class="btn-checkout-final" style="border:none; cursor:pointer; padding: 12px 40px;">CONFIRMAR INGRESO</button>
+                <div class="reserva-footer">
+                    <div style="font-size: 12px; color: #666; text-align: left;">
+                        Registrado por: <input type="text" id="resRecepcion" required style="border:none; border-bottom:1px solid #ccc; outline:none; width:120px;">
                     </div>
-                </form>
-            </div>
+                    <div class="botones">
+                        <button type="button" id="btnCancelarCheckIn" class="btn-secundario">CANCELAR</button>
+                        <button type="submit" class="btn-primario">CONFIRMAR INGRESO</button>
+                    </div>
+                </div>
+            </form>
         `,
         didOpen: () => {
             const form = document.getElementById('formCheckInDirecto');
@@ -338,7 +356,6 @@ async function modalCheckInDirecto(hab) {
 
 
 
-// --- 3. MODAL GESTIÓN (ESTILO ELITE INTEGRADO) ---
 async function abrirModalGestionOcupada(hab) {
     const qRes = query(collection(db, "reservas"), 
                  where("habitacion", "==", hab.numero.toString()), 
@@ -359,96 +376,103 @@ async function abrirModalGestionOcupada(hab) {
     snapCons.forEach(c => {
         const item = c.data();
         totalCons += parseFloat(item.precio);
-        const f = item.fechaConsumo ? new Date(item.fechaConsumo) : new Date();
-        const fechaAmigable = f.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) + 
-                             `, ${f.getHours()}:${f.getMinutes().toString().padStart(2, '0')}`;
+        const f = new Date(item.fechaConsumo);
+        const fechaAmigable = f.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }) + 
+                             ` ${f.getHours()}:${f.getMinutes().toString().padStart(2, '0')}`;
 
         tablaCons += `
-            <div class="consumo-row-item">
-                <div class="consumo-info-main">
-                    <span class="consumo-qty">${item.cantidad || 1}x</span>
-                    <div class="consumo-details">
-                        <span class="consumo-desc">${item.descripcion}</span>
-                        <small class="consumo-date">${fechaAmigable}</small>
-                    </div>
+            <div class="consumo-item-lista">
+                <div class="c-info">
+                    <span class="c-qty">${item.cantidad}x</span>
+                    <span class="c-name">${item.descripcion}</span>
+                    <span class="c-date">${fechaAmigable}</span>
                 </div>
-                <span class="consumo-price">S/ ${parseFloat(item.precio).toFixed(2)}</span>
+                <div class="c-price">S/ ${parseFloat(item.precio).toFixed(2)}</div>
             </div>`;
     });
 
     Swal.fire({
-        title: `<span style="font-family: var(--font-titles); color: var(--vino-tinto); font-size: 28px;">Habitación ${hab.numero}</span>`,
-        width: '800px',
-        customClass: {
-            popup: 'hotel-modal-custom',
-            denyButton: 'btn-checkout-final',
-            confirmButton: 'btn-cancelar-soft'
-        },
+        title: `<div class="modal-header-gestion">
+                    <span>Habitación ${hab.numero}</span>
+                    <small>${hab.tipo || 'Doble'}</small>
+                </div>`,
+        width: '900px',
+        customClass: { popup: 'hotel-modal-custom' },
         html: `
-            <div class="cuenta-modal-container">
-                <div class="reserva-grid-layout" style="background: var(--blanco-colonial); border-radius: 12px; padding: 15px; margin-bottom: 20px; border-left: 5px solid var(--marron-zocalo);">
-                    <div class="grid-span-2">
-                        <label>HUÉSPED PRINCIPAL</label>
-                        <p style="font-size: 16px; font-weight: bold; margin: 0; color: var(--negro);">${r.huesped}</p>
-                        <p style="font-size: 13px; margin: 2px 0; color: var(--marron-zocalo);">${r.doc || 'Sin documento'}</p>
-                    </div>
-                    <div>
-                        <label>TELÉFONO</label>
-                        <p style="font-size: 14px; margin: 0;">${r.telefono || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <label>PAX / COCHERA</label>
-                        <p style="font-size: 14px; margin: 0;">${r.personas || '1'} Pers. | ${r.cochera || 'No'}</p>
+            <div class="gestion-container">
+                <div class="ficha-huesped">
+                    <div class="ficha-row">
+                        <div class="ficha-col span-2">
+                            <label>Huésped Principal</label>
+                            <p class="val-main">${r.huesped}</p>
+                            <p class="val-sub">${r.doc || 'Sin DNI'} • ${r.nacionalidad || 'Nacionalidad N/A'}</p>
+                        </div>
+                        <div class="ficha-col">
+                            <label>Contacto</label>
+                            <p>${r.telefono || '-'}</p>
+                            <p class="val-sub">${r.correo || 'Sin correo'}</p>
+                        </div>
+                        <div class="ficha-col">
+                            <label>Medio Reserva</label>
+                            <p><span class="badge-medio">${r.medio?.toUpperCase() || 'DIRECTA'}</span></p>
+                        </div>
                     </div>
 
-                    <div class="reserva-separator grid-span-4" style="background: transparent; border: none; margin: 10px 0 5px 0;">Cronograma de Estadía</div>
+                    <div class="ficha-row separator">
+                        <div class="ficha-col">
+                            <label>Ingreso</label>
+                            <p><b>${r.checkIn}</b></p>
+                        </div>
+                        <div class="ficha-col">
+                            <label>Salida Prevista</label>
+                            <p><b style="color: var(--vino-tinto);">${r.checkOut}</b></p>
+                        </div>
+                        <div class="ficha-col">
+                            <label>Pax / Cochera</label>
+                            <p>${r.personas} Pers. | ${r.cochera || 'No'}</p>
+                        </div>
+                        <div class="ficha-col">
+                            <label>Servicios</label>
+                            <p class="val-sub">${r.desayuno || 'SIN DESAYUNO'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="consumos-section">
+                    <div class="section-title">
+                        <span><i class="fas fa-shopping-cart"></i> CONSUMOS EXTRAS</span>
+                        <button id="btnAddConsumo" class="btn-agregar-sm">+ AGREGAR ITEM</button>
+                    </div>
                     
-                    <div>
-                        <label>INGRESO</label>
-                        <p style="font-size: 14px; margin: 0; font-weight: bold;">${r.checkIn}</p>
+                    <div class="lista-consumos">
+                        ${tablaCons || '<div class="no-data">No hay consumos registrados aún.</div>'}
                     </div>
-                    <div>
-                        <label>SALIDA PREVISTA</label>
-                        <p style="font-size: 14px; margin: 0; font-weight: bold; color: var(--vino-tinto);">${r.checkOut}</p>
-                    </div>
-                    <div class="grid-span-2">
-                        <label>OBSERVACIONES / SERVICIOS</label>
-                        <p style="font-size: 12px; margin: 0; color: #666;">${r.desayuno || 'SIN DESAYUNO'} | Conf: ${r.recepcionconfi || '-'}</p>
+
+                    <div class="total-bar">
+                        <div class="total-label">
+                            <small>CARGOS ADICIONALES</small>
+                            <span>Subtotal Consumos</span>
+                        </div>
+                        <div class="total-monto">S/ ${totalCons.toFixed(2)}</div>
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h4 style="font-family: var(--font-titles); margin: 0; color: var(--marron-zocalo);">🛒 Consumos Extra</h4>
-                    <button id="btnAddConsumo" class="btn-dorado-full" style="width: auto; padding: 5px 15px; font-size: 12px;">
-                        + AGREGAR ITEM
-                    </button>
-                </div>
-                
-                <div class="consumos-scroll-area" style="border: 1px solid #eee; background: white;">
-                    ${tablaCons || '<p style="text-align:center; color:#94a3b8; padding: 20px;">No hay consumos registrados aún.</p>'}
-                </div>
-                
-                <div class="liquidacion-footer" style="margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <div style="text-align: left;">
-                        <span style="font-size: 11px; display: block; opacity: 0.8;">SUMATORIA DE EXTRAS</span>
-                        <span style="font-size: 18px; font-weight: bold;">Subtotal Consumos</span>
-                    </div>
-                    <span class="monto-total" style="font-size: 26px;">S/ ${totalCons.toFixed(2)}</span>
+                <div class="gestion-footer">
+                    <button id="btnCerrarModal" class="btn-secundario">CERRAR PANEL</button>
+                    <button id="btnFinalizarOut" class="btn-checkout-final">🏁 FINALIZAR CHECK-OUT</button>
                 </div>
             </div>
         `,
-        showDenyButton: true,
-        denyButtonText: '🏁 FINALIZAR CHECK-OUT',
-        confirmButtonText: 'CERRAR PANEL',
-        buttonsStyling: false, // Usamos nuestras clases CSS
-    }).then(result => {
-        if (result.isDenied) realizarCheckOut(resDoc.id, hab, r, totalCons);
+        showConfirmButton: false,
+        didOpen: () => {
+            document.getElementById('btnAddConsumo').onclick = () => agregarConsumo(resDoc.id, hab);
+            document.getElementById('btnCerrarModal').onclick = () => Swal.close();
+            document.getElementById('btnFinalizarOut').onclick = () => realizarCheckOut(resDoc.id, hab, r, totalCons);
+        }
     });
-    
-    // El didOpen se puede optimizar dentro de la misma llamada
-    const btnAdd = document.getElementById('btnAddConsumo');
-    if(btnAdd) btnAdd.onclick = () => agregarConsumo(resDoc.id, hab);
 }
+
+
 // --- 4. AGREGAR CONSUMO (ESTILO INTEGRADO) ---
 async function agregarConsumo(resId, hab) {
     const ahora = new Date();

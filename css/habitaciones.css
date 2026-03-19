@@ -325,3 +325,111 @@ body {
     cursor: pointer;
 }
 
+/* ==========================================================================
+   9 . MODAL CHECK IN NUEVA RESERVA DIRECTA
+   ========================================================================== */
+
+
+.reserva-grid-compacto {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 10px;
+    text-align: left;
+}
+
+.grid-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.reserva-header-section {
+    background: #f8f9fa;
+    color: var(--vino-tinto);
+    font-weight: bold;
+    padding: 5px 10px;
+    border-left: 4px solid var(--vino-tinto);
+    margin-top: 10px;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.f-group { display: flex; flex-direction: column; gap: 5px; }
+.f-group label { font-size: 12px; font-weight: bold; color: #555; }
+.span-2 { grid-column: span 2; }
+
+.f-input, .f-select {
+    padding: 8px 10px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 5px !important;
+    font-size: 14px !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+.f-input.highlight { border: 2px solid var(--amarillo-ocre) !important; }
+.f-input.readonly { background: #eee !important; color: #666; }
+.total-bold { font-weight: bold; color: var(--vino-tinto); font-size: 16px !important; }
+.f-input.alert { color: #d32f2f; font-weight: bold; }
+
+.reserva-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.btn-primario { background: var(--vino-tinto); color: white; padding: 10px 25px; border-radius: 5px; font-weight: bold; }
+.btn-secundario { background: #ccc; color: #333; padding: 10px 20px; border-radius: 5px; }
+
+/* ==========================================================================
+   10 . MODAL GESTION OCUPADA
+   ========================================================================== */
+
+   /* Contenedor General */
+.gestion-container { text-align: left; display: flex; flex-direction: column; gap: 20px; }
+
+/* Ficha Huésped */
+.ficha-huesped {
+    background: #fdfdfd;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 20px;
+    border-left: 5px solid var(--vino-tinto);
+}
+.ficha-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
+.ficha-row.separator { border-top: 1px dashed #cbd5e1; padding-top: 15px; margin-bottom: 0; }
+.ficha-col label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px; }
+.ficha-col p { margin: 0; font-size: 13px; color: #1e293b; }
+.val-main { font-size: 16px !important; font-weight: bold; color: var(--negro); }
+.val-sub { font-size: 11px !important; color: #64748b; }
+.badge-medio { background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+
+/* Consumos */
+.section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; color: var(--marron-zocalo); }
+.lista-consumos { background: white; border: 1px solid #eee; border-radius: 8px; max-height: 200px; overflow-y: auto; }
+.consumo-item-lista { 
+    display: flex; justify-content: space-between; align-items: center; 
+    padding: 10px 15px; border-bottom: 1px solid #f1f5f9; 
+}
+.c-info { display: flex; align-items: center; gap: 10px; }
+.c-qty { background: var(--blanco-colonial); color: var(--vino-tinto); font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+.c-name { font-size: 13px; font-weight: 500; }
+.c-date { font-size: 10px; color: #94a3b8; margin-left: 5px; }
+.c-price { font-weight: bold; color: #1e293b; }
+
+/* Barra Total */
+.total-bar { 
+    background: var(--vino-tinto); color: white; border-radius: 8px; 
+    padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px;
+}
+.total-monto { font-size: 28px; font-weight: bold; }
+.total-label span { font-size: 18px; display: block; font-weight: bold; }
+
+/* Botones */
+.gestion-footer { display: flex; justify-content: flex-end; gap: 15px; margin-top: 10px; }
+.btn-agregar-sm { background: var(--amarillo-ocre); color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; }
