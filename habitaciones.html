@@ -43,12 +43,27 @@
 <body>
 
     <main class="main-content">
-        <div class="header-flex" style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-            <a href="dashboard.html" class="btn-back"><i class="fa-solid fa-arrow-left"></i></a>
+        <<div class="header-flex" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="dashboard.html" class="btn-back" title="Volver al Dashboard">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
             <div>
-                <h2 style="margin:0; font-family:'Playfair Display', serif; font-size: 1.5rem;">Habitaciones HOTEL CENTRAL</h2>
-                <p id="current-date" style="font-size: 0.75rem; color: #666; margin:0;"></p>
+                <h2 style="margin:0; font-family:'Playfair Display', serif; font-size: 1.4rem; color: var(--vino-tinto);">
+                    Habitaciones HOTEL CENTRAL
+                </h2>
+                <p id="current-date" style="font-size: 0.75rem; color: #666; margin:0; text-transform: capitalize;"></p>
             </div>
+        </div>
+
+        <a href="calendario.html" class="btn-calendario-header">
+            <i class="fa-solid fa-calendar-days"></i>
+            <span>Ver Calendario</span>
+        </a>
+    </div>
+
+    <div class="hab-stats" style="margin-bottom: 15px;">
         </div>
 
         <div class="hab-stats" style="margin-bottom: 15px;">

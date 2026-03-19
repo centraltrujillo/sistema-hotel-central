@@ -71,11 +71,11 @@
 
 /* LIBRE (Verde Colonial / Limpio) */
 .hab-card.libre {
-    border-bottom-color: #2e7d32;
+    border-bottom-color: var(--amarillo-ocre);
 }
 .hab-card.libre .hab-badge {
     background-color: #e8f5e9;
-    color: #2e7d32;
+    color: var(--amarillo-ocre);
 }
 
 /* OCUPADA (Tu Vino Tinto de Identidad) */
@@ -92,11 +92,11 @@
 
 /* MANTENIMIENTO / LIMPIEZA */
 .hab-card.mantenimiento {
-    border-bottom-color: var(--amarillo-ocre);
+    border-bottom-color: var(--gris-antracita);
     background-color: #fffdf0;
 }
 .hab-card.mantenimiento .hab-badge {
-    background-color: var(--amarillo-ocre);
+    background-color: var(--gris-antracita);
     color: var(--blanco);
 }
 
@@ -255,4 +255,35 @@
 .swal2-validation-message {
     font-family: var(--font-main);
     font-size: 13px;
+}
+
+.btn-calendario-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--vino-tinto, #800020); /* Usa tu variable o el color tinto */
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.85rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.btn-calendario-header:hover {
+    background-color: #5a1914; /* Un tono más oscuro al pasar el mouse */
+    transform: translateY(-2px);
+}
+
+.btn-calendario-header i {
+    font-size: 1rem;
+}
+
+/* Ajuste para que el grid sea scrolleable si hay muchas habs, pero el body no */
+#habGrid {
+    overflow-y: auto;
+    padding-bottom: 20px;
 }

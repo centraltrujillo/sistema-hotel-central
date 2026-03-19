@@ -35,13 +35,13 @@ function cargarHabitaciones() {
         const listaReservasHoy = snapRes.docs.map(d => d.data().habitacion);
 
         const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        docs.sort((a, b) => a.numero - b.numero);
 
-        docs.forEach(hab => {
-            const est = hab.estado || "Libre";
-            if (est === "Libre") s.l++; else s.o++;
+docs.forEach(hab => {
+    const est = hab.estado || "Libre";
+    
+    // Convertimos ambos a String para asegurar que la comparación sea exitosa
+    const tieneReservaHoy = listaReservasHoy.some(resHab => String(resHab) === String(hab.numero));
 
-            const tieneReservaHoy = listaReservasHoy.includes(hab.numero.toString());
 
             const card = document.createElement('div');
             card.className = `hab-card ${est.toLowerCase()}`;
@@ -71,100 +71,132 @@ function cargarHabitaciones() {
     });
 }
 
-// --- 2. MODAL CHECK-IN + ANTI OVERBOOKING ---
+// --- 2. MODAL CHECK-IN (ELECCIÓN) ---
 async function abrirModalCheckIn(hab) {
     const hoy = getHoyISO();
 
-    // VALIDACIÓN ANTI-OVERBOOKING: Verificar si ya hay alguien con checkin en esta hab
+    // A. VALIDACIÓN ANTI-OVERBOOKING (Si ya está ocupada)
     const qCheck = query(collection(db, "reservas"), 
                    where("habitacion", "==", hab.numero.toString()), 
                    where("estado", "==", "checkin"));
     const snapCheck = await getDocs(qCheck);
 
     if (!snapCheck.empty) {
-        Swal.fire('Error', 'Esta habitación ya tiene un check-in activo en el sistema.', 'error');
+        Swal.fire('Error', 'Esta habitación ya tiene un check-in activo.', 'error');
         return;
     }
 
+    // B. BUSCAR RESERVAS PARA HOY
     const q = query(collection(db, "reservas"), 
               where("habitacion", "==", hab.numero.toString()), 
               where("checkIn", "==", hoy),
               where("estado", "==", "reservada"));
     
     const snap = await getDocs(q);
-    let opciones = { "directo": "➕ Venta del Día (Cliente nuevo)" };
-    snap.forEach(d => { opciones[d.id] = `🏨 Reserva: ${d.data().huesped}`; });
+    let opciones = {};
+    
+    snap.forEach(d => { 
+        opciones[d.id] = `🏨 Reserva: ${d.data().huesped}`; 
+    });
+    opciones["directo"] = "➕ Venta del Día (Cliente nuevo)";
 
     const { value: choice } = await Swal.fire({
         title: `Check-in Hab. ${hab.numero}`,
         input: 'select',
         inputOptions: opciones,
-        confirmButtonColor: '#5a1914',
-        showCancelButton: true
+        inputPlaceholder: 'Seleccione una opción',
+        confirmButtonColor: '#800020',
+        showCancelButton: true,
+        preConfirm: async (value) => {
+            if (!value) {
+                Swal.showValidationMessage('Debes seleccionar una opción');
+                return false;
+            }
+            // ADVERTENCIA DE OVERBOOKING si elige directo habiendo reservas
+            if (value === "directo" && !snap.empty) {
+                const result = await Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: "Hay una reserva para hoy. ¿Deseas ignorarla?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, proceder',
+                    cancelButtonText: 'No, cancelar'
+                });
+                return result.isConfirmed ? "directo" : false;
+            }
+            return value;
+        }
     });
 
-if (choice) {
-    if (choice === "directo") {
-        // En lugar de guardar aquí, abrimos el nuevo modal completo
-        modalCheckInDirecto(hab); 
-    } else {
-        await updateDoc(doc(db, "reservas", choice), { estado: "checkin" });
-        await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
+    if (choice) {
+        if (choice === "directo") {
+            modalCheckInDirecto(hab); 
+        } else {
+            // Es una reserva existente: Actualizamos estados
+            await updateDoc(doc(db, "reservas", choice), { estado: "checkin" });
+            await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
+            Swal.fire('¡Éxito!', 'Check-in de reserva completado', 'success');
+        }
     }
 }
 
-// MODAL PARA INGRESAR DATOS 
+// --- 3. MODAL PARA INGRESO DIRECTO (DATOS COMPLETOS) ---
 async function modalCheckInDirecto(hab) {
     const hoy = getHoyISO();
     
     const { value: formValues } = await Swal.fire({
-        title: `<span style="font-family: var(--font-titles); color: var(--vino-tinto);">Check-in: Habitación ${hab.numero}</span>`,
+        title: `<span style="font-family: var(--font-titles); color: var(--vino-tinto);">Check-in Directo: Hab. ${hab.numero}</span>`,
         width: '600px',
         html: `
             <div style="text-align: left; font-family: var(--font-main); display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 10px;">
                 <div style="grid-column: span 2;">
-                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">NOMBRE COMPLETO DEL HUÉSPED</label>
-                    <input id="ni-nombre" class="swal2-input" style="width: 100%; margin: 5px 0;" placeholder="Juan Pérez">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">NOMBRE COMPLETO</label>
+                    <input id="ni-nombre" class="swal2-input" style="width: 100%; margin: 5px 0;">
                 </div>
                 <div>
                     <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">DNI / CE</label>
-                    <input id="ni-doc" class="swal2-input" style="width: 100%; margin: 5px 0;" placeholder="Documento">
+                    <input id="ni-doc" class="swal2-input" style="width: 100%; margin: 5px 0;">
                 </div>
                 <div>
                     <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">TELÉFONO</label>
-                    <input id="ni-tel" class="swal2-input" style="width: 100%; margin: 5px 0;" placeholder="999 999 999">
+                    <input id="ni-tel" class="swal2-input" style="width: 100%; margin: 5px 0;">
                 </div>
                 <div>
-                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">FECHA SALIDA (ESTIMADA)</label>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">CANT. PERSONAS (PAX)</label>
+                    <input id="ni-personas" type="number" class="swal2-input" style="width: 100%; margin: 5px 0;" value="1" min="1">
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">FECHA SALIDA</label>
                     <input id="ni-out" type="date" class="swal2-input" style="width: 100%; margin: 5px 0;" value="${hoy}">
                 </div>
-                <div>
-                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">PRECIO POR NOCHE (S/)</label>
+                <div style="grid-column: span 2;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">PRECIO ACORDADO (S/)</label>
                     <input id="ni-precio" type="number" class="swal2-input" style="width: 100%; margin: 5px 0;" value="${hab.precio || 0}">
                 </div>
                 <div style="grid-column: span 2;">
-                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">OBSERVACIONES / PLACA</label>
-                    <textarea id="ni-notas" class="swal2-textarea" style="width: 100%; margin: 5px 0; font-family: var(--font-main);" placeholder="Ej: Auto ABC-123, toallas extra..."></textarea>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--gris-antracita);">NOTAS / PLACA</label>
+                    <textarea id="ni-notas" class="swal2-textarea" style="width: 100%; margin: 5px 0;"></textarea>
                 </div>
             </div>`,
         confirmButtonText: 'CONFIRMAR INGRESO',
         confirmButtonColor: 'var(--vino-tinto)',
         showCancelButton: true,
-        cancelButtonText: 'CANCELAR',
         preConfirm: () => {
             const nombre = document.getElementById('ni-nombre').value;
             const docu = document.getElementById('ni-doc').value;
             const out = document.getElementById('ni-out').value;
             const precio = document.getElementById('ni-precio').value;
+            const personas = document.getElementById('ni-personas').value;
             
             if (!nombre || !docu || !out || !precio) {
-                Swal.showValidationMessage('Por favor, completa los campos obligatorios');
+                Swal.showValidationMessage('Completa los campos obligatorios');
                 return false;
             }
             return {
                 huesped: nombre,
                 doc: docu,
                 telefono: document.getElementById('ni-tel').value,
+                personas: personas,
                 checkOut: out,
                 total: parseFloat(precio),
                 notas: document.getElementById('ni-notas').value
@@ -173,7 +205,7 @@ async function modalCheckInDirecto(hab) {
     });
 
     if (formValues) {
-        // 1. Guardar en la colección de Reservas (como un checkin activo)
+        // 1. Guardar Reserva como checkin
         await addDoc(collection(db, "reservas"), {
             ...formValues,
             habitacion: hab.numero.toString(),
@@ -183,7 +215,7 @@ async function modalCheckInDirecto(hab) {
             tipoVenta: "Directa"
         });
 
-        // 2. Opcional: Guardar/Actualizar en base de datos de Huespedes para historial
+        // 2. Historial de Huéspedes
         await addDoc(collection(db, "huespedes"), {
             nombre: formValues.huesped,
             documento: formValues.doc,
@@ -191,10 +223,24 @@ async function modalCheckInDirecto(hab) {
             ultimaVisita: hoy
         });
 
-        // 3. Cambiar estado de la habitación
+        // 3. Ocupar Habitación
         await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
         
-        Swal.fire('¡Éxito!', 'Huésped registrado y habitación ocupada', 'success');
+        Swal.fire({
+            title: '¡Ingreso Exitoso!',
+            icon: 'success',
+            confirmButtonColor: 'var(--vino-tinto)',
+            html: `
+                <div style="text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="margin: 5px 0;"><b>Huésped:</b> ${formValues.huesped}</p>
+                    <p style="margin: 5px 0;"><b>Habitación:</b> <span style="color: var(--vino-tinto); font-weight: bold;">${hab.numero}</span></p>
+                    <p style="margin: 5px 0;"><b>Personas:</b> ${formValues.personas}</p>
+                    <p style="margin: 5px 0;"><b>Salida:</b> ${formValues.checkOut}</p>
+                    <hr style="margin: 10px 0; border: 0; border-top: 1px dashed #cbd5e1;">
+                    <p style="margin: 5px 0; text-align: right; font-weight: bold;">Total: S/ ${formValues.total.toFixed(2)}</p>
+                </div>
+            `
+        });
     }
 }
 
@@ -491,5 +537,4 @@ function imprimirTicket(rData, consumos, totalConsumos, granTotal) {
         </html>
     `);
     ventana.document.close();
-}
 }
