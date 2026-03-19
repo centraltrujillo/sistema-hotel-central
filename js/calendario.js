@@ -236,18 +236,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             Swal.fire('¡Éxito!', 'Huésped ingresado.', 'success');
                         };
                     }
-
-                    document.getElementById('btnEliminarRes').onclick = async () => {
+document.getElementById('btnEliminarRes').onclick = async () => {
                         const confirm = await Swal.fire({ title: '¿Eliminar reserva?', text: "Esta acción no se puede deshacer", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Sí, eliminar' });
                         if(confirm.isConfirmed) {
                             await deleteDoc(doc(db, "reservas", resId));
                             Swal.fire('Eliminado', 'La reserva ha sido borrada.', 'success');
                         }
-                    };
-                }
-            });
-        }
-    });
+                    }; // <--- FALTA ESTA (Cierra el onclick)
+                } // <--- ESTA ES EL CIERRE DE didOpen
+            }); // Cierre de Swal.fire (Detalle)
+        } // Cierre de eventClick
+    }); // Cierre de new FullCalendar.Calendar
 
     calendar.render();
 

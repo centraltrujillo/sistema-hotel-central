@@ -1,121 +1,177 @@
-/* --- ESTILOS GENERALES DEL CALENDARIO --- */
-body { font-family: 'Lato', sans-serif; background-color: #f8fafc; margin: 0; }
+/* --- 1. ESTILOS BASE Y CONTENEDORES --- */
+body { 
+    font-family: 'Lato', sans-serif; 
+    background-color: #f8fafc; 
+    margin: 0; 
+    color: #334155;
+}
 
-.calendar-container {
+#calendar {
     background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     padding: 20px;
-    margin-top: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-/* --- ESTILOS DEL FORMULARIO DE EDICIÓN (SWEETALERT) --- */
-#swal-form-reserva {
-    text-align: left;
-    font-family: 'Lato', sans-serif;
-}
+/* --- 2. CONFIGURACIÓN DE LA VISTA TIMELINE (HABITACIONES) --- */
 
-#swal-form-reserva label {
-    display: block;
-    font-weight: 800;
-    margin-bottom: 3px;
-    color: #800020; /* Color Vino */
-    font-size: 10px;
-    letter-spacing: 0.8px;
+/* Encabezado de la columna de habitaciones */
+.fc .fc-resource-area-header-cell {
+    background-color: #800020 !important; /* Color Vino */
+    color: white !important;
+    font-weight: 700;
     text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
 }
 
-#swal-form-reserva .swal2-input, 
-#swal-form-reserva .swal2-select {
-    height: 32px !important;
-    margin: 0 0 8px 0 !important;
-    font-size: 13px !important;
-    border-radius: 4px !important;
-    border: 1px solid #d1d5db !important;
-    width: 100% !important;
-    box-shadow: none !important;
-}
-
-#swal-form-reserva .swal2-input:focus {
-    border-color: #d4a017 !important; /* Color Dorado */
-    box-shadow: 0 0 0 2px rgba(212, 160, 23, 0.1) !important;
-}
-
-#swal-form-reserva input[readonly] {
-    background-color: #f1f5f9 !important;
-    border-style: dashed !important;
+/* Celdas de las habitaciones (Columna izquierda) */
+.fc .fc-datagrid-cell-main {
     font-weight: 700;
     color: #1e293b;
+    font-size: 14px; /* Según tu estándar de navegación */
+    padding: 8px !important;
 }
 
-/* --- ESTILOS DE EVENTOS Y BOTONES --- */
-.fc-toolbar-title { font-family: 'Playfair Display', serif; font-weight: 700; color: #800020; }
-
-.fc-event {
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none !important;
-    font-weight: 600;
+/* Líneas de tiempo y cuadrícula */
+.fc-timeline-lane {
+    background: #fff;
+    transition: background 0.2s;
 }
 
-.fc-event:hover {
-    transform: scale(1.02);
-    filter: brightness(1.1);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+.fc-timeline-lane:hover {
+    background-color: #f1f5f9; /* Efecto al pasar el mouse por la fila */
+}
+
+/* Fines de semana con color distinto */
+.fc .fc-timeline-slot-sat, 
+.fc .fc-timeline-slot-sun {
+    background-color: #f8fafc;
+}
+
+/* --- 3. BARRA DE HERRAMIENTAS (TOOLBAR) --- */
+.fc-toolbar-title { 
+    font-family: 'Playfair Display', serif; 
+    font-weight: 700; 
+    color: #800020; 
+    font-size: 20px !important; /* Tu estándar para títulos */
 }
 
 .fc .fc-button-primary {
     background-color: #ffffff !important;
     color: #800020 !important;
     border: 1px solid #e2e8f0 !important;
-    text-transform: capitalize;
     font-weight: 700;
+    font-size: 13px; /* Estándar botón logout */
+    text-transform: capitalize;
+}
+
+.fc .fc-button-primary:hover {
+    background-color: #f8fafc !important;
 }
 
 .fc .fc-button-active {
     background-color: #800020 !important;
     color: #ffffff !important;
+    border-color: #800020 !important;
 }
 
-/* Estilo para los Check-ins (Eventos blancos) */
-.fc-h-event[style*="background-color: #ffffff"],
-.fc-h-event[style*="background-color: rgb(255, 255, 255)"] {
-    color: #1e293b !important;
+/* --- 4. EVENTOS (LAS RESERVAS) --- */
+.fc-event {
+    cursor: pointer;
+    transition: transform 0.1s ease;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 2px 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.fc-event:hover {
+    transform: scale(1.02);
+    filter: brightness(1.05);
+}
+
+/* Estilo para Check-ins/Finalizados (Blancos) */
+.fc-event[style*="background-color: #ffffff"],
+.fc-event[style*="background-color: rgb(255, 255, 255)"] {
+    color: #475569 !important;
     border: 1px solid #cbd5e1 !important;
 }
 
-/* --- COLORES DE LA LEYENDA (Deben coincidir con JS) --- */
-.dot.booking { background-color: #3b82f6; }       /* Azul */
-.dot.airbnb { background-color: #f43f5e; }        /* Rosa/Rojo */
-.dot.directas { background-color: #8b5cf6; }      /* Morado */
-.dot.expedia { background-color: #f59e0b; }       /* Naranja/Dorado */
-.dot.personal { background-color: #10b981; }      /* Verde */
-.dot.dayuse { background-color: #6366f1; }        /* Índigo */
-.dot.mantenimiento { background-color: #fa051a; } /* Rojo fuerte */
-.dot.gmail { background-color: #59ea35; }         /* Verde lima */
+/* --- 5. LEYENDA DE COLORES --- */
+.calendar-legend-container {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 12px;
+}
 
-/* Estilo para los elementos de la leyenda */
+.legend-title {
+    font-weight: 700;
+    color: #800020;
+    font-size: 14px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
 .legend-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 12px;
-    margin-top: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12px;
+    font-size: 12px; /* Estándar etiquetas KPI */
     font-weight: 700;
-    text-transform: uppercase;
-    color: #475569;
+    color: #64748b;
 }
 
 .dot {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     display: inline-block;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Colores de los puntos (Sincronizados con JS) */
+.dot.booking { background-color: #3b82f6; }
+.dot.airbnb { background-color: #f43f5e; }
+.dot.directas { background-color: #8b5cf6; }
+.dot.expedia { background-color: #f59e0b; }
+.dot.personal { background-color: #10b981; }
+.dot.dayuse { background-color: #6366f1; }
+.dot.mantenimiento { background-color: #fa051a; }
+.dot.gmail { background-color: #59ea35; }
+
+/* --- 6. FORMULARIO DE EDICIÓN (SWEETALERT) --- */
+#swal-form-reserva {
+    text-align: left;
+}
+
+#swal-form-reserva label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #800020;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+#swal-form-reserva .swal2-input, 
+#swal-form-reserva .swal2-select {
+    height: 35px !important;
+    margin: 0 0 10px 0 !important;
+    font-size: 14px !important;
+    border: 1px solid #d1d5db !important;
+    width: 100% !important;
+    border-radius: 6px !important;
+}
+
+#swal-form-reserva input[readonly] {
+    background-color: #f8fafc !important;
+    color: #64748b;
+    border-style: dashed !important;
 }
