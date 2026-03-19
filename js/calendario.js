@@ -13,12 +13,19 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        locale: 'es',
-        buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Agenda' },
-        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
-        height: 'auto',
-        displayEventTime: true,
+    // CAMBIO: Usar vista de línea de tiempo
+    initialView: 'resourceTimelineMonth', 
+    locale: 'es',
+    // Configuración de las columnas de recursos (Habitaciones)
+    resourceAreaHeaderContent: 'HABITACIONES',
+    resourceAreaWidth: '20%',
+    resources: [], // Se llenarán desde Firebase
+    
+    headerToolbar: { 
+        left: 'prev,next today', 
+        center: 'title', 
+        right: 'resourceTimelineMonth,resourceTimelineDay' 
+    },
         
         eventClick: function(info) {
             const res = info.event.extendedProps.dataReserva;
@@ -244,17 +251,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
     calendar.render();
 
+    // --- NUEVO: CARGAR HABITACIONES (COLUMNA IZQUIERDA) ---
+    onSnapshot(collection(db, "habitaciones"), (snap) => {
+        const habitaciones = snap.docs.map(doc => ({
+            id: doc.data().numero.toString(), // Este ID debe coincidir con r.habitacion
+            title: `Hab. ${doc.data().numero} - ${doc.data().tipo || ''}`
+        }));
+        calendar.setOption('resources', habitaciones);
+    });
+
+    // --- ACTUALIZADO: CARGAR RESERVAS (LAS BARRAS DE COLOR) ---
     onSnapshot(collection(db, "reservas"), (snap) => {
         const evs = [];
         snap.docs.forEach(dSnap => {
             const r = dSnap.data();
             const esPasado = (r.estado === 'checkin' || r.estado === 'finalizado');
-            let titulo = `Hab. ${r.habitacion} - ${r.huesped}`;
-            if(r.estado === 'checkin') titulo = `✅ [Hab. ${r.habitacion}] ${r.huesped}`;
             
+            // Título dinámico si está en Check-In
+            let titulo = r.huesped;
+            if(r.estado === 'checkin') titulo = `✅ ${r.huesped}`;
+
             evs.push({
                 id: dSnap.id,
+                // IMPORTANTE: resourceId vincula la reserva con la fila de la habitación
+                resourceId: r.habitacion.toString(), 
                 title: titulo,
+                // Mantenemos tu lógica de Early/Late
                 start: r.early ? `${r.checkIn}T${r.early}:00` : r.checkIn,
                 end: r.late ? `${r.checkOut}T${r.late}:00` : r.checkOut,
                 backgroundColor: esPasado ? '#ffffff' : (coloresMedio[r.medio?.toLowerCase().trim()] || '#800020'),
@@ -266,4 +288,4 @@ document.addEventListener('DOMContentLoaded', function() {
         calendar.removeAllEvents();
         calendar.addEventSource(evs);
     });
-});
+}); // Cierre del DOMContentLoaded
