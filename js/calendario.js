@@ -45,15 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div><label>TELÉFONO</label><input id="sw-telefono" class="swal2-input" value="${res.telefono || ''}"></div>
                                 <div style="grid-column: span 2;"><label>CORREO</label><input id="sw-correo" class="swal2-input" value="${res.correo || ''}"></div>
 
-                                <div>
-                                    <label>TIPO HABITACIÓN</label>
-                                    <select id="sw-tipoHab" class="swal2-select">
-                                        <option value="SIMPLE" ${res.tipoHab === 'SIMPLE' ? 'selected' : ''}>SIMPLE</option>
-                                        <option value="MATRIMONIAL" ${res.tipoHab === 'MATRIMONIAL' ? 'selected' : ''}>MATRIMONIAL</option>
-                                        <option value="DOBLE" ${res.tipoHab === 'DOBLE' ? 'selected' : ''}>DOBLE</option>
-                                        <option value="TRIPLE" ${res.tipoHab === 'TRIPLE' ? 'selected' : ''}>TRIPLE</option>
-                                    </select>
-                                </div>
+                               
                                 <div><label>HABITACIÓN #</label><input id="sw-habitacion" class="swal2-input" value="${res.habitacion}" readonly></div>
                                 <div><label>CHECK IN</label><input type="date" id="sw-in" class="swal2-input" value="${res.checkIn}"></div>
                                 <div><label>CHECK OUT</label><input type="date" id="sw-out" class="swal2-input" value="${res.checkOut}"></div>
@@ -181,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
                                 <h4 style="color: #1e293b; margin-top:0;">🏨 Estancia y Habitación</h4>
                                 <div style="font-size: 14px; line-height: 1.6;">
-                                    <p><b>Habitación:</b> <span style="background:#800020; color:white; padding:2px 8px; border-radius:4px;">${res.habitacion} (${res.tipoHab})</span></p>
+                                    <p><b>Habitación:</b> <span style="background:#800020; color:white; padding:2px 8px; border-radius:4px;">${res.habitacion} </span></p>
                                     <p><b>Check-In:</b> ${res.checkIn} ${res.early ? `<span style="color:#3b82f6;">(Early: ${res.early})</span>` : ''}</p>
                                     <p><b>Check-Out:</b> ${res.checkOut} ${res.late ? `<span style="color:#f43f5e;">(Late: ${res.late})</span>` : ''}</p>
                                     <p><b>Medio:</b> <span style="text-transform: uppercase; font-weight:bold; color:#6366f1;">${res.medio}</span></p>
