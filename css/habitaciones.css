@@ -1,228 +1,327 @@
 /* ==========================================================================
-   1. VARIABLES Y CONFIGURACIÓN (Basado en colors.css)
+   1. VARIABLES DE MARCA Y CONFIGURACIÓN
    ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Playfair+Display:wght@700;800&display=swap');
+
 :root {
-    /* 🏛️ Colores de la Arquitectura (Tu Paleta) */
-    --amarillo-ocre: #D4A017;
-    --blanco-colonial: #F5F5F5;
-    --marron-zocalo: #4E342E;
-    --vino-tinto: #641E16;
+    /* Paleta Principal */
+    --gris-antracita: #2d3748;
+    --vino-tinto: #741d1d;
+    --ocre-oro: #c5a059;
+    --blanco-puro: #ffffff;
+    --gris-fondo: #f4f7f6;
     
-    /* 🚩 Colores de Acento */
-    --gris-antracita: #263238;
-    --verde-libre: #2E7D32;
-    --blanco: #FFFFFF;
+    /* Colores de Estado */
+    --color-libre: #28a745;
+    --color-ocupada: #dc3545;
+    --color-sucia: #f6ad55;
 
-    /* 🔠 Tipografía (Tus Reglas Establecidas) */
-    --font-titles: 'Playfair Display', serif;
-    --font-main: 'Lato', sans-serif;
-    
-    /* Tamaños de Fuente (Según tu Dashboard.css) */
-    --fz-base: 15px;      /* Tamaño base profesional */
-    --fz-titles: 20px;    /* Títulos de página y logo */
-    --fz-nav: 14px;       /* Enlaces de navegación */
-    --fz-kpi-lab: 12px;   /* Etiquetas de KPI */
-    --fz-kpi-num: 25px;   /* Números de KPI */
-    --fz-card-sub: 16px;  /* Subtítulos internos de tarjetas */
+    /* Tipografía */
+    --font-titulos: 'Playfair Display', serif;
+    --font-cuerpo: 'Lato', sans-serif;
+
+    /* Profundidad y Animaciones */
+    --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+    --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* ==========================================================================
-   2. ESTRUCTURA Y ANIMACIONES "ELITE"
-   ========================================================================== */
+/* Base de la página */
 body {
-    background-color: var(--blanco);
-    font-family: var(--font-main);
-    font-size: var(--fz-base);
-    color: var(--gris-antracita);
+    background-color: var(--gris-fondo);
+    font-family: var(--font-cuerpo);
     margin: 0;
-    -webkit-font-smoothing: antialiased;
-}
-
-@keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.main-content {
-    animation: slideUpFade 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
     padding: 20px;
 }
 
 /* ==========================================================================
-   3. CABECERA Y NAVEGACIÓN
+   2. DASHBOARD HEADER (Título y Contadores)
    ========================================================================== */
-.main-title {
-    font-family: var(--font-titles);
-    font-size: var(--fz-titles);
-    color: var(--vino-tinto);
+.main-content header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e2e8f0;
 }
 
-.date-text {
-    font-size: 13px;
-    color: #7f8c8d;
+.main-content header h1 {
+    font-family: var(--font-titulos);
+    color: var(--gris-antracita);
+    font-size: 28px;
+    margin: 0;
 }
 
-.header-actions a {
-    text-decoration: none;
-    font-size: var(--fz-nav);
-    font-weight: bold;
-    padding: 8px 16px;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-}
-
-.btn-reservas-header {
-    color: var(--vino-tinto);
-    border: 1px solid var(--vino-tinto);
-}
-
-.btn-calendario-header {
-    background: var(--marron-zocalo);
-    color: var(--blanco-colonial);
-}
-
-.btn-back {
-    color: var(--vino-tinto);
-    font-size: 20px;
-    transition: transform 0.2s;
-}
-
-.btn-back:hover { transform: scale(1.1); }
-
-/* ==========================================================================
-   4. ESTADÍSTICAS (KPIs)
-   ========================================================================== */
+/* KPIs de estadísticas */
 .hab-stats {
     display: flex;
     gap: 15px;
-    margin-bottom: 25px;
+    margin-bottom: 30px;
 }
 
-.stat-card-mini {
-    background: var(--blanco);
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    border-left: 5px solid var(--amarillo-ocre);
-    min-width: 120px;
-    text-align: center;
+.stat-item {
+    background: var(--blanco-puro);
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-premium);
+    border-left: 4px solid var(--ocre-oro);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
-.stat-card-mini span {
-    font-size: var(--fz-kpi-lab);
+.stat-item label {
+    font-size: 12px;
     text-transform: uppercase;
-    font-weight: bold;
-    color: #7f8c8d;
+    letter-spacing: 1px;
+    color: #718096;
+    margin-bottom: 5px;
 }
 
-.stat-card-mini h3 {
-    font-family: var(--font-titles);
-    font-size: var(--fz-kpi-num);
-    margin: 5px 0 0 0;
-    color: var(--marron-zocalo);
+.stat-item span {
+    font-family: var(--font-titulos);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--gris-antracita);
 }
 
-/* ==========================================================================
-   5. GRID Y TARJETAS DE HABITACIÓN
+/* ================= ==========================================================
+   3. GRID DE HABITACIONES
    ========================================================================== */
 #habGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* Ancho mínimo ligeramente mayor */
+    gap: 25px;
+    padding: 10px 0;
 }
 
+/* ================= ==========================================================
+   4. LA TARJETA (HAB-CARD) - Diseño Premium con Iconos
+   ========================================================================== */
 .hab-card {
-    background: var(--blanco);
-    border-radius: 12px;
+    background: var(--blanco-puro);
+    border-radius: 15px;
     overflow: hidden;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
-    border: 1px solid rgba(0,0,0,0.05);
-    transition: all 0.3s ease;
+    box-shadow: var(--shadow-premium);
+    transition: var(--transition);
     cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.03);
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 .hab-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-hover);
+    border-color: rgba(197, 160, 89, 0.3);
 }
 
-/* Línea dorada inferior */
+/* Detalle inferior dorado */
 .hab-card::after {
     content: "";
     position: absolute;
     bottom: 0;
+    left: 0;
     width: 100%;
     height: 4px;
-    background: var(--amarillo-ocre);
+    background-color: var(--ocre-oro);
+}
+
+/* 4.1. Cabecera de la Tarjeta (Número y Tipo) */
+.hab-header {
+    background-color: var(--gris-antracita);
+    color: var(--blanco-puro);
+    padding: 15px;
+    text-align: center;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.05) 100%), var(--gris-antracita);
+}
+
+.hab-card.ocupada .hab-header {
+    background-color: var(--vino-tinto);
 }
 
 .hab-number {
-    background: var(--gris-antracita);
-    color: var(--blanco);
-    padding: 10px;
-    font-family: var(--font-titles);
-    font-size: 18px;
-    text-align: center;
-    font-weight: bold;
+    font-family: var(--font-titulos);
+    font-size: 26px; /* Más grande para destacar */
+    font-weight: 800;
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 3px;
 }
 
-/* Cambia color si está ocupada */
-.hab-card.ocupada .hab-number {
-    background: var(--vino-tinto);
+.hab-type {
+    font-family: var(--font-cuerpo);
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.9;
 }
 
+/* 4.2. Cuerpo de la Tarjeta (Icono y Estado) */
 .hab-body {
-    padding: 15px;
+    padding: 20px 15px;
     text-align: center;
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    justify-content: space-between;
+    gap: 15px;
 }
 
-.hab-body p {
-    font-size: var(--fz-card-sub);
-    font-weight: bold;
-    margin: 0;
-}
-
-/* Badges de estado */
-.hab-badge {
-    font-size: 11px;
-    font-weight: 900;
-    padding: 4px 10px;
-    border-radius: 20px;
-    text-transform: uppercase;
-    display: inline-block;
-}
-
-.hab-card.libre .hab-badge {
-    background: #E8F5E9;
-    color: var(--verde-libre);
-}
-
-.hab-card.ocupada .hab-badge {
-    background: #FDEDEC;
-    color: var(--vino-tinto);
-}
-
-/* Alerta de reserva */
-.reserva-hoy-tag {
-    font-size: 10px;
-    background: var(--blanco-colonial);
-    color: var(--marron-zocalo);
-    padding: 4px;
-    border: 1px solid var(--amarillo-ocre);
-    border-radius: 4px;
-    font-weight: bold;
+/* Icono descriptivo de la habitación */
+.hab-icon {
+    font-size: 48px; /* Grande para llenar el espacio */
+    color: var(--ocre-oro);
+    opacity: 0.8;
 }
 
 /* ==========================================================================
-   6. SCROLLBAR (Tu Estilo Personalizado)
+   5. BADGES DE ESTADO
    ========================================================================== */
-::-webkit-scrollbar { width: 10px; }
-::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
-::-webkit-scrollbar-thumb { 
-    background: var(--amarillo-ocre); 
-    border-radius: 10px; 
+.hab-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 18px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 auto;
+    width: fit-content;
 }
+
+/* Colores de estado */
+.hab-card.libre .hab-badge {
+    background-color: #e6fffa;
+    color: var(--color-libre);
+    border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+.hab-card.ocupada .hab-badge {
+    background-color: #fff5f5;
+    color: var(--color-ocupada);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+.hab-card.sucia .hab-badge {
+    background-color: #fffaf0;
+    color: var(--color-sucia);
+    border: 1px solid rgba(246, 173, 85, 0.2);
+}
+
+/* ==========================================================================
+   6. RESERVA PARA HOY
+   ========================================================================== */
+.reserva-hoy-tag {
+    font-size: 10px;
+    font-weight: bold;
+    color: var(--vino-tinto);
+    background: #fff5f5;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--vino-tinto);
+    display: inline-block;
+    animation: pulseReserva 2s infinite;
+}
+
+@keyframes pulseReserva {
+    0% { box-shadow: 0 0 0 0 rgba(116, 29, 29, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(116, 29, 29, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(116, 29, 29, 0); }
+}
+
+/* ==========================================================================
+   7 . MODAL CONSUMO
+   ========================================================================== */
+.consumo-row-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s;
+}
+
+.consumo-row-item:hover {
+    background: var(--blanco-colonial);
+}
+
+.consumo-info-main {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.consumo-qty {
+    background: var(--marron-zocalo);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.consumo-details {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.consumo-desc {
+    font-weight: 700;
+    color: var(--negro);
+    font-size: 14px;
+}
+
+.consumo-date {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.consumo-price {
+    font-weight: 800;
+    color: #2e7d32;
+    font-size: 15px;
+}
+
+/* ==========================================================================
+   8 . MODAL CHECK OUT
+   ========================================================================== */
+.btn-pagar-imprimir {
+    background-color: #2e7d32 !important; /* Verde Esmeralda */
+    color: white !important;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    margin: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-solo-pagar {
+    background-color: var(--vino-tinto) !important;
+    color: white !important;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    margin: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-cancelar-soft {
+    background-color: #64748b !important;
+    color: white !important;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    margin: 5px;
+    border: none;
+    cursor: pointer;
+}
+
