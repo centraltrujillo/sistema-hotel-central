@@ -2,7 +2,7 @@ import { auth, db } from "./firebaseconfig.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { 
     collection, onSnapshot, query, updateDoc, doc, getDocs, 
-    where, addDoc, deleteDoc, getDoc, orderBy 
+    where, addDoc, deleteDoc, getDoc, orderBy, setDoc
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const habGrid = document.getElementById('habGrid');
@@ -304,23 +304,34 @@ async function modalCheckInDirecto(hab) {
 
     if (formValues) {
         try {
+            // 1. Guardar la Reserva (ID aleatorio con addDoc)
             await addDoc(collection(db, "reservas"), formValues);
-            await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
-            
-            // Guardar o actualizar datos del huésped para la próxima vez
-            await setDoc(doc(db, "huespedes", formValues.doc), {
-                nombre: formValues.huesped,
-                documento: formValues.doc,
-                telefono: formValues.telefono,
-                correo: formValues.correo,
-                nacionalidad: formValues.nacionalidad,
-                nacimiento: formValues.nacimiento,
-                ultimaVisita: hoy
-            }, { merge: true });
 
-            Swal.fire('¡Éxito!', 'Ingreso y registro de huésped completado.', 'success');
-        } catch (e) {
-            Swal.fire('Error', 'No se pudo guardar la información.', 'error');
+            // 2. Ocupar la Habitación (updateDoc)
+            await updateDoc(doc(db, "habitaciones", hab.id), { 
+                estado: "Ocupada" 
+            });
+
+            // 3. Guardar el Historial del Huésped (ID manual con setDoc)
+            // Usamos el DNI como ID del documento para evitar duplicados
+            const dniHuesped = formValues.doc.toString().trim();
+            
+            if (dniHuesped) {
+                await setDoc(doc(db, "huespedes", dniHuesped), {
+                    nombre: formValues.huesped,
+                    documento: dniHuesped,
+                    telefono: formValues.telefono || "",
+                    correo: formValues.correo || "",
+                    nacionalidad: formValues.nacionalidad || "",
+                    nacimiento: formValues.nacimiento || "",
+                    ultimaVisita: hoy
+                }, { merge: true }); // Mantiene datos antiguos si ya existía
+            }
+
+            Swal.fire('¡Éxito!', 'Ingreso y huésped registrados.', 'success');
+        } catch (error) {
+            console.error("Error al guardar:", error);
+            Swal.fire('Error', 'Se ocupó la habitación pero falló el registro de huésped.', 'warning');
         }
     }
 }
@@ -488,7 +499,8 @@ async function realizarCheckOut(resId, hab, rData, totalConsumos) {
     const snapCons = await getDocs(qCons);
     const listaConsumos = snapCons.docs.map(d => d.data());
 
-    const { value: metodo, isConfirmed } = await Swal.fire({
+    // CAMBIO 1: Guardamos todo en la variable 'resultado'
+    const resultado = await Swal.fire({
         title: `<span style="font-family: var(--font-titles); color: var(--vino-tinto);">Finalizar Estadía</span>`,
         html: `
             <div class="checkout-container">
@@ -511,15 +523,19 @@ async function realizarCheckOut(resId, hab, rData, totalConsumos) {
         showDenyButton: true,
         denyButtonText: 'SÓLO REGISTRAR PAGO',
         customClass: {
-            confirmButton: 'btn-pagar-imprimir',
-            denyButton: 'btn-solo-pagar'
-        },
-        preConfirm: () => document.getElementById('metodoPago').value
-    });
+        popup: 'hotel-modal-custom',      // Activa el borde vino superior
+        confirmButton: 'btn-pagar-imprimir', // Activa el botón verde
+        denyButton: 'btn-solo-pagar',     // Activa el botón vino
+        cancelButton: 'btn-cancelar-soft' // Activa el botón gris
+    },
+    buttonsStyling: false // Obligatorio para que use TUS estilos y no los de SweetAlert
+});
 
-
-    if (isConfirmed || Swal.getDenyButton().classList.contains('swal2-deny')) {
+    // CAMBIO 2: Usamos las propiedades oficiales de SweetAlert2
+    if (resultado.isConfirmed || resultado.isDenied) {
         try {
+            const metodo = resultado.value; // El método de pago elegido
+
             // A. REGISTRO EN COLECCIÓN DE PAGOS 
             await addDoc(collection(db, "pagos"), {
                 idReserva: resId,
@@ -532,8 +548,8 @@ async function realizarCheckOut(resId, hab, rData, totalConsumos) {
                 fechaPago: new Date() 
             });
 
-            // B. ¿IMPRIMIR TICKET? (Solo si eligió el botón verde)
-            if (isConfirmed) {
+            // B. ¿IMPRIMIR TICKET? (Solo si presionó el botón principal)
+            if (resultado.isConfirmed) {
                 imprimirTicket(rData, listaConsumos, totalConsumos, granTotal);
             }
 

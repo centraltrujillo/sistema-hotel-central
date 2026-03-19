@@ -40,16 +40,69 @@
             </nav>
         </header>
 
-        <section class="hab-stats" style="display: flex; gap: 15px; margin-bottom: 20px;">
-            <div class="stat-card-mini">
-                <span>Libres</span>
-                <h3 id="stat-libres">--</h3>
+       <!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habitaciones | Hotel Central</title>
+    <link rel="icon" type="image/png" href="img/logo.png" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/dashboard.css"> 
+    <link rel="stylesheet" href="css/habitaciones.css"> 
+</head>
+<body>
+
+    <main class="main-content">
+        <header class="header-flex" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+            
+            <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
+                <a href="dashboard.html" class="btn-back" title="Volver al Dashboard">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <div class="title-container">
+                    <h2 class="main-title" style="margin:0;">Habitaciones HOTEL CENTRAL</h2>
+                    <p id="current-date" class="date-text" style="margin:0;"></p>
+                </div>
             </div>
-            <div class="stat-card-mini">
-                <span>Ocupadas</span>
-                <h3 id="stat-ocupadas">--</h3>
-            </div>
-        </section>
+
+            <nav class="header-actions" style="display: flex; gap: 10px;">
+                <a href="reservas.html" class="btn-reservas-header">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>Ver Reservas</span>
+                </a>
+                <a href="calendario.html" class="btn-calendario-header">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <span>Ver Calendario</span>
+                </a>
+            </nav>
+        </header>
+
+        <section class="hab-stats">
+    <div class="stat-item">
+        <label>Libres</label> <span id="stat-libres">--</span> </div>
+    <div class="stat-item">
+        <label>Ocupadas</label>
+        <span id="stat-ocupadas">--</span>
+    </div>
+</section>
+
+        <section class="hab-grid" id="habGrid">
+            </section>
+    </main>
+
+    <script type="module" src="js/habitaciones.js"></script>
+    <script>
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+        });
+    </script>
+</body>
+</html>
 
         <section class="hab-grid" id="habGrid">
             </section>
