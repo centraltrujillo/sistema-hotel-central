@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 4. MODAL DE EDICIÓN CON CÁLCULOS ---
     const abrirEdicionIntegral = (res, resId) => {
         Swal.fire({
-            title: `<span style="font-family: 'Playfair Display'; color: #800020;">Editor de Reserva</span>`,
+            title: `<span style="font-family: 'Playfair Display'; color: #800020;">Editar Reserva</span>`,
             width: '1100px',
             html: `
                 <div id="swal-form-reserva">
