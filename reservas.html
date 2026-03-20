@@ -16,7 +16,9 @@
     <div class="admin-layout">
         <aside class="sidebar">
             <div class="logo-box">
-                <div class="logo-icon"><img src="img/logo.jpeg" alt="Logo" style="width: 100%; height: auto; border-radius: 8px;"></div>
+                <div class="logo-icon">
+                    <img src="img/logo.jpeg" alt="Logo" style="width: 100%; height: auto; border-radius: 8px;">
+                </div>
                 <div>
                     <h3>Hotel Central</h3>
                     <p>Sistema de Gestión</p>
@@ -90,7 +92,7 @@
                         <input type="text" id="resHuesped" required>
                     </div>
                     <div class="form-group">
-                        <label>DNI / </label>
+                        <label>DNI / Pasaporte</label>
                         <input type="text" id="resDoc" required>
                     </div>
 
@@ -98,7 +100,7 @@
                     <div class="form-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad"></div>
                     <div class="form-group"><label>Teléfono</label><input type="tel" id="resTelefono" required></div>
 
-                    <div class="form-group"><label>Correo</label><input type="email" id="resCorreo"></div>
+                    <div class="form-group"><label>Correo electrónico</label><input type="email" id="resCorreo"></div>
                     <div class="form-group">
                         <label>Habitación</label>
                         <select id="resHabitacion" required>
@@ -112,7 +114,6 @@
                             <option value="booking">Booking</option>
                             <option value="expedia">Expedia</option>
                             <option value="dayuse">Day Use</option>
-                            <option value="mantenimiento">Mantenimiento</option>
                             <option value="gmail">Gmail</option>
                             <option value="directas">Directas</option>
                             <option value="airbnb">Airbnb</option>
@@ -125,36 +126,35 @@
 
                     <div class="form-group"><label>Early Check-in</label><input type="time" id="resEarly"></div>
                     <div class="form-group"><label>Late Check-out</label><input type="time" id="resLate"></div>
+                    <div class="form-group"><label>Tarifa Diaria</label><input type="number" id="resTarifa" step="0.01" required></div>
+
                     <div class="form-group">
-    <label>Tarifa Diaria</label>
-    <input type="number" id="resTarifa" step="0.01" required>
-</div>
+                        <label>Moneda</label>
+                        <select id="resMoneda">
+                            <option value="PEN">Soles (S/)</option>
+                            <option value="USD">Dólares ($)</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Tipo de Cambio</label><input type="number" id="resTipoCambio" placeholder="Ej: 3.80" step="0.01"></div>
+                    <div class="form-group"><label>Total Alojamiento</label><input type="number" id="resTotal" step="0.01" value="0.00"></div>
 
-<div class="form-group">
-    <label>Moneda</label>
-    <select id="resMoneda">
-        <option value="PEN">Soles (S/)</option>
-        <option value="USD">Dólares ($)</option>
-    </select>
-</div>
-
-<div class="form-group">
-    <label>Tipo de Cambio</label>
-    <input type="number" id="resTipoCambio" placeholder="Ej: 3.80" step="0.01">
-</div>
-
-<div class="form-group">
-    <label>Total Alojamiento</label>
-    <input type="number" id="resTotal" step="0.01" value="0.00">
-</div>
-                    <div class="form-group" style="grid-column: span 1;"><label>Diferencia Pendiente</label><input type="number" id="resDiferencia" readonly style="background: #f1f5f9;"></div>
+                    <div class="form-group"><label>Diferencia Pendiente</label><input type="number" id="resDiferencia" readonly style="background: #f1f5f9;"></div>
                     <div class="form-group"><label>Información Desayuno</label><select id="resInfo"><option>CON DESAYUNO</option><option>SIN DESAYUNO</option></select></div>
+                    <div class="form-group"><label>Monto Adelanto</label><input type="number" id="resAdelantoMonto" step="0.01" value="0.00"></div>
 
-                    <div class="form-group" style="grid-column: span 3;"><label>Pagos Adelantados (Monto/Fecha/Medio)</label><input type="text" id="resAdelanto" placeholder="Ej: 140.00 Efectivo 11/03"></div>
-
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Detalle de Adelanto (Medio de pago / Fecha)</label>
+                        <input type="text" id="resAdelantoDetalle" placeholder="Ej: Yape 11/03, Efectivo">
+                    </div>
                     <div class="form-group"><label>Cochera</label><input type="text" id="resCochera" placeholder="SI/NO"></div>
+
                     <div class="form-group"><label>Traslado</label><input type="text" id="resTraslado"></div>
-                    <div class="form-group"><label>Recepcionado por:</label><input type="text" id="resRecepcion" required></div>
+                    <div class="form-group" style="grid-column: span 2;"><label>Recepcionado por:</label><input type="text" id="resRecepcion" required></div>
+
+                    <div class="form-group" style="grid-column: span 3;">
+                        <label>Notas / Observaciones Especiales</label>
+                        <textarea id="resObservaciones" rows="3" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px;"></textarea>
+                    </div>
 
                     <div class="form-group" style="grid-column: span 3;">
                         <label>Reserva confirmada por:</label>

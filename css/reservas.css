@@ -1,4 +1,4 @@
-/* --- HOTEL CENTRAL: GESTIÓN DE RESERVAS (VERSION FINAL UNIFICADA) --- */
+/* --- HOTEL CENTRAL: GESTIÓN DE RESERVAS (VERSION ACTUALIZADA) --- */
 
 :root {
     --vino-tinto: #800020;
@@ -8,6 +8,8 @@
     --border-color: #e2e8f0;
     --font-main: 'Lato', sans-serif;
     --font-titles: 'Playfair Display', serif;
+    --success-green: #10b981;
+    --danger-red: #f43f5e;
 }
 
 /* 1. ESTRUCTURA Y CABECERA */
@@ -113,7 +115,7 @@
     font-size: 14px; 
 }
 
-/* BADGES DE MEDIO (Dinamizados por el JS) */
+/* BADGES DE MEDIO */
 .badge-medio {
     padding: 5px 12px;
     border-radius: 6px;
@@ -121,6 +123,7 @@
     font-weight: 700;
     color: white;
     display: inline-block;
+    text-transform: uppercase;
 }
 
 .type-booking { background: #1e40af; }
@@ -132,7 +135,7 @@
 .type-mantenimiento { background: #dc2626; }
 .type-gmail { background: #ea4335; }
 
-/* 5. MODAL DE RESERVAS (REDISEÑO 3 COLUMNAS) */
+/* 5. MODAL DE RESERVAS */
 .modal-reserva-overlay {
     display: none;
     position: fixed;
@@ -147,7 +150,7 @@
 .modal-reserva-overlay.active { display: flex; }
 
 .modal-reserva-content {
-    background: #f1f5f9; /* Color base neutro para el formulario */
+    background: #f1f5f9; 
     border-radius: 15px;
     width: 95%;
     max-width: 1050px; 
@@ -173,7 +176,10 @@
     font-size: 28px;
     cursor: pointer;
     line-height: 1;
+    transition: color 0.2s;
 }
+
+.close-modal:hover { color: var(--amarillo-ocre); }
 
 /* GRID DEL FORMULARIO */
 .form-grid-res {
@@ -190,54 +196,109 @@
     font-weight: 700;
     color: var(--marron-zocalo);
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .form-group input, 
-.form-group select {
+.form-group select,
+.form-group textarea {
     padding: 10px 12px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     font-size: 14px;
     font-family: var(--font-main);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: white;
 }
 
-/* ESTILOS DE ESTADO FINANCIERO */
+.form-group input:focus, 
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--amarillo-ocre);
+    box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.1);
+}
+
+/* ESTILOS DE ESTADO FINANCIERO (RESALTADOS) */
 #resTotal {
-    background: #ecfdf5;
-    border: 2px solid #10b981;
-    color: #065f46;
+    background: #f0fdf4 !important;
+    border: 2px solid var(--success-green) !important;
+    color: #166534 !important;
     font-weight: 800;
     font-size: 16px;
+}
+
+#resAdelantoMonto {
+    background: #fffbeb !important;
+    border: 2px solid var(--amarillo-ocre) !important;
+    color: #92400e !important;
+    font-weight: 700;
 }
 
 #resDiferencia {
-    background: #fff1f2;
-    border: 2px solid #f43f5e;
-    color: #9f1239;
+    background: #fff1f2 !important;
+    border: 2px solid var(--danger-red) !important;
+    color: #9f1239 !important;
     font-weight: 800;
     font-size: 16px;
 }
 
-/* BOTONES DE ACCIÓN */
+/* ESTILO PARA OBSERVACIONES */
+#resObservaciones {
+    resize: none;
+    border: 1px solid #cbd5e1;
+    line-height: 1.5;
+}
+
+/* BOTONES DE ACCIÓN EN TABLA */
 .actions { display: flex; gap: 8px; }
 .btn-edit, .btn-delete {
     border: none;
-    padding: 8px;
+    padding: 8px 10px;
     border-radius: 6px;
     cursor: pointer;
     transition: 0.2s;
 }
-.btn-edit { background: #e2e8f0; color: #475569; }
+.btn-edit { background: #f1f5f9; color: #475569; }
 .btn-edit:hover { background: var(--amarillo-ocre); color: white; }
 .btn-delete { background: #fee2e2; color: #dc2626; }
 .btn-delete:hover { background: #dc2626; color: white; }
 
-/* RESPONSIVE */
-@media (max-width: 900px) {
-    .form-grid-res { grid-template-columns: repeat(2, 1fr); }
+/* FOOTER DEL MODAL */
+.form-actions-res {
+    border-top: 1px solid var(--border-color);
 }
 
-@media (max-width: 600px) {
+.btn-save {
+    background: var(--vino-tinto);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-save:hover {
+    background: #600018;
+}
+
+/* RESPONSIVE */
+@media (max-width: 950px) {
+    .form-grid-res { grid-template-columns: repeat(2, 1fr); }
+    /* Ajustamos los spans para tablet */
+    .form-group[style*="grid-column: span 3"],
+    .form-group[style*="grid-column: span 2"] {
+        grid-column: span 2 !important;
+    }
+}
+
+@media (max-width: 650px) {
     .form-grid-res { grid-template-columns: 1fr; }
+    .form-group[style*="grid-column"] {
+        grid-column: span 1 !important;
+    }
     .page-header { flex-direction: column; gap: 15px; align-items: flex-start; }
+    .modal-reserva-content { width: 98%; }
 }

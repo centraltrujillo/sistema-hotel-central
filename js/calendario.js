@@ -15,7 +15,34 @@ document.addEventListener('DOMContentLoaded', function() {
         'mantenimiento': '#fa051a', 'gmail': '#59ea35'
     };
 
-    const habitaciones = ["201", "202", "203", "204", "301", "302", "303", "304", "305", "401", "402", "403", "404"];
+// --- CONFIGURACIÓN GLOBAL ---
+let habitaciones = []; // Ahora empezará vacío y se llenará desde Firebase
+
+async function cargarHabitacionesDesdeFirebase() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "habitaciones"));
+        habitaciones = []; // Limpiamos el array
+        
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            // Guardamos un objeto con el número y el tipo
+            habitaciones.push({
+                numero: data.numero,
+                tipo: data.tipo || "S/T" // "S/T" por si no tiene tipo asignado
+            });
+        });
+
+        // Opcional: Ordenar por número de habitación
+        habitaciones.sort((a, b) => a.numero - b.numero);
+
+        // Una vez que tenemos los datos, generamos el calendario
+        generarCalendarioGantt();
+    } catch (error) {
+        console.error("Error cargando habitaciones:", error);
+    }
+}
+
+
 
     // --- 1. INICIALIZAR CONTROLES DEL HEADER ---
     function inicializarControles() {
@@ -74,15 +101,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         html += `</tr></thead><tbody>`;
 
-        habitaciones.forEach(num => {
-            html += `<tr><td class="sticky-col hab-name">Hab. ${num}</td>`;
-            for (let i = 1; i <= diasEnMes; i++) {
-                const esHoy = (esMismoMesYAno && fechaHoy.getDate() === i);
-                const fechaId = `${anioActual}-${String(mesActual + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                html += `<td id="cell-${num}-${fechaId}" class="calendar-cell ${esHoy ? 'today-column' : ''}"></td>`;
-            }
-            html += `</tr>`;
-        });
+        habitaciones.forEach(hab => {
+    // Usamos hab.numero y hab.tipo para la etiqueta
+    html += `<tr><td class="sticky-col hab-name">${hab.numero} - ${hab.tipo}</td>`;
+    
+    for (let i = 1; i <= diasEnMes; i++) {
+        const esHoy = (esMismoMesYAno && fechaHoy.getDate() === i);
+        const fechaId = `${anioActual}-${String(mesActual + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        // Importante: El ID de la celda sigue usando solo el número para vincular con las reservas
+        html += `<td id="cell-${hab.numero}-${fechaId}" class="calendar-cell ${esHoy ? 'today-column' : ''}"></td>`;
+    }
+    html += `</tr>`;
+});
 
         html += `</tbody></table>`;
         contenedor.innerHTML = html;
