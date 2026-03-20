@@ -6,147 +6,87 @@ body {
     color: #334155;
 }
 
-#calendar {
+#gantt-container {
     background: #ffffff;
     border-radius: 12px;
-    padding: 20px;
+    padding: 10px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow-x: auto; /* Permite scroll horizontal en móviles */
+    margin-top: 20px;
 }
 
-/* --- 2. CONFIGURACIÓN DE LA VISTA TIMELINE (HABITACIONES) --- */
+/* --- 2. ESTRUCTURA DE LA TABLA GANTT --- */
+.gantt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    table-layout: fixed; /* Mantiene las columnas de igual tamaño */
+}
 
-/* Encabezado de la columna de habitaciones */
-.fc .fc-resource-area-header-cell {
+/* Encabezados */
+.gantt-table th {
+    background-color: #f1f5f9;
+    color: #64748b;
+    font-weight: 700;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+}
+
+/* Columna de Habitaciones (Fijada a la izquierda) */
+.sticky-col {
+    position: sticky;
+    left: 0;
     background-color: #800020 !important; /* Color Vino */
     color: white !important;
+    z-index: 10;
+    width: 120px;
+    min-width: 120px;
+    border-right: 2px solid #d4a017 !important; /* Línea dorada divisoria */
+    text-align: left !important;
+    padding-left: 15px !important;
+}
+
+.hab-name {
     font-weight: 700;
+    font-size: 14px;
     text-transform: uppercase;
-    font-size: 12px;
-    letter-spacing: 1px;
 }
 
-/* Celdas de las habitaciones (Columna izquierda) */
-.fc .fc-datagrid-cell-main {
-    font-weight: 700;
-    color: #1e293b;
-    font-size: 14px; /* Según tu estándar de navegación */
-    padding: 8px !important;
-}
-
-/* Líneas de tiempo y cuadrícula */
-.fc-timeline-lane {
-    background: #fff;
+/* Celdas del Calendario */
+.calendar-cell {
+    border: 1px solid #e2e8f0;
+    height: 45px;
+    width: 40px;
+    min-width: 40px;
+    position: relative;
+    cursor: pointer;
     transition: background 0.2s;
 }
 
-.fc-timeline-lane:hover {
-    background-color: #f1f5f9; /* Efecto al pasar el mouse por la fila */
-}
-
-/* Fines de semana con color distinto */
-.fc .fc-timeline-slot-sat, 
-.fc .fc-timeline-slot-sun {
+.calendar-cell:hover {
     background-color: #f8fafc;
 }
 
-/* --- 3. BARRA DE HERRAMIENTAS (TOOLBAR) --- */
-.fc-toolbar-title { 
-    font-family: 'Playfair Display', serif; 
-    font-weight: 700; 
-    color: #800020; 
-    font-size: 20px !important; /* Tu estándar para títulos */
+/* --- 3. EVENTOS / RESERVAS DENTRO DE CELDAS --- */
+.has-reservation {
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.1);
 }
 
-.fc .fc-button-primary {
-    background-color: #ffffff !important;
-    color: #800020 !important;
-    border: 1px solid #e2e8f0 !important;
-    font-weight: 700;
-    font-size: 13px; /* Estándar botón logout */
-    text-transform: capitalize;
+.res-label {
+    display: block;
+    padding-left: 4px;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
 }
 
-.fc .fc-button-primary:hover {
-    background-color: #f8fafc !important;
-}
-
-.fc .fc-button-active {
-    background-color: #800020 !important;
-    color: #ffffff !important;
-    border-color: #800020 !important;
-}
-
-/* --- 4. EVENTOS (LAS RESERVAS) --- */
-.fc-event {
-    cursor: pointer;
-    transition: transform 0.1s ease;
-    border: none !important;
-    border-radius: 4px !important;
-    padding: 2px 5px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.fc-event:hover {
-    transform: scale(1.02);
-    filter: brightness(1.05);
-}
-
-/* Estilo para Check-ins/Finalizados (Blancos) */
-.fc-event[style*="background-color: #ffffff"],
-.fc-event[style*="background-color: rgb(255, 255, 255)"] {
-    color: #475569 !important;
-    border: 1px solid #cbd5e1 !important;
-}
-
-/* --- 5. LEYENDA DE COLORES --- */
-.calendar-legend-container {
-    margin-bottom: 20px;
-    padding: 15px;
-    background: white;
-    border-radius: 12px;
-}
-
-.legend-title {
-    font-weight: 700;
-    color: #800020;
-    font-size: 14px;
-    margin-bottom: 12px;
-    text-transform: uppercase;
-}
-
-.legend-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px; /* Estándar etiquetas KPI */
-    font-weight: 700;
-    color: #64748b;
-}
-
-.dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-/* Colores de los puntos (Sincronizados con JS) */
-.dot.booking { background-color: #3b82f6; }
-.dot.airbnb { background-color: #f43f5e; }
-.dot.directas { background-color: #8b5cf6; }
-.dot.expedia { background-color: #f59e0b; }
-.dot.personal { background-color: #10b981; }
-.dot.dayuse { background-color: #6366f1; }
-.dot.mantenimiento { background-color: #fa051a; }
-.dot.gmail { background-color: #59ea35; }
-
-/* --- 6. FORMULARIO DE EDICIÓN (SWEETALERT) --- */
+/* --- 4. FORMULARIO DE EDICIÓN (SWEETALERT) --- */
 #swal-form-reserva {
     text-align: left;
 }
@@ -162,16 +102,46 @@ body {
 
 #swal-form-reserva .swal2-input, 
 #swal-form-reserva .swal2-select {
-    height: 35px !important;
+    height: 38px !important;
     margin: 0 0 10px 0 !important;
     font-size: 14px !important;
     border: 1px solid #d1d5db !important;
     width: 100% !important;
     border-radius: 6px !important;
+    box-sizing: border-box;
 }
 
 #swal-form-reserva input[readonly] {
     background-color: #f8fafc !important;
     color: #64748b;
     border-style: dashed !important;
+}
+
+/* --- 5. LEYENDA (Mantenemos tus estilos) --- */
+.calendar-legend-container {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 12px;
+}
+
+.legend-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
 }

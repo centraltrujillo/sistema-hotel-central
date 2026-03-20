@@ -14,11 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Estilos rápidos para los nuevos botones en el header */
-        .header-actions {
-            display: flex;
-            gap: 10px;
-        }
+        .header-actions { display: flex; gap: 10px; }
         .btn-header {
             padding: 8px 15px;
             border-radius: 6px;
@@ -48,17 +44,17 @@
 <body>
     <div class="admin-layout">
         <main class="main-content">
-            <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div style="display: flex; align-items: center;">
                     <a href="dashboard.html" class="back-arrow" title="Regresar al Dashboard">
                         <i class="fas fa-arrow-left"></i>
                     </a>
-                    <h2 style="margin: 0;">Calendario de Reservas</h2>
+                    <h2 style="margin: 0; font-family: 'Playfair Display'; color: #800020;">Calendario de Reservas</h2>
                 </div>
                 
                 <div class="header-actions">
                     <a href="reservas.html" class="btn-header btn-add">
-                        <i class="fas fa-plus"></i> + Nueva reserva
+                        <i class="fas fa-plus"></i> Nueva reserva
                     </a>
                     <a href="habitaciones.html" class="btn-header btn-rooms">
                         <i class="fas fa-bed"></i> Ver habitaciones
@@ -80,13 +76,12 @@
                 </div>
             </div>
 
-            <div id="calendar" class="card" style="padding: 20px;"></div>
+            <div id="gantt-container" class="card" style="padding: 0; overflow: hidden;">
+                </div>
         </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     
     <script type="module" src="js/calendario.js"></script>
 </body>
