@@ -13,24 +13,35 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
-    // CAMBIO: Usar vista de línea de tiempo
-    initialView: 'resourceTimelineMonth', 
-    locale: 'es',
-    // Configuración de las columnas de recursos (Habitaciones)
-    resourceAreaHeaderContent: 'HABITACIONES',
-    resourceAreaWidth: '20%',
-    resources: [], // Se llenarán desde Firebase
-    
-    headerToolbar: { 
-        left: 'prev,next today', 
-        center: 'title', 
-        right: 'resourceTimelineMonth,resourceTimelineDay' 
-    },
+        // --- CAMBIO A VISTA GRATUITA ---
+        initialView: 'dayGridMonth', 
+        locale: 'es',
+        headerToolbar: { 
+            left: 'prev,next today', 
+            center: 'title', 
+            right: 'dayGridMonth,listWeek' // 'listWeek' es genial para ver entradas del día
+        },
+
+        // --- TRUCO VISUAL: Mostrar la habitación en el título del evento ---
+        eventContent: function(arg) {
+            let container = document.createElement('div');
+            container.style.overflow = 'hidden';
+            container.style.textOverflow = 'ellipsis';
+            container.style.whiteSpace = 'nowrap';
+            container.style.fontSize = '11px';
+            
+            // Usamos el número de habitación que viene en extendedProps
+            const hab = arg.event.extendedProps.numHab || '??';
+            container.innerHTML = `<b>${hab}:</b> ${arg.event.title}`;
+            
+            return { domNodes: [container] };
+        },
         
         eventClick: function(info) {
             const res = info.event.extendedProps.dataReserva;
             const resId = info.event.id;
             if (!res) return;
+
 
             const esCheckIn = res.estado === 'checkin' || res.estado === 'finalizado';
             const simbolo = res.moneda === 'USD' ? '$' : 'S/';
@@ -250,41 +261,32 @@ document.getElementById('btnEliminarRes').onclick = async () => {
 
     calendar.render();
 
-    // --- NUEVO: CARGAR HABITACIONES (COLUMNA IZQUIERDA) ---
-    onSnapshot(collection(db, "habitaciones"), (snap) => {
-        const habitaciones = snap.docs.map(doc => ({
-            id: doc.data().numero.toString(), // Este ID debe coincidir con r.habitacion
-            title: `Hab. ${doc.data().numero} - ${doc.data().tipo || ''}`
-        }));
-        calendar.setOption('resources', habitaciones);
-    });
-
-    // --- ACTUALIZADO: CARGAR RESERVAS (LAS BARRAS DE COLOR) ---
+    // --- CARGAR RESERVAS DESDE FIREBASE ---
     onSnapshot(collection(db, "reservas"), (snap) => {
         const evs = [];
         snap.docs.forEach(dSnap => {
             const r = dSnap.data();
             const esPasado = (r.estado === 'checkin' || r.estado === 'finalizado');
             
-            // Título dinámico si está en Check-In
             let titulo = r.huesped;
             if(r.estado === 'checkin') titulo = `✅ ${r.huesped}`;
 
             evs.push({
                 id: dSnap.id,
-                // IMPORTANTE: resourceId vincula la reserva con la fila de la habitación
-                resourceId: r.habitacion.toString(), 
                 title: titulo,
-                // Mantenemos tu lógica de Early/Late
-                start: r.early ? `${r.checkIn}T${r.early}:00` : r.checkIn,
-                end: r.late ? `${r.checkOut}T${r.late}:00` : r.checkOut,
+                // FullCalendar gratuito solo necesita start y end
+                start: r.checkIn,
+                end: r.checkOut, 
                 backgroundColor: esPasado ? '#ffffff' : (coloresMedio[r.medio?.toLowerCase().trim()] || '#800020'),
                 textColor: esPasado ? '#475569' : '#ffffff',
                 borderColor: esPasado ? '#cbd5e1' : 'transparent',
-                extendedProps: { dataReserva: { ...r, id: dSnap.id } }
+                extendedProps: { 
+                    dataReserva: { ...r, id: dSnap.id },
+                    numHab: r.habitacion // Guardamos el número para el eventContent
+                }
             });
         });
         calendar.removeAllEvents();
         calendar.addEventSource(evs);
     });
-}); // Cierre del DOMContentLoaded
+});

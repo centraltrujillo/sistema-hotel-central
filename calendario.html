@@ -12,34 +12,62 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Estilos rápidos para los nuevos botones en el header */
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-header {
+            padding: 8px 15px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.3s;
+            text-decoration: none;
+        }
+        .btn-add { background-color: #10b981; color: white; }
+        .btn-rooms { background-color: #800020; color: white; }
+        .btn-header:hover { opacity: 0.9; transform: translateY(-2px); }
+        .back-arrow { 
+            color: #800020; 
+            margin-right: 15px; 
+            font-size: 20px; 
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .back-arrow:hover { transform: translateX(-5px); }
+    </style>
 </head>
 <body>
     <div class="admin-layout">
-        <aside class="sidebar">
-            <div class="logo-box">
-                <div class="logo-icon">
-                    <img src="img/logo.jpeg" alt="Logo" style="width: 100%; height: auto; border-radius: 8px;">
-                </div>
-                <div>
-                    <h3>Hotel Central</h3>
-                    <p>Sistema de Gestión</p>
-                </div>
-            </div>
-            <nav class="nav-menu">
-                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
-                <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
-                <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
-                <a href="calendario.html" class="nav-link active"><i class="fa-solid fa-calendar-days"></i> Calendario</a>
-            </nav>
-        </aside>
-
         <main class="main-content">
-            <div class="page-header">
-                <h2>Calendario de Reservas</h2>
+            <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center;">
+                    <a href="dashboard.html" class="back-arrow" title="Regresar al Dashboard">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <h2 style="margin: 0;">Calendario de Reservas</h2>
+                </div>
+                
+                <div class="header-actions">
+                    <a href="reservas.html" class="btn-header btn-add">
+                        <i class="fas fa-plus"></i> + Nueva reserva
+                    </a>
+                    <a href="habitaciones.html" class="btn-header btn-rooms">
+                        <i class="fas fa-bed"></i> Ver habitaciones
+                    </a>
+                </div>
             </div>
 
             <div class="calendar-legend-container card">
-                <div class="legend-title">Leyenda: Medio de Reserva</div>
+                <div class="legend-title">Leyenda de Medio de Reserva</div>
                 <div class="legend-grid">
                     <div class="legend-item"><span class="dot booking"></span> Booking</div>
                     <div class="legend-item"><span class="dot airbnb"></span> Airbnb</div>
@@ -57,7 +85,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.10/index.global.min.js'></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    
     <script type="module" src="js/calendario.js"></script>
 </body>
 </html>
