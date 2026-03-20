@@ -1,9 +1,18 @@
-/* --- 1. ESTILOS BASE Y CONTENEDORES --- */
-body { 
-    font-family: 'Lato', sans-serif; 
-    background-color: #f8fafc; 
-    margin: 0; 
+/* --- 1. ESTILOS BASE Y CONTENEDORES (AJUSTE FULL SCREEN) --- */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100vh; /* Ocupa el 100% de la ventana */
+    font-family: 'Lato', sans-serif;
+    background-color: #f8fafc;
     color: #334155;
+    overflow: hidden; /* Evita el scroll global de la página */
+}
+
+/* El contenedor principal debe ser un Flexbox para estirar el contenido */
+body {
+    display: flex;
+    flex-direction: column;
 }
 
 #gantt-container {
@@ -11,26 +20,32 @@ body {
     border-radius: 12px;
     padding: 10px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    overflow-x: auto; /* Permite scroll horizontal en móviles */
-    margin-top: 20px;
+    margin: 0 15px 15px 15px; /* Espaciado lateral y fondo */
+    
+    flex-grow: 1;      /* Se estira para llenar el espacio vacío */
+    overflow: auto;    /* Permite scroll interno si la tabla es grande */
 }
 
 /* --- 2. ESTRUCTURA DE LA TABLA GANTT --- */
 .gantt-table {
     width: 100%;
+    height: 100%;       /* Intenta ocupar todo el alto del contenedor */
     border-collapse: collapse;
-    font-size: 14px;
-    table-layout: fixed; /* Mantiene las columnas de igual tamaño */
+    font-size: 13px;    /* Un poco más pequeño para mejorar visibilidad */
+    table-layout: fixed;
 }
 
-/* Encabezados */
-.gantt-table th {
+/* Encabezados fijos arriba */
+.gantt-table thead th {
+    position: sticky;
+    top: 0;
     background-color: #f1f5f9;
     color: #64748b;
     font-weight: 700;
-    padding: 10px;
+    padding: 8px;
     border: 1px solid #e2e8f0;
     text-align: center;
+    z-index: 20;
 }
 
 /* Columna de Habitaciones (Fijada a la izquierda) */
@@ -39,41 +54,43 @@ body {
     left: 0;
     background-color: #800020 !important; /* Color Vino */
     color: white !important;
-    z-index: 10;
-    width: 120px;
-    min-width: 120px;
-    border-right: 2px solid #d4a017 !important; /* Línea dorada divisoria */
+    z-index: 25;
+    width: 110px;
+    min-width: 110px;
+    border-right: 2px solid #d4a017 !important; /* Línea dorada */
     text-align: left !important;
-    padding-left: 15px !important;
+    padding-left: 12px !important;
 }
 
 .hab-name {
     font-weight: 700;
-    font-size: 14px;
     text-transform: uppercase;
 }
 
 /* Celdas del Calendario */
 .calendar-cell {
     border: 1px solid #e2e8f0;
-    height: 45px;
-    width: 40px;
-    min-width: 40px;
+    height: auto;       /* El alto se ajusta al espacio disponible */
+    width: 35px;
+    min-width: 35px;
     position: relative;
     cursor: pointer;
     transition: background 0.2s;
 }
 
+/* Resaltado de columna/fila hoy */
+.today-header { background-color: #fef3c7 !important; color: #92400e !important; }
+.today-column { background-color: #fffbeb; }
+
 .calendar-cell:hover {
-    background-color: #f8fafc;
+    background-color: #f1f5f9;
 }
 
 /* --- 3. EVENTOS / RESERVAS DENTRO DE CELDAS --- */
 .has-reservation {
     color: white;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
-    padding: 2px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -83,14 +100,11 @@ body {
 .res-label {
     display: block;
     padding-left: 4px;
-    text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
 }
 
 /* --- 4. FORMULARIO DE EDICIÓN (SWEETALERT) --- */
-#swal-form-reserva {
-    text-align: left;
-}
-
+#swal-form-reserva { text-align: left; }
 #swal-form-reserva label {
     display: block;
     font-weight: 700;
@@ -99,49 +113,50 @@ body {
     font-size: 11px;
     text-transform: uppercase;
 }
-
 #swal-form-reserva .swal2-input, 
 #swal-form-reserva .swal2-select {
-    height: 38px !important;
-    margin: 0 0 10px 0 !important;
-    font-size: 14px !important;
-    border: 1px solid #d1d5db !important;
-    width: 100% !important;
+    height: 35px !important;
+    margin: 0 0 8px 0 !important;
+    font-size: 13px !important;
     border-radius: 6px !important;
-    box-sizing: border-box;
 }
 
-#swal-form-reserva input[readonly] {
-    background-color: #f8fafc !important;
-    color: #64748b;
-    border-style: dashed !important;
-}
-
-/* --- 5. LEYENDA (Mantenemos tus estilos) --- */
+/* --- 5. LEYENDA Y DOTS DINÁMICOS --- */
 .calendar-legend-container {
-    margin-bottom: 20px;
-    padding: 15px;
+    padding: 10px 20px;
     background: white;
-    border-radius: 12px;
+    margin-bottom: 5px;
 }
 
 .legend-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 12px;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: 6px;
+    font-size: 11px;
     font-weight: 700;
     color: #64748b;
+    text-transform: uppercase;
 }
 
 .dot {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.1);
 }
+
+/* Colores específicos de los Dots */
+.dot.booking { background-color: #3b82f6; }
+.dot.airbnb { background-color: #f43f5e; }
+.dot.directas { background-color: #8b5cf6; }
+.dot.expedia { background-color: #f59e0b; }
+.dot.personal { background-color: #10b981; }
+.dot.day-use { background-color: #6366f1; }
+.dot.mantenimiento { background-color: #fa051a; }
+.dot.gmail { background-color: #59ea35; }
