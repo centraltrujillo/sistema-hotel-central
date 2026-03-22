@@ -100,6 +100,9 @@ document.getElementById("resDoc").addEventListener("blur", async (e) => {
         document.getElementById("resTelefono").value = h.telefono || "";
         document.getElementById("resCorreo").value = h.correo || "";
         document.getElementById("resNacionalidad").value = h.nacionalidad || "";
+        // --- AGREGAR ESTA LÍNEA ---
+        document.getElementById("resNacimiento").value = h.nacimiento || ""; 
+        
         Swal.fire({ toast: true, position: 'top-end', title: 'Huésped registrado cargado', icon: 'success', showConfirmButton: false, timer: 1500 });
     }
 });
@@ -113,7 +116,7 @@ form.addEventListener("submit", async (e) => {
     const nuevoOut = document.getElementById("resCheckOut").value;
 
     try {
-        // 1. --- VALIDACIÓN DE DISPONIBILIDAD ---
+        // a --- VALIDACIÓN DE DISPONIBILIDAD ---
         const q = query(
             collection(db, "reservas"), 
             where("habitacion", "==", habSeleccionada)
@@ -144,7 +147,7 @@ form.addEventListener("submit", async (e) => {
             });
         }
 
-        // 2. --- PREPARACIÓN DE DATOS ---
+        // b --- PREPARACIÓN DE DATOS ---
         const data = {
             huesped: document.getElementById("resHuesped").value,
             doc: document.getElementById("resDoc").value,
@@ -176,7 +179,7 @@ form.addEventListener("submit", async (e) => {
             fechaRegistro: editId ? (listaReservasGlobal.find(r => r.id === editId)?.fechaRegistro || new Date().toISOString()) : new Date().toISOString()
     };
 
-        // 3. --- GUARDAR O ACTUALIZAR ---
+        // c --- GUARDAR O ACTUALIZAR ---
         if (editId) {
             await updateDoc(doc(db, "reservas", editId), data);
         } else {

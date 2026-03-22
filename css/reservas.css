@@ -429,6 +429,12 @@
     font-weight: 700;
 }
 
+#statusDisponibilidad {
+    height: 20px; /* Evita que el formulario "salte" cuando aparece el texto */
+    font-size: 13px;
+    margin-top: 5px;
+}
+
 /* 8. RESPONSIVE DINÁMICO */
 @media (max-width: 1000px) {
     .form-grid-compact { grid-template-columns: repeat(2, 1fr); }
