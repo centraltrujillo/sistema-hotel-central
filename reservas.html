@@ -80,92 +80,57 @@
         </main>
     </div>
 
-  <div id="modalReserva" class="modal-reserva-overlay">
-    <div class="modal-reserva-content">
-        <div class="modal-reserva-header">
-            <h3 id="modalTitle">Nueva Reserva</h3>
+<div id="modalReserva" class="modal-reserva-overlay">
+    <div class="modal-reserva-content" style="max-width: 1150px; width: 98%;"> <div class="modal-reserva-header" style="padding: 10px 25px;"> <h3 id="modalTitle" style="font-size: 18px;">Nueva Reserva</h3>
             <span class="close-modal">&times;</span>
         </div>
         
         <form id="formNuevaReserva">
-            <div class="form-body-scroll">
-                <div class="form-section-title">Datos del Huésped</div>
-                <div class="form-grid-res">
-                    <div class="form-group span-2">
-                        <label>Nombres y Apellidos</label>
-                        <input type="text" id="resHuesped" placeholder="Nombre completo" required>
-                    </div>
-                    <div class="form-group">
-                        <label>DNI / Pasaporte</label>
-                        <input type="text" id="resDoc" placeholder="Documento" required>
-                    </div>
-                    <div class="form-group"><label>Nacimiento</label><input type="date" id="resNacimiento"></div>
-                    <div class="form-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad"></div>
+            <div class="form-body-no-scroll"> <div class="form-section-title" style="margin: 10px 0 8px 0;">Datos del Huésped</div>
+                <div class="form-grid-compact">
+                    <div class="form-group span-2"><label>Nombres</label><input type="text" id="resHuesped" required></div>
+                    <div class="form-group"><label>DNI/Pasaporte</label><input type="text" id="resDoc" required></div>
                     <div class="form-group"><label>Teléfono</label><input type="tel" id="resTelefono" required></div>
-                    <div class="form-group span-3"><label>Correo electrónico</label><input type="email" id="resCorreo"></div>
+                    <div class="form-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad"></div>
+                    <div class="form-group"><label>Nacimiento</label><input type="date" id="resNacimiento"></div>
+                    <div class="form-group span-2"><label>Correo</label><input type="email" id="resCorreo"></div>
                 </div>
 
-                <div class="form-section-title">Detalles de la Estancia</div>
-                <div class="form-grid-res">
+                <div class="form-section-title" style="margin: 10px 0 8px 0;">Detalles de la Estancia</div>
+                <div class="form-grid-compact">
                     <div class="form-group"><label>Habitación</label><select id="resHabitacion" required></select></div>
                     <div class="form-group"><label>Check In</label><input type="date" id="resCheckIn" required></div>
                     <div class="form-group"><label>Check Out</label><input type="date" id="resCheckOut" required></div>
+                    <div class="form-group"><label>Medio</label><select id="resMedio" required>...</select></div>
                     
-                    <div id="statusDisponibilidad" class="status-badge span-3"></div>
-
-                    <div class="form-group">
-                        <label>Medio de Reserva</label>
-                        <select id="resMedio" required>
-                            <option value="personal">Personal</option>
-                            <option value="booking">Booking</option>
-                            <option value="airbnb">Airbnb</option>
-                            <option value="expedia">Expedia</option>
-                            <option value="dayuse">Day Use</option>
-                            <option value="gmail">Gmail</option>
-                            <option value="directas">Directas</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>N° Personas</label><input type="number" id="resPersonas" min="1" value="1"></div>
-                    <div class="form-group"><label>Desayuno</label><select id="resInfo"><option>CON DESAYUNO</option><option>SIN DESAYUNO</option></select></div>
+                    <div class="form-group"><label>N° Pers.</label><input type="number" id="resPersonas" min="1" value="1"></div>
+                    <div class="form-group"><label>Desayuno</label><select id="resInfo"><option>SI</option><option>NO</option></select></div>
+                    <div class="form-group"><label>Early C.I.</label><input type="time" id="resEarly"></div>
+                    <div class="form-group"><label>Late C.O.</label><input type="time" id="resLate"></div>
                     
-                    <div class="form-group"><label>Early Check-in</label><input type="time" id="resEarly"></div>
-                    <div class="form-group"><label>Late Check-out</label><input type="time" id="resLate"></div>
                     <div class="form-group"><label>Cochera</label><input type="text" id="resCochera" placeholder="SI/NO"></div>
-                    
-                    <div class="form-group span-3"><label>Servicio de Traslado</label><input type="text" id="resTraslado" placeholder="Detalles del vuelo o movilidad..."></div>
+                    <div class="form-group span-3"><label>Traslado / Vuelo</label><input type="text" id="resTraslado"></div>
                 </div>
 
-                <div class="form-section-title">Tarifas y Contabilidad</div>
-                <div class="form-grid-res highlight-section">
-                    <div class="form-group"><label>Moneda</label><select id="resMoneda"><option value="PEN">Soles (S/)</option><option value="USD">Dólares ($)</option></select></div>
-                    <div class="form-group"><label>T. Cambio</label><input type="number" id="resTipoCambio" step="0.01" placeholder="0.00"></div>
-                    <div class="form-group"><label>Tarifa x Noche</label><input type="number" id="resTarifa" step="0.01" required></div>
-                    
-                    <div class="form-group"><label>Total Alojamiento</label><input type="number" id="resTotal" class="input-total" value="0.00" readonly></div>
-                    <div class="form-group"><label>Monto Adelanto</label><input type="number" id="resAdelantoMonto" class="input-adelanto" step="0.01" value="0.00"></div>
-                    <div class="form-group"><label>Pendiente</label><input type="number" id="resDiferencia" class="input-diferencia" value="0.00" readonly></div>
-                    
-                    <div class="form-group span-3"><label>Detalle de Adelanto (Medio de pago / Fecha)</label><input type="text" id="resAdelantoDetalle" placeholder="Ej: Yape 11/03, Efectivo"></div>
+                <div class="form-section-title" style="margin: 10px 0 8px 0;">Contabilidad</div>
+                <div class="form-grid-compact highlight-section" style="padding: 10px;">
+                    <div class="form-group"><label>Moneda</label><select id="resMoneda">...</select></div>
+                    <div class="form-group"><label>T. Cambio</label><input type="number" id="resTipoCambio" step="0.01"></div>
+                    <div class="form-group"><label>Tarifa</label><input type="number" id="resTarifa" required></div>
+                    <div class="form-group"><label>Total</label><input type="number" id="resTotal" class="input-total" readonly></div>
+                    <div class="form-group"><label>Adelanto</label><input type="number" id="resAdelantoMonto" class="input-adelanto"></div>
+                    <div class="form-group"><label>Pendiente</label><input type="number" id="resDiferencia" class="input-diferencia" readonly></div>
+                    <div class="form-group span-2"><label>Detalle Pago</label><input type="text" id="resAdelantoDetalle"></div>
                 </div>
 
-                <div class="form-section-title">Observaciones y Control</div>
-                <div class="form-grid-res">
-                    <div class="form-group span-3">
-                        <label>Notas / Observaciones Especiales</label>
-                        <textarea id="resObservaciones" rows="2" placeholder="Notas adicionales..."></textarea>
-                    </div>
-                    <div class="form-group span-2">
-                        <label>Recepcionado por:</label>
-                        <input type="text" id="resRecepcion" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Reserva confirmada por:</label>
-                        <input type="text" id="resRecepcionconfi" required>
-                    </div>
+                <div class="form-grid-compact" style="margin-top: 10px;">
+                    <div class="form-group span-2"><label>Observaciones</label><input type="text" id="resObservaciones"></div>
+                    <div class="form-group"><label>Recibe</label><input type="text" id="resRecepcion" required></div>
+                    <div class="form-group"><label>Confirma</label><input type="text" id="resRecepcionconfi" required></div>
                 </div>
             </div>
 
-            <div class="form-actions-res">
+            <div class="form-actions-res" style="padding: 10px 25px;">
                 <button type="button" class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
                 <button type="submit" class="btn-save">Guardar Reserva</button>
             </div>

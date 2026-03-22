@@ -303,6 +303,44 @@
     min-height: 18px;
 }
 
+/* Forzar que el modal no tenga scroll y sea compacto */
+.form-body-no-scroll {
+    padding: 10px 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-grid-compact {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 columnas para ganar altura */
+    gap: 8px 15px; /* Menos espacio entre filas */
+}
+
+/* Reducir tamaño de inputs para que ocupen menos altura */
+.form-group input, 
+.form-group select {
+    padding: 6px 10px !important; /* Más delgados */
+    font-size: 13px !important;
+    height: 32px; /* Altura fija pequeña */
+}
+
+.form-group label {
+    font-size: 10px !important; /* Texto más pequeño */
+    margin-bottom: 2px;
+}
+
+/* Ajustar el título de sección */
+.form-section-title {
+    font-size: 14px !important;
+    margin: 8px 0 5px 0 !important;
+}
+
+/* Reducir el tamaño de la sección de pagos */
+.highlight-section {
+    padding: 8px !important;
+    gap: 5px 12px !important;
+}
+
 /* 8. RESPONSIVE */
 @media (max-width: 950px) {
     .form-grid-res { grid-template-columns: repeat(2, 1fr); }
