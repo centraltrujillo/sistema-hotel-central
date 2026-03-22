@@ -172,9 +172,9 @@ form.addEventListener("submit", async (e) => {
             observaciones: document.getElementById("resObservaciones").value,
             recepcion: document.getElementById("resRecepcion").value,
             recepcionconfi: document.getElementById("resRecepcionconfi").value,
-            estado: editId ? (listaReservasGlobal.find(r => r.id === editId).estado) : "reservada",
-            fechaRegistro: editId ? (listaReservasGlobal.find(r => r.id === editId).fechaRegistro) : new Date().toISOString()
-        };
+            estado: editId  ? (listaReservasGlobal.find(r => r.id === editId)?.estado || "reservada")  : "reservada",
+            fechaRegistro: editId ? (listaReservasGlobal.find(r => r.id === editId)?.fechaRegistro || new Date().toISOString()) : new Date().toISOString()
+    };
 
         // 3. --- GUARDAR O ACTUALIZAR ---
         if (editId) {
@@ -243,6 +243,65 @@ onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), 
     });
 });
 
+// --- FUNCIÓN DE VERIFICACIÓN EN TIEMPO REAL ---
+const verificarDisponibilidadRealTime = async () => {
+    const hab = document.getElementById("resHabitacion").value;
+    const fIn = document.getElementById("resCheckIn").value;
+    const fOut = document.getElementById("resCheckOut").value;
+    const statusDiv = document.getElementById("statusDisponibilidad");
+    const btnGuardar = form.querySelector('button[type="submit"]');
+
+    // Solo validar si tenemos los 3 datos necesarios
+    if (!hab || !fIn || !fOut) {
+        statusDiv.textContent = "";
+        return;
+    }
+
+    statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
+    statusDiv.style.color = "orange";
+
+    try {
+        const q = query(collection(db, "reservas"), where("habitacion", "==", hab));
+        const snap = await getDocs(q);
+        let ocupado = false;
+
+        snap.forEach(docSnap => {
+            const res = docSnap.data();
+            if (editId && docSnap.id === editId) return;
+
+            if (fIn < res.checkOut && fOut > res.checkIn) {
+                ocupado = true;
+            }
+        });
+
+        if (ocupado) {
+            statusDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Habitación ocupada en estas fechas';
+            statusDiv.style.color = "#e11d48"; // Rojo
+            btnGuardar.disabled = true;
+            btnGuardar.style.opacity = "0.5";
+            btnGuardar.style.cursor = "not-allowed";
+        } else {
+            statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> Habitación disponible';
+            statusDiv.style.color = "#10b981"; // Verde
+            btnGuardar.disabled = false;
+            btnGuardar.style.opacity = "1";
+            btnGuardar.style.cursor = "pointer";
+        }
+    } catch (error) {
+        console.error(error);
+        statusDiv.textContent = "Error al verificar";
+    }
+};
+
+// --- LISTENERS PARA DISPARAR LA VERIFICACIÓN ---
+[
+    document.getElementById("resHabitacion"),
+    document.getElementById("resCheckIn"),
+    document.getElementById("resCheckOut")
+].forEach(el => {
+    el.addEventListener("change", verificarDisponibilidadRealTime);
+});
+
 // --- FUNCIONES DE MODAL ---
 window.prepararEdicion = (id) => {
     const res = listaReservasGlobal.find(r => r.id === id);
@@ -277,6 +336,8 @@ window.prepararEdicion = (id) => {
         document.getElementById("resObservaciones").value = res.observaciones || "";
         document.getElementById("resRecepcion").value = res.recepcion || "";
         document.getElementById("resRecepcionconfi").value = res.recepcionconfi || "";
+
+        verificarDisponibilidadRealTime();
         
         modal.classList.add("active");
     }
@@ -300,6 +361,15 @@ const cerrarModal = () => {
     modal.classList.remove("active"); 
     form.reset(); 
     editId = null; 
+    
+    // Limpiar el mensaje de disponibilidad al cerrar
+    const statusDiv = document.getElementById("statusDisponibilidad");
+    const btnGuardar = form.querySelector('button[type="submit"]');
+    if(statusDiv) statusDiv.textContent = "";
+    if(btnGuardar) {
+        btnGuardar.disabled = false;
+        btnGuardar.style.opacity = "1";
+    }
 };
 
 btnAbrirModal.onclick = () => { 

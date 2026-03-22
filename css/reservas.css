@@ -1,4 +1,4 @@
-/* --- HOTEL CENTRAL: GESTIÓN DE RESERVAS (VERSION ACTUALIZADA) --- */
+/* --- HOTEL CENTRAL: GESTIÓN DE RESERVAS (VERSION PROFESIONAL) --- */
 
 :root {
     --vino-tinto: #800020;
@@ -10,6 +10,8 @@
     --font-titles: 'Playfair Display', serif;
     --success-green: #10b981;
     --danger-red: #f43f5e;
+    --slate-600: #475569;
+    --slate-400: #94a3b8;
 }
 
 /* 1. ESTRUCTURA Y CABECERA */
@@ -27,7 +29,7 @@
     margin: 0;
 }
 
-/* 2. BOTONES */
+/* 2. BOTONES GENERALES */
 .btn-add {
     background: var(--amarillo-ocre);
     color: var(--marron-zocalo);
@@ -50,7 +52,7 @@
     box-shadow: 0 4px 12px rgba(128, 0, 32, 0.2);
 }
 
-/* 3. KPIS (TARJETAS POR CANAL) */
+/* 3. KPIS (TARJETAS DE ESTADÍSTICAS) */
 .stats-grid { 
     display: grid; 
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
@@ -75,7 +77,7 @@
 .stat-card span { 
     font-size: 12px; 
     font-weight: 800; 
-    color: #94a3b8; 
+    color: var(--slate-400); 
     text-transform: uppercase; 
     display: block;
     margin-bottom: 8px;
@@ -115,7 +117,7 @@
     font-size: 14px; 
 }
 
-/* BADGES DE MEDIO */
+/* BADGES DE MEDIO (CANALES) */
 .badge-medio {
     padding: 5px 12px;
     border-radius: 6px;
@@ -135,7 +137,7 @@
 .type-mantenimiento { background: #dc2626; }
 .type-gmail { background: #ea4335; }
 
-/* 5. MODAL DE RESERVAS */
+/* 5. MODAL DE RESERVAS (ESTRUCTURA BASE) */
 .modal-reserva-overlay {
     display: none;
     position: fixed;
@@ -153,11 +155,13 @@
     background: #f1f5f9; 
     border-radius: 15px;
     width: 95%;
-    max-width: 1050px; 
+    max-width: 1000px; 
     max-height: 95vh;
-    overflow-y: auto;
+    overflow: hidden; /* Importante para el header sticky */
     position: relative;
     box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-reserva-header {
@@ -167,27 +171,39 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    flex-shrink: 0;
 }
 
-.close-modal {
-    font-size: 28px;
-    cursor: pointer;
-    line-height: 1;
-    transition: color 0.2s;
-}
-
+.close-modal { font-size: 28px; cursor: pointer; line-height: 1; }
 .close-modal:hover { color: var(--amarillo-ocre); }
 
-/* GRID DEL FORMULARIO */
+/* 6. FORMULARIO DENTRO DEL MODAL (SECCIONADO) */
+.form-body-scroll {
+    overflow-y: auto;
+    padding: 10px 30px 30px 30px;
+    flex-grow: 1;
+}
+
+.form-section-title {
+    grid-column: span 3;
+    font-family: var(--font-titles);
+    color: var(--vino-tinto);
+    font-size: 16px;
+    font-weight: 700;
+    margin: 25px 0 15px 0;
+    padding-bottom: 5px;
+    border-bottom: 2px solid var(--amarillo-ocre);
+}
+
 .form-grid-res {
     display: grid;
     grid-template-columns: repeat(3, 1fr); 
     gap: 15px 20px;
-    padding: 25px 30px;
 }
+
+/* Utilidades de Grid */
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
 
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 
@@ -206,73 +222,58 @@
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     font-size: 14px;
-    font-family: var(--font-main);
-    transition: border-color 0.2s, box-shadow 0.2s;
     background: white;
+    transition: all 0.2s;
 }
 
-.form-group input:focus, 
-.form-group select:focus,
-.form-group textarea:focus {
+.form-group input:focus, .form-group select:focus {
     outline: none;
     border-color: var(--amarillo-ocre);
     box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.1);
 }
 
-/* ESTILOS DE ESTADO FINANCIERO (RESALTADOS) */
-#resTotal {
-    background: #f0fdf4 !important;
-    border: 2px solid var(--success-green) !important;
-    color: #166534 !important;
-    font-weight: 800;
-    font-size: 16px;
+/* SECCIÓN DE PAGOS (HIGHLIGHT) */
+.highlight-section {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px dashed var(--slate-400);
 }
 
-#resAdelantoMonto {
-    background: #fffbeb !important;
-    border: 2px solid var(--amarillo-ocre) !important;
-    color: #92400e !important;
-    font-weight: 700;
+.input-total { 
+    background: #f0fdf4 !important; 
+    border: 1px solid var(--success-green) !important; 
+    color: #166534 !important; font-weight: 800; font-size: 16px; 
 }
 
-#resDiferencia {
-    background: #fff1f2 !important;
-    border: 2px solid var(--danger-red) !important;
-    color: #9f1239 !important;
-    font-weight: 800;
-    font-size: 16px;
+.input-adelanto { 
+    background: #fffbeb !important; 
+    border: 1px solid var(--amarillo-ocre) !important; 
+    color: #92400e !important; font-weight: 700; 
 }
 
-/* ESTILO PARA OBSERVACIONES */
-#resObservaciones {
-    resize: none;
-    border: 1px solid #cbd5e1;
-    line-height: 1.5;
+.input-diferencia { 
+    background: #fff1f2 !important; 
+    border: 1px solid var(--danger-red) !important; 
+    color: #9f1239 !important; font-weight: 800; font-size: 16px; 
 }
 
-/* BOTONES DE ACCIÓN EN TABLA */
-.actions { display: flex; gap: 8px; }
-.btn-edit, .btn-delete {
-    border: none;
-    padding: 8px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-.btn-edit { background: #f1f5f9; color: #475569; }
-.btn-edit:hover { background: var(--amarillo-ocre); color: white; }
-.btn-delete { background: #fee2e2; color: #dc2626; }
-.btn-delete:hover { background: #dc2626; color: white; }
-
-/* FOOTER DEL MODAL */
+/* 7. ACCIONES Y FOOTER DEL MODAL */
 .form-actions-res {
+    padding: 20px 30px;
+    background: #f8fafc;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
     border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .btn-save {
     background: var(--vino-tinto);
     color: white;
     border: none;
+    padding: 12px 35px;
     border-radius: 8px;
     font-weight: 700;
     text-transform: uppercase;
@@ -280,25 +281,36 @@
     transition: background 0.3s;
 }
 
-.btn-save:hover {
-    background: #600018;
+.btn-save:hover { background: #600018; }
+
+.btn-cancel {
+    background: #e2e8f0;
+    color: var(--slate-600);
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
 }
 
-/* RESPONSIVE */
+/* STATUS DISPONIBILIDAD */
+.status-badge {
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    padding: 8px;
+    border-radius: 6px;
+    min-height: 18px;
+}
+
+/* 8. RESPONSIVE */
 @media (max-width: 950px) {
     .form-grid-res { grid-template-columns: repeat(2, 1fr); }
-    /* Ajustamos los spans para tablet */
-    .form-group[style*="grid-column: span 3"],
-    .form-group[style*="grid-column: span 2"] {
-        grid-column: span 2 !important;
-    }
+    .span-3, .form-section-title { grid-column: span 2; }
 }
 
 @media (max-width: 650px) {
     .form-grid-res { grid-template-columns: 1fr; }
-    .form-group[style*="grid-column"] {
-        grid-column: span 1 !important;
-    }
-    .page-header { flex-direction: column; gap: 15px; align-items: flex-start; }
-    .modal-reserva-content { width: 98%; }
+    .span-2, .span-3, .form-section-title { grid-column: span 1; }
+    .modal-reserva-content { width: 98%; height: 100vh; border-radius: 0; }
 }
