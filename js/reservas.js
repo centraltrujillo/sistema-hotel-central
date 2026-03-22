@@ -1,6 +1,6 @@
 import { db } from "./firebaseconfig.js";
 import { 
-    collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, query, orderBy, getDocs, where 
+    collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, query, orderBy, getDocs, where, setDoc
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // --- REFERENCIAS AL DOM ---
@@ -184,17 +184,14 @@ form.addEventListener("submit", async (e) => {
         }
 
         // 4. --- SYNC HUÉSPED ---
-        const hRef = collection(db, "huespedes");
-        const hSnap = await getDocs(query(hRef, where("documento", "==", data.doc)));
-        if (hSnap.empty) {
-            await addDoc(hRef, { 
-                nombre: data.huesped.toUpperCase(), 
-                documento: data.doc, 
-                telefono: data.telefono, 
-                correo: data.correo,
-                nacionalidad: data.nacionalidad 
-            });
-        }
+        const hRef = doc(db, "huespedes", data.doc); // Aquí fijamos el ID como el DNI
+await setDoc(hRef, { 
+    nombre: data.huesped.toUpperCase(), 
+    documento: data.doc, 
+    telefono: data.telefono, 
+    correo: data.correo,
+    nacionalidad: data.nacionalidad 
+}, { merge: true });
 
         Swal.fire('¡Listo!', 'La reserva se guardó correctamente', 'success');
         cerrarModal();
