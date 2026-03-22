@@ -429,11 +429,23 @@
     font-weight: 700;
 }
 
-#statusDisponibilidad {
-    height: 20px; /* Evita que el formulario "salte" cuando aparece el texto */
-    font-size: 13px;
-    margin-top: 5px;
+/* Unifica estas reglas en una sola sección */
+.span-3 {
+    grid-column: span 3;
 }
+
+#statusDisponibilidad {
+    grid-column: span 3; /* Asegura que ocupe el ancho de los 3 inputs de arriba */
+    min-height: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: -5px; /* Lo pega un poco más a los inputs de arriba */
+    margin-bottom: 5px;
+}
+
 
 /* 8. RESPONSIVE DINÁMICO */
 @media (max-width: 1000px) {
