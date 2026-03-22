@@ -104,49 +104,86 @@ document.getElementById("resDoc").addEventListener("blur", async (e) => {
     }
 });
 
-// --- 4. GUARDAR / ACTUALIZAR ---
+// --- 4. GUARDAR / ACTUALIZAR (CON VALIDACIÓN DE OVERBOOKING) ---
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    
-    const data = {
-        huesped: document.getElementById("resHuesped").value,
-        doc: document.getElementById("resDoc").value,
-        nacimiento: document.getElementById("resNacimiento").value,
-        nacionalidad: document.getElementById("resNacionalidad").value,
-        telefono: document.getElementById("resTelefono").value,
-        correo: document.getElementById("resCorreo").value,
-        habitacion: document.getElementById("resHabitacion").value,
-        medio: document.getElementById("resMedio").value,
-        checkIn: document.getElementById("resCheckIn").value,
-        checkOut: document.getElementById("resCheckOut").value,
-        personas: document.getElementById("resPersonas").value,
-        early: document.getElementById("resEarly").value,
-        late: document.getElementById("resLate").value,
-        tarifa: inputTarifa.value,
-        moneda: selectMoneda.value,
-        tipoCambio: inputTipoCambio.value,
-        total: inputTotal.value,
-        adelantoMonto: inputAdelantoMonto.value, // Nuevo
-        adelantoDetalle: document.getElementById("resAdelantoDetalle").value, // Nuevo
-        diferencia: inputDiferencia.value,
-        desayuno: document.getElementById("resInfo").value,
-        cochera: document.getElementById("resCochera").value,
-        traslado: document.getElementById("resTraslado").value,
-        observaciones: document.getElementById("resObservaciones").value, // Nuevo
-        recepcion: document.getElementById("resRecepcion").value,
-        recepcionconfi: document.getElementById("resRecepcionconfi").value,
-        estado: editId ? (listaReservasGlobal.find(r => r.id === editId).estado) : "reservada",
-        fechaRegistro: editId ? (listaReservasGlobal.find(r => r.id === editId).fechaRegistro) : new Date().toISOString()
-    };
+
+    const habSeleccionada = document.getElementById("resHabitacion").value;
+    const nuevoIn = document.getElementById("resCheckIn").value;
+    const nuevoOut = document.getElementById("resCheckOut").value;
 
     try {
+        // 1. --- VALIDACIÓN DE DISPONIBILIDAD ---
+        const q = query(
+            collection(db, "reservas"), 
+            where("habitacion", "==", habSeleccionada)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        let ocupado = false;
+
+        querySnapshot.forEach((docSnap) => {
+            const resExistente = docSnap.data();
+            const idExistente = docSnap.id;
+
+            // Ignorar la misma reserva si estamos editando
+            if (editId && idExistente === editId) return;
+
+            // Lógica de solapamiento
+            if (nuevoIn < resExistente.checkOut && nuevoOut > resExistente.checkIn) {
+                ocupado = true;
+            }
+        });
+
+        if (ocupado) {
+            return Swal.fire({
+                title: 'Habitación Ocupada',
+                text: 'La habitación ya tiene una reserva en esas fechas.',
+                icon: 'error',
+                confirmButtonColor: '#800020'
+            });
+        }
+
+        // 2. --- PREPARACIÓN DE DATOS ---
+        const data = {
+            huesped: document.getElementById("resHuesped").value,
+            doc: document.getElementById("resDoc").value,
+            nacimiento: document.getElementById("resNacimiento").value,
+            nacionalidad: document.getElementById("resNacionalidad").value,
+            telefono: document.getElementById("resTelefono").value,
+            correo: document.getElementById("resCorreo").value,
+            habitacion: habSeleccionada,
+            medio: document.getElementById("resMedio").value,
+            checkIn: nuevoIn,
+            checkOut: nuevoOut,
+            personas: document.getElementById("resPersonas").value,
+            early: document.getElementById("resEarly").value,
+            late: document.getElementById("resLate").value,
+            tarifa: inputTarifa.value,
+            moneda: selectMoneda.value,
+            tipoCambio: inputTipoCambio.value,
+            total: inputTotal.value,
+            adelantoMonto: inputAdelantoMonto.value,
+            adelantoDetalle: document.getElementById("resAdelantoDetalle").value,
+            diferencia: inputDiferencia.value,
+            desayuno: document.getElementById("resInfo").value,
+            cochera: document.getElementById("resCochera").value,
+            traslado: document.getElementById("resTraslado").value,
+            observaciones: document.getElementById("resObservaciones").value,
+            recepcion: document.getElementById("resRecepcion").value,
+            recepcionconfi: document.getElementById("resRecepcionconfi").value,
+            estado: editId ? (listaReservasGlobal.find(r => r.id === editId).estado) : "reservada",
+            fechaRegistro: editId ? (listaReservasGlobal.find(r => r.id === editId).fechaRegistro) : new Date().toISOString()
+        };
+
+        // 3. --- GUARDAR O ACTUALIZAR ---
         if (editId) {
             await updateDoc(doc(db, "reservas", editId), data);
         } else {
             await addDoc(collection(db, "reservas"), data);
         }
 
-        // Sync Huésped
+        // 4. --- SYNC HUÉSPED ---
         const hRef = collection(db, "huespedes");
         const hSnap = await getDocs(query(hRef, where("documento", "==", data.doc)));
         if (hSnap.empty) {
@@ -161,9 +198,10 @@ form.addEventListener("submit", async (e) => {
 
         Swal.fire('¡Listo!', 'La reserva se guardó correctamente', 'success');
         cerrarModal();
+
     } catch (error) {
-        console.error(error);
-        Swal.fire('Error', 'No se pudo conectar con la base de datos', 'error');
+        console.error("Error completo:", error);
+        Swal.fire('Error', 'No se pudo conectar con la base de datos o validar disponibilidad', 'error');
     }
 });
 
@@ -171,7 +209,7 @@ form.addEventListener("submit", async (e) => {
 onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), (snapshot) => {
     tablaBody.innerHTML = "";
     listaReservasGlobal = [];
-    const conteo = { booking: 0, airbnb: 0, directas: 0, expedia: 0, personal: 0, dayuse: 0 };
+    const conteo = { booking: 0, airbnb: 0, directas: 0, expedia: 0, personal: 0, dayuse: 0, gmail: 0 };
 
     snapshot.docs.forEach(docSnap => {
         const res = docSnap.data();
