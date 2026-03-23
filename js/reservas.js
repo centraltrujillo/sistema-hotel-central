@@ -100,7 +100,6 @@ document.getElementById("resDoc").addEventListener("blur", async (e) => {
         document.getElementById("resTelefono").value = h.telefono || "";
         document.getElementById("resCorreo").value = h.correo || "";
         document.getElementById("resNacionalidad").value = h.nacionalidad || "";
-        // --- AGREGAR ESTA LÍNEA ---
         document.getElementById("resNacimiento").value = h.nacimiento || ""; 
         
         Swal.fire({ toast: true, position: 'top-end', title: 'Huésped registrado cargado', icon: 'success', showConfirmButton: false, timer: 1500 });
@@ -193,11 +192,12 @@ await setDoc(hRef, {
     documento: data.doc, 
     telefono: data.telefono, 
     correo: data.correo,
-    nacionalidad: data.nacionalidad 
+    nacionalidad: data.nacionalidad,
+    nacimiento: data.nacimiento
 }, { merge: true });
 
         Swal.fire('¡Listo!', 'La reserva se guardó correctamente', 'success');
-        cerrarModal();
+        window.cerrarModal();
 
     } catch (error) {
         console.error("Error completo:", error);
@@ -357,29 +357,37 @@ window.eliminarReserva = async (id) => {
     if (result.isConfirmed) await deleteDoc(doc(db, "reservas", id));
 };
 
-const cerrarModal = () => { 
-    modal.classList.remove("active"); 
-    form.reset(); 
-    editId = null; 
-    
-    // Limpiar el mensaje de disponibilidad al cerrar
-    const statusDiv = document.getElementById("statusDisponibilidad");
-    const btnGuardar = form.querySelector('button[type="submit"]');
-    if(statusDiv) statusDiv.textContent = "";
-    if(btnGuardar) {
-        btnGuardar.disabled = false;
-        btnGuardar.style.opacity = "1";
-    }
-};
 
 btnAbrirModal.onclick = () => { 
     editId = null; 
     form.reset();
     document.getElementById("modalTitle").textContent = "Nueva Reserva"; 
+    
+    // Forzar valores por defecto visuales que el reset() a veces no pone bonito
+    inputTotal.value = "0.00";
+    inputDiferencia.value = "0.00";
+    inputTipoCambio.value = "3.50"; // O el valor que manejes por defecto
+    
     modal.classList.add("active"); 
 };
 
-closeModal.onclick = cerrarModal;
+// --- UNIFICACIÓN DE CERRAR MODAL (Reemplaza tus dos funciones anteriores con esta) ---
+window.cerrarModal = () => { 
+    modal.classList.remove("active"); 
+    form.reset(); 
+    editId = null; 
+    
+    // Limpieza de estados visuales
+    const statusDiv = document.getElementById("statusDisponibilidad");
+    const btnGuardar = form.querySelector('button[type="submit"]');
+    
+    if(statusDiv) statusDiv.textContent = "";
+    if(btnGuardar) {
+        btnGuardar.disabled = false;
+        btnGuardar.style.opacity = "1";
+        btnGuardar.style.cursor = "pointer";
+    }
+};
 
 
 // --- 6. EXPORTAR EXCEL ---

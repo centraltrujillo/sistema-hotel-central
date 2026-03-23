@@ -1,16 +1,12 @@
-/* --- 1. ESTILOS BASE Y CONTENEDORES (AJUSTE FULL SCREEN) --- */
+/* --- 1. ESTILOS BASE Y CONTENEDORES --- */
 body, html {
     margin: 0;
     padding: 0;
-    height: 100vh; /* Ocupa el 100% de la ventana */
+    height: 100vh;
     font-family: 'Lato', sans-serif;
     background-color: #f8fafc;
     color: #334155;
-    overflow: hidden; /* Evita el scroll global de la página */
-}
-
-/* El contenedor principal debe ser un Flexbox para estirar el contenido */
-body {
+    overflow: hidden; 
     display: flex;
     flex-direction: column;
 }
@@ -20,22 +16,19 @@ body {
     border-radius: 12px;
     padding: 10px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    margin: 0 15px 15px 15px; /* Espaciado lateral y fondo */
-    
-    flex-grow: 1;      /* Se estira para llenar el espacio vacío */
-    overflow: auto;    /* Permite scroll interno si la tabla es grande */
+    margin: 0 15px 15px 15px;
+    flex-grow: 1;
+    overflow: auto;
 }
 
 /* --- 2. ESTRUCTURA DE LA TABLA GANTT --- */
 .gantt-table {
     width: 100%;
-    height: 100%;       /* Intenta ocupar todo el alto del contenedor */
     border-collapse: collapse;
-    font-size: 13px;    /* Un poco más pequeño para mejorar visibilidad */
+    font-size: 13px;
     table-layout: fixed;
 }
 
-/* Encabezados fijos arriba */
 .gantt-table thead th {
     position: sticky;
     top: 0;
@@ -48,18 +41,23 @@ body {
     z-index: 20;
 }
 
-/* Columna de Habitaciones (Fijada a la izquierda) */
+/* Columna de Habitaciones (Fijada) */
 .sticky-col {
     position: sticky;
     left: 0;
-    background-color: #800020 !important; /* Color Vino */
+    background-color: #800020 !important; /* Vino */
     color: white !important;
     z-index: 25;
     width: 110px;
     min-width: 110px;
-    border-right: 2px solid #d4a017 !important; /* Línea dorada */
+    border-right: 2px solid #d4a017 !important; /* Dorado */
     text-align: left !important;
     padding-left: 12px !important;
+}
+
+/* Esquina superior izquierda (Cruce de headers) */
+.gantt-table thead th.sticky-col {
+    z-index: 30 !important;
 }
 
 .hab-name {
@@ -67,10 +65,8 @@ body {
     text-transform: uppercase;
 }
 
-/* Celdas del Calendario */
 .calendar-cell {
     border: 1px solid #e2e8f0;
-    height: auto;       /* El alto se ajusta al espacio disponible */
     width: 35px;
     min-width: 35px;
     position: relative;
@@ -78,15 +74,12 @@ body {
     transition: background 0.2s;
 }
 
-/* Resaltado de columna/fila hoy */
 .today-header { background-color: #fef3c7 !important; color: #92400e !important; }
 .today-column { background-color: #fffbeb; }
 
-.calendar-cell:hover {
-    background-color: #f1f5f9;
-}
+.calendar-cell:hover { background-color: #f1f5f9; }
 
-/* --- 3. EVENTOS / RESERVAS DENTRO DE CELDAS --- */
+/* --- 3. RESERVAS --- */
 .has-reservation {
     color: white;
     font-size: 10px;
@@ -103,60 +96,130 @@ body {
     text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
 }
 
-/* --- 4. FORMULARIO DE EDICIÓN (SWEETALERT) --- */
-#swal-form-reserva { text-align: left; }
-#swal-form-reserva label {
-    display: block;
-    font-weight: 700;
-    margin-bottom: 4px;
+/* --- 4. ESTRUCTURA DE MODALES (GRID 4 COLUMNAS) --- */
+.form-grid-compact, .swal2-html-container {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px 12px !important;
+    text-align: left !important;
+    overflow-x: hidden !important;
+    margin: 1em 1.5em !important;
+    align-items: start;
+}
+
+.form-section-title, .swal-section-title {
+    grid-column: span 4;
     color: #800020;
-    font-size: 11px;
-    text-transform: uppercase;
-}
-#swal-form-reserva .swal2-input, 
-#swal-form-reserva .swal2-select {
-    height: 35px !important;
-    margin: 0 0 8px 0 !important;
-    font-size: 13px !important;
-    border-radius: 6px !important;
-}
-
-/* --- 5. LEYENDA Y DOTS DINÁMICOS --- */
-.calendar-legend-container {
-    padding: 10px 20px;
-    background: white;
-    margin-bottom: 5px;
-}
-
-.legend-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
-    color: #64748b;
+    margin: 10px 0 5px 0;
+    padding-bottom: 3px;
+    border-bottom: 2px solid #d4a017;
     text-transform: uppercase;
 }
 
+.form-group label, .swal2-html-container label {
+    font-size: 10px !important;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 2px;
+    text-align: left !important;
+}
+
+.form-group input, .form-group select,
+.swal2-input, .swal2-select {
+    height: 32px !important;
+    padding: 0 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.swal2-textarea {
+    grid-column: span 4;
+    height: 60px !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+/* Solo lectura */
+.input-total[readonly], .input-diferencia[readonly] {
+    background-color: #f1f5f9 !important; 
+    cursor: not-allowed;
+    border: 1px solid #e2e8f0 !important;
+    color: #800020;
+    font-weight: bold;
+}
+
+/* --- 5. UTILIDADES DE COLUMNAS --- */
+.span-2 { grid-column: span 2 !important; }
+.span-3 { grid-column: span 3 !important; }
+.span-4 { grid-column: span 4 !important; }
+
+/* --- 6. SECCIÓN HIGHLIGHT (PAGOS) --- */
+.highlight-section {
+    grid-column: span 4;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px 12px;
+    background-color: #fff7ed; /* Crema suave */
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px dashed #d4a017; /* Dorado */
+}
+
+/* --- 7. LEYENDA Y BADGES --- */
 .dot {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
+    display: inline-block;
     border: 1px solid rgba(0,0,0,0.1);
 }
 
-/* Colores específicos de los Dots */
-.dot.booking { background-color: #3b82f6; }
-.dot.airbnb { background-color: #f43f5e; }
-.dot.directas { background-color: #8b5cf6; }
-.dot.expedia { background-color: #f59e0b; }
-.dot.personal { background-color: #10b981; }
-.dot.day-use { background-color: #6366f1; }
-.dot.mantenimiento { background-color: #fa051a; }
-.dot.gmail { background-color: #59ea35; }
+/* Estados de colores */
+.dot.booking, .badge-booking { background: #1e40af; }
+.dot.airbnb, .badge-airbnb { background: #ff5a5f; }
+.dot.expedia, .badge-expedia { background: #ffb400; }
+.dot.directas, .badge-directas { background: #7c3aed; }
+.dot.personal, .badge-personal { background: #059669; }
+.dot.dayuse, .badge-dayuse { background: #db2777; }
+.dot.mantenimiento, .badge-mantenimiento { background: #dc2626; }
+.dot.gmail, .badge-gmail { background: #ea4335; }
+
+[class^="badge-"] {
+    padding: 3px 8px;
+    border-radius: 12px;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+/* --- 8. STATUS Y ALERTAS --- */
+#statusDisponibilidad {
+    font-size: 12px;
+    font-weight: 700;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* --- 9. RESPONSIVE --- */
+@media (max-width: 900px) {
+    .swal2-html-container, .form-grid-compact {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .span-3, .span-4 { grid-column: span 2 !important; }
+    .highlight-section { 
+        grid-template-columns: repeat(2, 1fr); 
+        grid-column: span 2;
+    }
+}
