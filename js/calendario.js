@@ -1,6 +1,6 @@
 import { db } from "./firebaseconfig.js";
 import { 
-    collection, onSnapshot, doc, updateDoc, query, where, getDocs, deleteDoc, addDoc 
+    collection, onSnapshot, doc, updateDoc, query, where, getDocs, deleteDoc, addDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -196,12 +196,13 @@ document.addEventListener('DOMContentLoaded', function() {
         traslado: document.getElementById('resTraslado').value,
 
         // TARIFA DE LA RESERVA
-        tarifa: document.getElementById('resTarifa').value,
+        // Precios y Totales (Importante: usar Number para cálculos)
+    tarifa: Number(document.getElementById('resTarifa').value) || 0,
+    tipoCambio: Number(document.getElementById('resTipoCambio').value) || 3.85,
+    total: Number(document.getElementById('resTotal').value) || 0,
+    adelanto: Number(document.getElementById('resAdelantoMonto').value) || 0,
+    diferencia: Number(document.getElementById('resDiferencia').value) || 0,
         moneda: document.getElementById('resMoneda').value,
-        tipoCambio: document.getElementById('resTipoCambio').value,
-        total: document.getElementById('resTotal').value,
-        adelanto: document.getElementById('resAdelantoMonto').value,
-        diferencia: document.getElementById('resDiferencia').value,
         adelantoDetalle: document.getElementById('resAdelantoDetalle').value,
 
         // SECCIÓN FINAL (Observaciones y Personal)
@@ -215,28 +216,41 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     try {
-        // Validación rápida
-        if (!nuevaReserva.huesped || !nuevaReserva.habitacion) {
-            Swal.fire('Error', 'Por favor completa el nombre y la habitación', 'error');
-            return;
+        // --- PASO 1: GUARDAR RESERVA CON ID ALEATORIO ---
+        // addDoc genera automáticamente un ID como "hY7tG2p..."
+        const docReserva = await addDoc(collection(db, "reservas"), nuevaReserva);
+        console.log("Reserva guardada con ID aleatorio:", docReserva.id);
+
+        // --- PASO 2: GUARDAR/ACTUALIZAR HUÉSPED CON ID = DNI ---
+        if (nuevaReserva.doc) {
+            // Referenciamos el documento usando el DNI como nombre del ID
+            const huespedRef = doc(db, "huespedes", nuevaReserva.doc); 
+            
+            await setDoc(huespedRef, {
+                nombre: nuevaReserva.huesped,
+                documento: nuevaReserva.doc,
+                telefono: nuevaReserva.telefono,
+                nacionalidad: nuevaReserva.nacionalidad,
+                nacimiento: nuevaReserva.nacimiento,
+                correo: nuevaReserva.correo,
+                ultimaVisita: new Date().toISOString(),
+                // Guardamos una referencia a su última reserva por si acaso
+                ultimaReservaId: docReserva.id 
+            }, { merge: true }); // merge: true es VITAL para no borrar datos previos
         }
 
-        // Referencia a tu colección de Firebase
-        await addDoc(collection(db, "reservas"), nuevaReserva);
-
         Swal.fire({
-            title: '¡Reserva Guardada!',
-            text: `Se registró a ${nuevaReserva.huesped} correctamente.`,
+            title: '¡Registro Exitoso!',
+            text: `Reserva #${docReserva.id.substring(0,5)} creada para el DNI: ${nuevaReserva.doc}`,
             icon: 'success',
             confirmButtonColor: '#800020'
         });
 
         cerrarModal();
-        // Aquí podrías llamar a una función para refrescar el Gantt, ej: cargarReservas();
 
     } catch (error) {
-        console.error("Error al guardar en Firebase:", error);
-        Swal.fire('Error', 'No se pudo guardar la reserva', 'error');
+        console.error("Error al procesar:", error);
+        Swal.fire('Error', 'Hubo un problema con la base de datos', 'error');
     }
 };
 
@@ -309,7 +323,7 @@ const verificarDisponibilidadRealTime = async () => {
         if (!inputIn?.value || !inputOut?.value) return;
 
         const fIn = new Date(inputIn.value + 'T12:00:00');
-        const fOut = new Date(inputOut.value + 'T13:00:00');
+        const fOut = new Date(inputOut.value + 'T12:00:00');
         const tarifaBase = parseFloat(inputTarifa?.value) || 0;
         const tc = parseFloat(inputTC?.value) || 3.80;
 

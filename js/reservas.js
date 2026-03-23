@@ -42,7 +42,7 @@ const calcularMontos = () => {
     const fIn = new Date(inputCheckIn.value + 'T00:00:00');
     const fOut = new Date(inputCheckOut.value + 'T00:00:00');
     const tarifaBase = parseFloat(inputTarifa.value) || 0;
-    const tc = parseFloat(inputTipoCambio.value) || 1;
+    const tc = parseFloat(inputTipoCambio.value) || 3.85;
     const moneda = selectMoneda.value;
 
     // Capturar si los campos de tiempo tienen algún valor
@@ -158,16 +158,18 @@ form.addEventListener("submit", async (e) => {
             medio: document.getElementById("resMedio").value,
             checkIn: nuevoIn,
             checkOut: nuevoOut,
-            personas: document.getElementById("resPersonas").value,
+
+            personas: parseInt(document.getElementById("resPersonas").value) || 1,
+    tarifa: Number(inputTarifa.value) || 0,
+    tipoCambio: Number(inputTipoCambio.value) || 3.85,
+    total: Number(inputTotal.value) || 0,
+    adelantoMonto: Number(inputAdelantoMonto.value) || 0,
+    diferencia: Number(inputDiferencia.value) || 0,
+
             early: document.getElementById("resEarly").value,
             late: document.getElementById("resLate").value,
-            tarifa: inputTarifa.value,
             moneda: selectMoneda.value,
-            tipoCambio: inputTipoCambio.value,
-            total: inputTotal.value,
-            adelantoMonto: inputAdelantoMonto.value,
             adelantoDetalle: document.getElementById("resAdelantoDetalle").value,
-            diferencia: inputDiferencia.value,
             desayuno: document.getElementById("resInfo").value,
             cochera: document.getElementById("resCochera").value,
             traslado: document.getElementById("resTraslado").value,
@@ -226,7 +228,10 @@ onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), 
             <td>${res.checkIn}</td>
             <td>${res.checkOut}</td>
             <td style="text-align:center">${res.personas}</td>
-            <td><strong>S/ ${res.total}</strong></td>
+
+
+            <td><strong>S/ ${Number(res.total).toFixed(2)}</strong></td>
+        
             <td><span class="badge-medio type-${m}">${res.medio}</span></td>
             <td>
                 <div class="actions">
