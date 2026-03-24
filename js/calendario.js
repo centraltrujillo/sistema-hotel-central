@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if(yearSelect) {
             yearSelect.innerHTML = "";
-            for (let i = 2025; i <= 2027; i++) {
+            for (let i = 2025; i <= 2035; i++) {
                 yearSelect.innerHTML += `<option value="${i}" ${i === anioActual ? 'selected' : ''}>${i}</option>`;
             }
             yearSelect.onchange = (e) => { anioActual = parseInt(e.target.value); generarCalendarioGantt(); };
@@ -113,30 +113,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 c.classList.remove('has-reservation');
             });
 
-            snap.docs.forEach(dSnap => {
-                const res = dSnap.data();
-                const resId = dSnap.id;
-                
-                const inicio = new Date(res.checkIn + "T12:00:00");
-                const fin = new Date(res.checkOut + "T12:00:00");
-                
-                let actual = new Date(inicio);
-                while (actual < fin) {
-                    const fechaStr = actual.toISOString().split('T')[0];
-                    const celda = document.getElementById(`cell-${res.habitacion}-${fechaStr}`);
-                    
-                    if (celda) {
-                        celda.style.backgroundColor = coloresMedio[res.medio?.toLowerCase().trim()] || '#800020';
-                        celda.classList.add('has-reservation');
-                        celda.onclick = () => verDetalleReserva(res, resId);
-                        
-                        if (actual.getTime() === inicio.getTime()) {
-                            celda.innerHTML = `<span class="res-label">${res.huesped.split(' ')[0]}</span>`;
-                        }
-                    }
-                    actual.setDate(actual.getDate() + 1);
-                }
-            });
+snap.docs.forEach(dSnap => {
+    const res = dSnap.data();
+    const resId = dSnap.id;
+    
+    const inicio = new Date(res.checkIn + "T12:00:00");
+    const fin = new Date(res.checkOut + "T12:00:00");
+    
+    let actual = new Date(inicio);
+    while (actual < fin) {
+        const fechaStr = actual.toISOString().split('T')[0];
+        const celda = document.getElementById(`cell-${res.habitacion}-${fechaStr}`);
+        
+        if (celda) {
+            // --- LÓGICA DE COLOR SEGÚN ESTADO ---
+            const esCheckIn = res.estado === "checkin";
+            const esCheckOut = res.estado === "checkout";
+
+            if (esCheckIn || esCheckOut) {
+                // Color para estados procesados (Blanco Humo / Gris muy claro)
+                celda.style.backgroundColor = "#f8fafc"; 
+                celda.style.color = "#475569"; // Texto gris oscuro para legibilidad
+                celda.style.border = "1px solid #e2e8f0";
+            } else {
+                // Color normal según el medio (Booking, Airbnb, etc.)
+                celda.style.backgroundColor = coloresMedio[res.medio?.toLowerCase().trim()] || '#800020';
+                celda.style.color = "white";
+            }
+
+            celda.classList.add('has-reservation');
+            celda.onclick = () => verDetalleReserva(res, resId);
+            
+            // --- AGREGAR EL ÍCONO ✅ EN LA PRIMERA CELDA ---
+            if (actual.getTime() === inicio.getTime()) {
+                let icono = "";
+                if (esCheckIn) icono = " <i class='fa-solid fa-circle-check' style='color: #10b981;'></i>";
+                if (esCheckOut) icono = " <i class='fa-solid fa-flag-checkered' style='color: #64748b;'></i>";
+
+                celda.innerHTML = `<span class="res-label">${res.huesped.split(' ')[0]}${icono}</span>`;
+            }
+        }
+        actual.setDate(actual.getDate() + 1);
+    }
+});
         });
     }
 
@@ -211,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmadoPor: document.getElementById('resRecepcionconfi').value,
 
         // METADATOS
-        estado: "reserva",
+        estado: "reservada",
         fechaRegistro: new Date().toISOString()
     };
 
@@ -241,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         Swal.fire({
             title: '¡Registro Exitoso!',
-            text: `Reserva #${docReserva.id.substring(0,5)} creada para el DNI: ${nuevaReserva.doc}`,
+            text: `Reserva creada exitosamente para: ${nuevaReserva.huesped}`,
             icon: 'success',
             confirmButtonColor: '#800020'
         });
@@ -254,23 +273,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 };
 
+// --- VERIFICAR DISPONIBILIDAD ---
 
-// 2. La función mejorada
-const verificarDisponibilidadRealTime = async () => {
-    const form = document.getElementById('formNuevaReserva');
-    const hab = document.getElementById("resHabitacion").value;
-    const fIn = document.getElementById("resCheckIn").value;
-    const fOut = document.getElementById("resCheckOut").value;
+// Agregamos (prefix = "res") como valor por defecto
+const verificarDisponibilidad = async (prefix = "res") => {
+    // 1. Capturamos los elementos según el prefijo (res- o sw-)
+    const hab = document.getElementById(prefix === "res" ? "resHabitacion" : "sw-habitacion")?.value;
+    const fIn = document.getElementById(prefix === "res" ? "resCheckIn" : "sw-in")?.value;
+    const fOut = document.getElementById(prefix === "res" ? "resCheckOut" : "sw-out")?.value;
+    
+    // El div de status siempre tiene el mismo ID en ambos modales según tu código
     const statusDiv = document.getElementById("statusDisponibilidad");
-    const btnGuardar = form.querySelector('button[type="submit"]');
+    
+    // Buscamos el botón: puede ser el del formulario normal o el de SweetAlert
+    const btnGuardar = document.querySelector('.swal2-confirm') || 
+                       document.getElementById('formNuevaReserva')?.querySelector('button[type="submit"]');
 
     if (!hab || !fIn || !fOut) {
-        statusDiv.innerHTML = "";
+        if(statusDiv) statusDiv.innerHTML = "";
         return;
     }
 
-    statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
-    statusDiv.style.color = "orange";
+    if(statusDiv) {
+        statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
+        statusDiv.style.color = "orange";
+    }
 
     try {
         const q = query(collection(db, "reservas"), where("habitacion", "==", hab));
@@ -278,35 +305,43 @@ const verificarDisponibilidadRealTime = async () => {
         let ocupado = false;
 
         snap.forEach(docSnap => {
-            const res = docSnap.data();
-            // Si estamos editando, ignoramos la reserva actual para que no se autobreokee
+            const reservaData = docSnap.data();
+            
+            // CRÍTICO: Si estamos editando, ignoramos la reserva que tiene el mismo ID
             if (editId && docSnap.id === editId) return;
 
-            // Lógica de traslape
-            if (fIn < res.checkOut && fOut > res.checkIn) {
+            // Lógica de traslape (Overlap)
+            if (fIn < reservaData.checkOut && fOut > reservaData.checkIn) {
                 ocupado = true;
             }
         });
 
         if (ocupado) {
-            statusDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Habitación ocupada en estas fechas';
-            statusDiv.style.color = "#e11d48";
-            btnGuardar.disabled = true;
-            btnGuardar.style.opacity = "0.5";
-            btnGuardar.style.cursor = "not-allowed";
+            if(statusDiv) {
+                statusDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> NO DISPONIBLE en estas fechas';
+                statusDiv.style.color = "#e11d48";
+            }
+            if(btnGuardar) {
+                btnGuardar.disabled = true;
+                btnGuardar.style.opacity = "0.5";
+                btnGuardar.style.cursor = "not-allowed";
+            }
         } else {
-            statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> Habitación disponible';
-            statusDiv.style.color = "#10b981";
-            btnGuardar.disabled = false;
-            btnGuardar.style.opacity = "1";
-            btnGuardar.style.cursor = "pointer";
+            if(statusDiv) {
+                statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> Habitación disponible';
+                statusDiv.style.color = "#10b981";
+            }
+            if(btnGuardar) {
+                btnGuardar.disabled = false;
+                btnGuardar.style.opacity = "1";
+                btnGuardar.style.cursor = "pointer";
+            }
         }
     } catch (error) {
-        console.error(error);
-        statusDiv.textContent = "Error al verificar";
+        console.error("Error validando disponibilidad:", error);
+        if(statusDiv) statusDiv.textContent = "Error al verificar";
     }
 };
-
 
     // --- 6. CÁLCULOS Y AUTOCOMPLETADO (PARA AMBOS MODALES) ---
     // Esta función detecta si estamos en el modal HTML o en el de SweetAlert (sw-)
@@ -364,17 +399,35 @@ const verificarDisponibilidadRealTime = async () => {
 // --- 7. VISTA DETALLE ACTUALIZADA ---
 function verDetalleReserva(res, resId) {
     const mSymbol = res.moneda === 'USD' ? '$' : 'S/';
+
+    // --- LÓGICA DINÁMICA DE ESTADO ---
+    let colorEstado = "#800020"; 
+    let textoEstado = "RESERVADA";
+    let mensajeEstado = "El huésped tiene una reserva pendiente.";
+
+    if (res.estado === "checkin") {
+        colorEstado = "#10b981"; 
+        textoEstado = "EN HABITACIÓN";
+        mensajeEstado = "🟢 El huésped ya se encuentra instalado.";
+    } else if (res.estado === "checkout") {
+        colorEstado = "#64748b"; 
+        textoEstado = "CHECK-OUT REALIZADO";
+        mensajeEstado = "⚪ La estancia ha finalizado.";
+    }
     
     Swal.fire({
         title: `<span style="font-family: 'Playfair Display'; color: #800020; font-size: 26px;">Detalle de la Reserva</span>`,
         width: '1100px',
         showCloseButton: true,
-        showConfirmButton: false, // Ocultamos el botón de OK para usar nuestros propios botones de acción
-        customClass: {
-            htmlContainer: 'swal-grid-4' 
-        },
+        showConfirmButton: false,
+        customClass: { htmlContainer: 'swal-grid-4' },
         html: `
             <div class="swal-section-title">👤 INFORMACIÓN DEL HUÉSPED</div>
+            <div class="span-4" style="margin-bottom:10px;">
+                <b style="background: ${colorEstado}; color: white; padding: 3px 10px; border-radius: 20px; font-size: 12px;">${textoEstado}</b>
+                <span style="margin-left: 10px; font-size: 13px; color: #475569;">${mensajeEstado}</span>
+            </div>
+
             <div class="span-2"><label>Nombre Completo</label><b>${res.huesped}</b></div>
             <div class="span-1"><label>DNI/Pasaporte</label>${res.doc || '---'}</div>
             <div class="span-1"><label>Teléfono</label>${res.telefono || '---'}</div>
@@ -425,7 +478,7 @@ function verDetalleReserva(res, resId) {
                 </div>
             </div>
 
-            <div class="swal-section-title">📝 AUDITORÍA Y NOTAS</div>
+            <div class="swal-section-title">📝 NOTAS</div>
             <div class="span-4"><label>Observaciones</label><p style="font-size:13px; background: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 3px solid #800020;">${res.observaciones || 'Sin observaciones adicionales.'}</p></div>
 
             <div class="span-4" style="font-size: 11px; color: #64748b; text-align: right; border-top: 1px solid #eee; padding-top: 10px;">
@@ -434,14 +487,29 @@ function verDetalleReserva(res, resId) {
             </div>
 
             <div class="span-4" style="margin-top: 20px; display: flex; gap: 10px;">
-                <button id="btnCheckIn" class="btn-save" style="background:#10b981; flex:1; border:none; padding:10px; cursor:pointer; color:white; border-radius:5px; font-weight:bold;">🚀 CHECK-IN</button>
+                ${res.estado === 'reservada' ? `<button id="btnCheckIn" class="btn-save" style="background:#10b981; flex:1; border:none; padding:10px; cursor:pointer; color:white; border-radius:5px; font-weight:bold;">🚀 CHECK-IN</button>` : ''}
+                ${res.estado === 'checkin' ? `<button id="btnCheckOut" class="btn-save" style="background:#6366f1; flex:1; border:none; padding:10px; cursor:pointer; color:white; border-radius:5px; font-weight:bold;">🔑 CHECK-OUT</button>` : ''}
+                
                 <button id="btnOpenEdit" class="btn-save" style="background:#3b82f6; flex:1; border:none; padding:10px; cursor:pointer; color:white; border-radius:5px; font-weight:bold;">📝 EDITAR</button>
                 <button id="btnEliminarRes" class="btn-save" style="background:#ef4444; flex:1; border:none; padding:10px; cursor:pointer; color:white; border-radius:5px; font-weight:bold;">🗑️ ELIMINAR</button>
             </div>
         `,
-        showConfirmButton: false,
         didOpen: () => {
+            // Asignar eventos solo si los botones existen en el DOM
+            const btnIn = document.getElementById('btnCheckIn');
+            if(btnIn) btnIn.onclick = async () => {
+                await updateDoc(doc(db, "reservas", resId), { estado: "checkin" });
+                Swal.fire('¡Check-In!', 'El huésped ha ingresado.', 'success');
+            };
+
+            const btnOut = document.getElementById('btnCheckOut');
+            if(btnOut) btnOut.onclick = async () => {
+                await updateDoc(doc(db, "reservas", resId), { estado: "checkout" });
+                Swal.fire('¡Check-Out!', 'La habitación ha sido liberada.', 'success');
+            };
+
             document.getElementById('btnOpenEdit').onclick = () => abrirEdicionIntegral(res, resId);
+            
             document.getElementById('btnEliminarRes').onclick = async () => {
                 const result = await Swal.fire({ 
                     title: '¿Eliminar reserva?', 
@@ -458,21 +526,17 @@ function verDetalleReserva(res, resId) {
                     Swal.fire('Eliminado', 'La reserva ha sido borrada.', 'success');
                 }
             };
-            document.getElementById('btnCheckIn').onclick = async () => {
-                await updateDoc(doc(db, "reservas", resId), { estado: "checkin" });
-                Swal.fire('Check-in exitoso', 'El huésped ahora está en estado Check-in', 'success');
-            };
         }
     });
 }
 
-
+// --- 8. EDITAR RESERVA ---
 
 function abrirEdicionIntegral(res, resId) {
     editId = resId; // Para que la validación de disponibilidad ignore esta reserva
 
     Swal.fire({
-        title: '<span style="font-family: \'Playfair Display\'; color: #800020;">Editar Reserva Integral</span>',
+        title: '<span style="font-family: \'Playfair Display\'; color: #800020;">Editar Reserva</span>',
         width: '1150px',
         confirmButtonText: 'Guardar Cambios',
         confirmButtonColor: '#800020',
@@ -541,7 +605,7 @@ function abrirEdicionIntegral(res, resId) {
             <div class="span-1">
                 <label>Estado</label>
                 <select id="sw-estado" class="swal2-select">
-                    <option value="confirmada" ${res.estado == 'confirmada' ? 'selected' : ''}>CONFIRMADA</option>
+                    <option value="reservada" ${res.estado == 'reservada' ? 'selected' : ''}>RESERVADA</option>
                     <option value="checkin" ${res.estado == 'checkin' ? 'selected' : ''}>CHECK-IN</option>
                     <option value="checkout" ${res.estado == 'checkout' ? 'selected' : ''}>CHECK-OUT</option>
                 </select>
@@ -699,27 +763,33 @@ function abrirEdicionIntegral(res, resId) {
     });
 }
 
-    // --- 8. INICIO ORQUESTADO ---
-    async function iniciarModulo() {
-        inicializarControles();
-        
-        // Cargar habitaciones en tiempo real
-onSnapshot(collection(db, "habitaciones"), (querySnapshot) => {
-    habitaciones = []; 
-    querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        // CAMBIO AQUÍ: Aseguramos que el número sea siempre un String
-        habitaciones.push({ 
-            numero: String(data.numero), 
-            tipo: data.tipo || "S/T" 
-        });
-    });
-    // El sort funciona igual, comparando los valores
-    habitaciones.sort((a, b) => a.numero - b.numero);
-    generarCalendarioGantt();
-});
+// INICIO
 
-// UNIFICACIÓN DE LISTENERS
+async function iniciarModulo() {
+    inicializarControles();
+    
+    // 1. Cargar habitaciones en tiempo real
+    onSnapshot(collection(db, "habitaciones"), (querySnapshot) => {
+        habitaciones = []; 
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            habitaciones.push({ 
+                numero: String(data.numero), 
+                tipo: data.tipo || "S/T" 
+            });
+        });
+        habitaciones.sort((a, b) => a.numero - b.numero);
+        generarCalendarioGantt();
+    });
+
+    // 2. BOTÓN NUEVA RESERVA (El del header)
+    const btnNuevo = document.getElementById('btn-nueva-reserva');
+    if (btnNuevo) {
+        btnNuevo.onclick = abrirModalNuevaReserva;
+    }
+
+    // 3. LISTENERS DE CÁLCULO Y DISPONIBILIDAD
+    // Nota: Usamos 'resAdelantoMonto' para que coincida con tu HTML
     const idsMonitoreo = ["resHabitacion", "resCheckIn", "resCheckOut", "resTarifa", "resAdelantoMonto", "resEarly", "resLate", "resMoneda"];
     
     idsMonitoreo.forEach(id => {
@@ -727,25 +797,29 @@ onSnapshot(collection(db, "habitaciones"), (querySnapshot) => {
         if(el) {
             el.addEventListener("change", () => {
                 calcularMontos("res");
-                // Solo verificar disponibilidad si cambió habitación o fechas
                 if(["resHabitacion", "resCheckIn", "resCheckOut"].includes(id)) {
-                    verificarDisponibilidadRealTime();
+                    verificarDisponibilidad("res"); 
                 }
             });
-            // Para que la tarifa y adelanto calculen mientras escribes
+            
             if(["resTarifa", "resAdelantoMonto"].includes(id)) {
                 el.addEventListener("input", () => calcularMontos("res"));
             }
         }
     });
 
-        const docInput = document.getElementById("resDoc");
-        if(docInput) {
-            docInput.onblur = (e) => buscarHuesped(e.target.value, {
-                'resHuesped': 'nombre', 'resTelefono': 'telefono', 'resNacionalidad': 'nacionalidad'
-            });
-        }
+    // 4. BÚSQUEDA DE HUÉSPED POR DNI
+    const docInput = document.getElementById("resDoc");
+    if(docInput) {
+        docInput.onblur = (e) => buscarHuesped(e.target.value, {
+            'resHuesped': 'nombre', 
+            'resTelefono': 'telefono', 
+            'resNacionalidad': 'nacionalidad',
+            'resCorreo': 'correo', // Agregado para autocompletar todo
+            'resNacimiento': 'nacimiento'
+        });
     }
+}
 
     iniciarModulo();
 });
