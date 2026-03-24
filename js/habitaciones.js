@@ -329,15 +329,17 @@ function cerrarModal() {
     document.getElementById('modalReserva').style.display = 'none';
 }
 
-// Para cerrar el modal si hacen clic fuera del contenido blanco
-window.onclick = function(event) {
+// Reemplaza el window.onclick por esto:
+window.addEventListener('click', (event) => {
     const modal = document.getElementById('modalReserva');
-    if (event.target == modal) {
+    if (event.target === modal) {
         cerrarModal();
     }
-}
+});
 
-//5
+/* ==========================================================================
+   4. MODAL GESTION OCUPADA HABITACION
+   ========================================================================== */
 async function abrirModalGestionOcupada(hab) {
     const qRes = query(collection(db, "reservas"), 
                  where("habitacion", "==", hab.numero.toString()), 
@@ -357,19 +359,25 @@ async function abrirModalGestionOcupada(hab) {
 
     snapCons.forEach(c => {
         const item = c.data();
-        totalCons += parseFloat(item.precio);
-        const f = new Date(item.fechaConsumo);
+        
+        // 1. Usamos precioTotal (el monto ya multiplicado por la cantidad)
+        const montoFila = parseFloat(item.precioTotal) || 0;
+        totalCons += montoFila;
+
+        // 2. Manejo seguro de fecha (Soporta Timestamp de Firebase o String)
+        const f = item.fechaConsumo?.toDate ? item.fechaConsumo.toDate() : new Date(item.fechaConsumo);
+        
         const fechaAmigable = f.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }) + 
                              ` ${f.getHours()}:${f.getMinutes().toString().padStart(2, '0')}`;
 
         tablaCons += `
             <div class="consumo-item-lista">
                 <div class="c-info">
-                    <span class="c-qty">${item.cantidad}x</span>
+                    <span class="c-qty">${item.cantidad || 1}x</span>
                     <span class="c-name">${item.descripcion}</span>
                     <span class="c-date">${fechaAmigable}</span>
                 </div>
-                <div class="c-price">S/ ${parseFloat(item.precio).toFixed(2)}</div>
+                <div class="c-price">S/ ${montoFila.toFixed(2)}</div>
             </div>`;
     });
 
@@ -455,7 +463,7 @@ async function abrirModalGestionOcupada(hab) {
 }
 
 
-// --- 6. AGREGAR CONSUMO (ESTILO INTEGRADO) ---
+// --- 5. AGREGAR CONSUMO (ESTILO INTEGRADO) ---
 async function agregarConsumo(resId, hab) {
     const ahora = new Date();
     // Ajuste de zona horaria Perú
@@ -526,17 +534,20 @@ async function agregarConsumo(resId, hab) {
         }
     });
 
-    if (formValues) {
-        try {
-            const totalItem = formValues.cant * formValues.precio;
-            await addDoc(collection(db, "consumos"), {
-                idReserva: resId,
-                descripcion: formValues.desc.toUpperCase(), // Estandarizamos a mayúsculas
-                cantidad: formValues.cant,
-                precioUnitario: formValues.precio,
-                precio: totalItem, 
-                fechaConsumo: formValues.fecha
-            });
+if (formValues) {
+    try {
+        const unitario = parseFloat(formValues.precio);
+        const cantidad = parseInt(formValues.cant);
+        const totalFila = unitario * cantidad; // Cálculo de la fila
+
+        await addDoc(collection(db, "consumos"), {
+            idReserva: resId,
+            descripcion: formValues.desc.toUpperCase(),
+            cantidad: cantidad,
+            precioUnitario: unitario,
+            precioTotal: totalFila, // <--- CAMPO ESTÁNDAR
+            fechaConsumo: formValues.fecha
+        });
             
             // Toast de éxito
             Swal.fire({
@@ -555,7 +566,7 @@ async function agregarConsumo(resId, hab) {
     }
 }
 
-// --- 7. CHECK-OUT (ESTILO ELITE) ---
+// --- 6. CHECK-OUT (ESTILO ELITE) ---
 async function realizarCheckOut(resId, hab, rData, totalConsumos) {
     const subHosp = parseFloat(rData.total) || 0;
     const granTotal = subHosp + totalConsumos;
@@ -612,8 +623,10 @@ async function realizarCheckOut(resId, hab, rData, totalConsumos) {
         }
     });
 
-    if (resultado.isConfirmed || resultado.isDenied) {
-        try {
+    if (resultado.isDismissed) return; // <--- AGREGAR ESTO: Si cancela, no hace nada.
+
+if (resultado.isConfirmed || resultado.isDenied) {
+    try {
             // El valor de preConfirm llega en resultado.value
             const metodoSeleccionado = resultado.value;
 
@@ -636,8 +649,11 @@ async function realizarCheckOut(resId, hab, rData, totalConsumos) {
             }
 
             // C. CIERRE DE CICLO
-            await updateDoc(doc(db, "reservas", resId), { estado: "finalizado" });
-            await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Libre" });
+await updateDoc(doc(db, "reservas", resId), { estado: "finalizado" });
+await updateDoc(doc(db, "habitaciones", hab.id), { 
+    estado: "Libre", 
+    personasActuales: 0 // <--- AGREGAR ESTO para que el icono vuelva a ser el hotel
+});
 
             Swal.fire({
                 icon: 'success',
@@ -655,16 +671,17 @@ async function realizarCheckOut(resId, hab, rData, totalConsumos) {
 }
 
 
-// --- 8. FUNCIÓN DE IMPRESIÓN (FORMATO TICKET TÉRMICO) ---
+// --- 7. FUNCIÓN DE IMPRESIÓN (FORMATO TICKET TÉRMICO) ---
 function imprimirTicket(rData, consumos, totalConsumos, granTotal, metodoPago) {
+    // Abrir ventana inmediatamente para evitar bloqueo de pop-ups
     const ventana = window.open('', '_blank');
     const fechaActual = new Date().toLocaleString('es-PE');
     
-    // Generar filas de consumos con formato compacto
+    // Generar filas de consumos usando el campo estandarizado 'precioTotal'
     let filasConsumos = consumos.map(c => `
         <tr>
             <td style="padding: 2px 0; vertical-align: top;">${c.cantidad || 1}x ${c.descripcion}</td>
-            <td style="text-align: right; vertical-align: top;">${parseFloat(c.precio).toFixed(2)}</td>
+            <td style="text-align: right; vertical-align: top;">S/ ${parseFloat(c.precioTotal || 0).toFixed(2)}</td>
         </tr>
     `).join('');
 
@@ -676,51 +693,51 @@ function imprimirTicket(rData, consumos, totalConsumos, granTotal, metodoPago) {
                 @page { margin: 0; }
                 body { 
                     font-family: 'Courier New', Courier, monospace; 
-                    width: 280px; /* Optimizado para ticketera estándar */
+                    width: 260px; /* Un poco más estrecho para mayor compatibilidad */
                     margin: 0; 
-                    padding: 10px; 
+                    padding: 8px; 
                     color: #000;
-                    font-size: 12px;
-                    line-height: 1.2;
+                    font-size: 11px; /* Letra un punto más pequeña para que entre más info */
+                    line-height: 1.3;
                 }
                 .text-center { text-align: center; }
                 .text-right { text-align: right; }
-                .divider { border-top: 1px dashed #000; margin: 8px 0; }
+                .divider { border-top: 1px dashed #000; margin: 6px 0; }
                 table { width: 100%; border-collapse: collapse; }
                 .bold { font-weight: bold; }
-                .title { font-size: 16px; margin-bottom: 2px; }
-                .total-row { font-size: 14px; font-weight: bold; }
+                .title { font-size: 15px; margin-bottom: 2px; text-transform: uppercase; }
+                .total-row { font-size: 13px; font-weight: bold; border-top: 1px solid #000; }
             </style>
         </head>
-        <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
+        <body onload="setTimeout(() => { window.print(); window.close(); }, 700);">
             <div class="text-center">
                 <span class="bold title">HOTEL CENTRAL</span><br>
-                <span style="font-size: 10px;">RUC: 20601852153</span><br>
-                <span style="font-size: 10px;">Jr. Simon Bolivar 355 - Trujillo</span>
+                <span style="font-size: 9px;">RUC: 20601852153</span><br>
+                <span style="font-size: 9px;">Jr. Simón Bolívar 355 - Trujillo</span>
             </div>
             
             <div class="divider"></div>
             
             <div>
-                <b>TICKET DE PAGO</b><br>
-                Fecha: ${fechaActual}<br>
-                Hab: ${rData.habitacion} [${rData.tipo || 'Hab'}]<br>
-                Huésped: ${rData.huesped.toUpperCase()}
+                <b style="font-size: 12px;">TICKET DE PAGO #001</b><br>
+                <b>Fecha:</b> ${fechaActual}<br>
+                <b>Hab:</b> ${rData.habitacion} [${rData.tipo || 'Hab'}]<br>
+                <b>Huésped:</b> ${rData.huesped.toUpperCase()}
             </div>
             
             <div class="divider"></div>
             
             <table>
                 <thead>
-                    <tr>
+                    <tr style="border-bottom: 1px solid #000;">
                         <th align="left">CONCEPTO</th>
                         <th align="right">SUBT.</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 4px 0;">Estadía (${rData.checkIn} al ${rData.checkOut})</td>
-                        <td class="text-right">${parseFloat(rData.total).toFixed(2)}</td>
+                        <td style="padding: 4px 0;">Estadía (${rData.checkIn} / ${rData.checkOut})</td>
+                        <td class="text-right">S/ ${parseFloat(rData.total).toFixed(2)}</td>
                     </tr>
                     ${filasConsumos}
                 </tbody>
@@ -730,19 +747,19 @@ function imprimirTicket(rData, consumos, totalConsumos, granTotal, metodoPago) {
             
             <table>
                 <tr class="total-row">
-                    <td>TOTAL PAGADO</td>
-                    <td class="text-right">S/ ${granTotal.toFixed(2)}</td>
+                    <td style="padding-top: 5px;">TOTAL PAGADO</td>
+                    <td class="text-right" style="padding-top: 5px;">S/ ${granTotal.toFixed(2)}</td>
                 </tr>
             </table>
 
-            <div style="margin-top: 5px;">
-                <span>Método de Pago: <b>${metodoPago || 'Efectivo'}</b></span>
+            <div style="margin-top: 8px;">
+                <span>Forma de Pago: <b>${metodoPago?.toUpperCase() || 'EFECTIVO'}</b></span>
             </div>
             
             <div class="divider"></div>
             
-            <div class="text-center" style="font-size: 10px;">
-                *** Gracias por su visita ***<br>
+            <div class="text-center" style="font-size: 9px;">
+                *** Gracias por su preferencia ***<br>
                 Trujillo - La Libertad<br>
                 <b>www.hotelcentraltrujillo.com</b>
             </div>

@@ -222,4 +222,12 @@ function llenarModal(h, esLectura) {
 
 window.cerrarModal = () => { modal.style.display = 'none'; formHuesped.reset(); document.getElementById('huespedId').value = ""; };
 
+
+// --- ASEGURAR DISPONIBILIDAD GLOBAL PARA HTML ---
+window.verDetalles = verDetalles;
+window.editarHuesped = editarHuesped;
+window.cerrarModal = cerrarModal;
+window.cambiarPagina = cambiarPagina; 
+
+
 cargarHuespedes();

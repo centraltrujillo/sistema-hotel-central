@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control | Hotel Central</title>
+    
     <link rel="icon" type="image/png" href="img/logo.png" />
 
     <link rel="stylesheet" href="css/colors.css">
@@ -19,11 +20,11 @@
         <aside class="sidebar">
             <div class="logo-box">
                 <div class="logo-icon">
-                    <img src="img/logo.jpeg" alt="Logo Hotel" style="width: 100%; height: auto; border-radius: 8px;">
+                    <img src="img/logo.jpeg" alt="Logo Hotel Central" style="width: 100%; height: auto; border-radius: 8px;">
                 </div>
                 <div>
                     <h3>Hotel Central</h3>
-                    <p>Sistema de Gestión</p>
+                    <p>Gestión Boutique</p>
                 </div>
             </div>
             <nav class="nav-menu">
@@ -37,11 +38,15 @@
 
         <main class="main-content">
             <header class="header">
-                <h2 id="view-title">Panel de Control</h2>
+                <div class="header-title">
+                    <h2 id="view-title">Panel de Control</h2>
+                    <p id="current-date" style="font-size: 0.85rem; color: #64748b; margin: 0;"></p>
+                </div>
+                
                 <div class="user-info">
                     <div class="text-right">
                         <span id="userName" style="font-weight: 700; color: var(--vino-tinto);">Cargando...</span><br>
-                        <small id="userRole" style="color: var(--marron-zocalo); font-weight: 400;">Identificando...</small>
+                        <small id="userRole" style="color: var(--marron-zocalo);">Recepcionista</small>
                     </div>
                     <button id="btnLogout" title="Cerrar Sesión">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -49,50 +54,70 @@
                 </div>
             </header>
 
-            <div class="kpi-grid">
-                <div class="kpi-card">
+            <section class="kpi-grid">
+                <div class="kpi-card animated-fade">
                     <div class="kpi-info">
-                        <span>Ocupación Actual</span>
-                        <h2 id="kpi-ocupacion">--/13</h2>
-                        <small class="trend">Habitaciones ocupadas</small>
+                        <span>Ocupación Hoy</span>
+                        <h2 id="kpi-ocupacion">0/13</h2>
+                        <small class="trend">Habitaciones activas</small>
                     </div>
                     <div class="kpi-icon blue"><i class="fa-solid fa-door-open"></i></div>
                 </div>
 
-                <div class="kpi-card">
+                <div class="kpi-card animated-fade" style="animation-delay: 0.1s;">
                     <div class="kpi-info">
-                        <span>Huéspedes Registrados</span>
-                        <h2 id="kpi-huespedes">--</h2>
-                        <small class="trend">Total histórico</small>
+                        <span>Huéspedes Totales</span>
+                        <h2 id="kpi-huespedes">0</h2>
+                        <small class="trend">Base de datos CRM</small>
                     </div>
-                    <div class="kpi-icon green"><i class="fa-solid fa-user-group"></i></div>
+                    <div class="kpi-icon green"><i class="fa-solid fa-user-tag"></i></div>
                 </div>
 
-                <div class="kpi-card">
+                <div class="kpi-card animated-fade" style="animation-delay: 0.2s;">
                     <div class="kpi-info">
-                        <span>Reservas del Día</span>
-                        <h2 id="kpi-reservas">--</h2>
-                        <small class="trend">Pendientes hoy</small>
+                        <span>Ingresos Mensuales</span>
+                        <h2 id="kpi-ingresos">S/ 0.00</h2>
+                        <small class="trend">Facturación total</small>
                     </div>
-                    <div class="kpi-icon purple"><i class="fa-solid fa-calendar-check"></i></div>
+                    <div class="kpi-icon gold"><i class="fa-solid fa-sack-dollar"></i></div>
                 </div>
+            </section>
 
-            <div class="dashboard-footer-grid">
-                <div class="chart-container card">
-                    <h3>Flujo de Ingresos</h3>
+            <section class="charts-grid-triple">
+                <article class="card animated-fade">
+                    <h3><i class="fa-solid fa-chart-line"></i> Flujo Financiero</h3>
                     <div id="chart-line"></div>
+                </article>
+
+                <article class="card animated-fade" style="animation-delay: 0.1s;">
+                    <h3><i class="fa-solid fa-chart-pie"></i> Categorías</h3>
+                    <div id="chart-donut"></div>
+                </article>
+
+                <article class="card animated-fade" style="animation-delay: 0.2s;">
+                    <h3><i class="fa-solid fa-percent"></i> Ocupación %</h3>
+                    <div id="chart-radial"></div>
+                </article>
+            </section>
+
+            <section class="activity-section card animated-fade" style="margin-top: 25px;">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Actividad Reciente del Hotel</h3>
+                <div id="list-checkins" class="checkins-list">
+                    <p style="text-align: center; color: #888; padding: 20px;">Sincronizando con Firebase...</p>
                 </div>
-                
-                <div class="checkins-container card">
-                    <h3>Actividad Reciente</h3>
-                    <div id="list-checkins" class="checkins-list">
-                        <p style="padding: 20px; color: #888; text-align: center;">Sincronizando con Firebase...</p>
-                    </div>
+                <div style="text-align: right; margin-top: 15px;">
+                    <a href="reservas.html" class="btn-view-all">Ver todas las reservas →</a>
                 </div>
-            </div>
+            </section>
         </main>
     </div>
 
     <script type="module" src="js/dashboard.js"></script>
+    
+    <script>
+        // Mostrar fecha actual amigable
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', dateOptions);
+    </script>
 </body>
 </html>
