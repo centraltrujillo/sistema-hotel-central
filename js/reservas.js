@@ -187,15 +187,19 @@ form.addEventListener("submit", async (e) => {
             await addDoc(collection(db, "reservas"), data);
         }
 
-        // 4. --- SYNC HUÉSPED ---
-        const hRef = doc(db, "huespedes", data.doc); // Aquí fijamos el ID como el DNI
+        // --- 4. SYNC HUÉSPED (CORREGIDO) ---
+const hRef = doc(db, "huespedes", data.doc); 
+
 await setDoc(hRef, { 
-    nombre: data.huesped.toUpperCase(), 
-    documento: data.doc, 
+    // Usamos 'huesped' para que coincida con lo que espera tu modal de edición
+    huesped: data.huesped.toUpperCase(), 
+    doc: data.doc, 
     telefono: data.telefono, 
     correo: data.correo,
     nacionalidad: data.nacionalidad,
-    nacimiento: data.nacimiento
+    nacimiento: data.nacimiento,
+    // CLAVE: Esto permite que aparezca en el 'orderBy' de huespedes.js
+    ultimaVisita: new Date().toISOString() 
 }, { merge: true });
 
         Swal.fire('¡Listo!', 'La reserva se guardó correctamente', 'success');
@@ -257,10 +261,12 @@ const verificarDisponibilidadRealTime = async () => {
     const btnGuardar = form.querySelector('button[type="submit"]');
 
     // Solo validar si tenemos los 3 datos necesarios
-    if (!hab || !fIn || !fOut) {
-        statusDiv.textContent = "";
-        return;
-    }
+if (!hab || !fIn || !fOut) {
+    statusDiv.textContent = "";
+    btnGuardar.disabled = false; // Asegúrate de que no se quede bloqueado por error
+    btnGuardar.style.opacity = "1";
+    return;
+}
 
     statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
     statusDiv.style.color = "orange";
