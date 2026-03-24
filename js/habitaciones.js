@@ -5,7 +5,10 @@ import {
     where, addDoc, deleteDoc, getDoc, orderBy, setDoc
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+// Referencias a elementos del DOM
 const habGrid = document.getElementById('habGrid');
+const elLibres = document.getElementById('stat-libres');
+const elOcupadas = document.getElementById('stat-ocupadas');
 
 onAuthStateChanged(auth, (user) => {
     if (user) { cargarHabitaciones(); } 
@@ -29,31 +32,29 @@ function cargarHabitaciones() {
         
         let s = { l: 0, o: 0 };
 
+        // Buscamos reservas para hoy para mostrar la alerta amarilla
         const qRes = query(collection(db, "reservas"), 
                      where("checkIn", "==", hoy), 
                      where("estado", "==", "reservada"));
+        
         const snapRes = await getDocs(qRes);
-        const listaReservasHoy = snapRes.docs.map(d => d.data().habitacion);
+        const listaReservasHoy = snapRes.docs.map(d => String(d.data().habitacion));
 
-        const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        docs.forEach(hab => {
+        snapshot.docs.forEach(docSnap => {
+            const hab = { id: docSnap.id, ...docSnap.data() };
             const est = hab.estado || "Libre";
-            
-            if (est === "Libre" || est === "Disponible") {
-                s.l++;
-            } else if (est === "Ocupada") {
-                s.o++;
-            }
+            const nPers = hab.personasActuales || 0; // Se obtiene de la base de datos
 
-            const tieneReservaHoy = listaReservasHoy.some(resHab => String(resHab) === String(hab.numero));
+            // Estadísticas
+            if (est === "Libre" || est === "Disponible") s.l++;
+            else if (est === "Ocupada") s.o++;
+
+            const tieneReservaHoy = listaReservasHoy.includes(String(hab.numero));
+            const iconoDinamico = obtenerIconoSegunOcupacion(est, nPers);
 
             const card = document.createElement('div');
-            
-            // Usamos el estado en minúsculas para el color (vino o verde)
             card.className = `hab-card ${est.toLowerCase()}`;
             
-            // ESTRUCTURA NUEVA: Número y Tipo arriba, Icono en el centro
             card.innerHTML = `
                 <div class="hab-header">
                     <div class="hab-number">${hab.numero}</div>
@@ -61,50 +62,64 @@ function cargarHabitaciones() {
                 </div>
                 <div class="hab-body">
                     <div class="hab-icon">
-                        <i class="fa-solid fa-hotel"></i> 
+                        <i class="fa-solid ${iconoDinamico}"></i> 
                     </div>
                     <div class="hab-footer-info">
                         <span class="hab-badge">${est}</span>
-                        ${tieneReservaHoy && est === "Libre" 
+                        ${tieneReservaHoy && (est === "Libre" || est === "Disponible") 
                             ? '<div class="reserva-hoy-tag">⚠️ RESERVA PARA HOY</div>' 
                             : ''}
                     </div>
                 </div>`;
 
             card.onclick = () => {
-                if (est === "Ocupada") {
-                    abrirModalGestionOcupada(hab);
-                } else {
-                    abrirModalCheckIn(hab);
-                }
+                if (est === "Ocupada") abrirModalGestionOcupada(hab);
+                else abrirModalCheckIn(hab);
             };
+            
             habGrid.appendChild(card);
         });
 
-        const elLibres = document.getElementById('stat-libres');
-        const elOcupadas = document.getElementById('stat-ocupadas');
-
+        // Actualizar contadores superiores
         if (elLibres) elLibres.innerText = s.l;
         if (elOcupadas) elOcupadas.innerText = s.o;
     });
 }
 
-// --- 2. MODAL CHECK-IN (ELECCIÓN) ---
-async function abrirModalCheckIn(hab) {
+//Función Auxiliar para los Iconos Dinámicos
+ 
+function obtenerIconoSegunOcupacion(estado, numPersonas) {
+    if (estado !== "Ocupada") return 'fa-hotel'; 
+
+    const p = parseInt(numPersonas) || 1;
+
+    if (p === 1) return 'fa-user';            // 1 persona (Individual)
+    if (p === 2) return 'fa-user-group';      // 2 personas (Pareja)
+    if (p >= 3 && p <= 4) return 'fa-users';  // 3 a 4 personas (Grupo/Familia)
+    if (p >= 5) return 'fa-people-group';     // 5 a más (Delegación/Grupo Grande)
+    
+    return 'fa-users'; // Por si acaso
+}
+
+
+/* ==========================================================================
+   2. MODAL CHECK-IN (ELECCIÓN DE ORIGEN)
+   ========================================================================== */
+   async function abrirModalCheckIn(hab) {
     const hoy = getHoyISO();
 
-    // A. VALIDACIÓN ANTI-OVERBOOKING (Si ya está ocupada)
+    // A. VALIDACIÓN ANTI-OVERBOOKING (Evita doble check-in en la misma hab)
     const qCheck = query(collection(db, "reservas"), 
                    where("habitacion", "==", hab.numero.toString()), 
                    where("estado", "==", "checkin"));
     const snapCheck = await getDocs(qCheck);
 
     if (!snapCheck.empty) {
-        Swal.fire('Error', 'Esta habitación ya tiene un check-in activo.', 'error');
+        Swal.fire('Atención', 'Esta habitación ya tiene un proceso de ingreso activo.', 'warning');
         return;
     }
 
-    // B. BUSCAR RESERVAS PARA HOY
+    // B. BUSCAR RESERVAS PROGRAMADAS PARA HOY
     const q = query(collection(db, "reservas"), 
               where("habitacion", "==", hab.numero.toString()), 
               where("checkIn", "==", hoy),
@@ -112,33 +127,39 @@ async function abrirModalCheckIn(hab) {
     
     const snap = await getDocs(q);
     let opciones = {};
-    
+    let datosReservas = {}; // Para guardar la info de personas temporalmente
+
     snap.forEach(d => { 
-        opciones[d.id] = `🏨 Reserva: ${d.data().huesped}`; 
+        const data = d.data();
+        opciones[d.id] = `🏨 Reserva: ${data.huesped}`; 
+        datosReservas[d.id] = data.personas || 1; // Guardamos el N° de personas
     });
+    
     opciones["directo"] = "➕ Venta del Día (Cliente nuevo)";
 
+    // C. DIÁLOGO DE SELECCIÓN
     const { value: choice } = await Swal.fire({
         title: `Check-in Hab. ${hab.numero}`,
         input: 'select',
         inputOptions: opciones,
-        inputPlaceholder: 'Seleccione una opción',
-        confirmButtonColor: '#800020',
+        inputPlaceholder: '¿Cómo desea registrar el ingreso?',
+        confirmButtonColor: '#800020', // Tu color Vino Tinto
         showCancelButton: true,
+        cancelButtonText: 'Cancelar',
         preConfirm: async (value) => {
             if (!value) {
                 Swal.showValidationMessage('Debes seleccionar una opción');
                 return false;
             }
-            // ADVERTENCIA DE OVERBOOKING si elige directo habiendo reservas
+            // ADVERTENCIA: Si elige "Directo" pero hay una reserva esperando
             if (value === "directo" && !snap.empty) {
                 const result = await Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: "Hay una reserva para hoy. ¿Deseas ignorarla?",
+                    title: '¿Confirmar Venta Directa?',
+                    text: "Existe una reserva para hoy en esta habitación. ¿Desea ignorarla y continuar?",
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Sí, proceder',
-                    cancelButtonText: 'No, cancelar'
+                    cancelButtonText: 'No, revisar reserva'
                 });
                 return result.isConfirmed ? "directo" : false;
             }
@@ -146,223 +167,177 @@ async function abrirModalCheckIn(hab) {
         }
     });
 
+    // D. EJECUCIÓN DE LA RUTA ELEGIDA
     if (choice) {
         if (choice === "directo") {
+            // Caso 1: Es un cliente nuevo, abrimos el formulario largo
             modalCheckInDirecto(hab); 
         } else {
-            // Es una reserva existente: Actualizamos estados
-            await updateDoc(doc(db, "reservas", choice), { estado: "checkin" });
-            await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
-            Swal.fire('¡Éxito!', 'Check-in de reserva completado', 'success');
+            // Caso 2: Es una reserva que ya existe en el sistema
+            try {
+                const nPers = datosReservas[choice]; // Recuperamos el número de personas
+
+                // 1. Actualizamos la Reserva a estado "checkin"
+                await updateDoc(doc(db, "reservas", choice), { 
+                    estado: "checkin" 
+                });
+
+                // 2. Actualizamos la Habitación (ESTO ACTIVA EL ICONO)
+                await updateDoc(doc(db, "habitaciones", hab.id), { 
+                    estado: "Ocupada",
+                    personasActuales: parseInt(nPers) 
+                });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Check-in Exitoso',
+                    text: 'La habitación ahora figura como OCUPADA',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'No se pudo procesar el ingreso.', 'error');
+            }
         }
     }
 }
 
-// --- 3. MODAL PARA INGRESO DIRECTO ---
-
-async function modalCheckInDirecto(hab) {
+/* ==========================================================================
+   3. MODAL PARA INGRESO DIRECTO (USANDO HTML NATIVO)
+   ========================================================================== */
+   async function modalCheckInDirecto(hab) {
+    const modal = document.getElementById('modalReserva');
+    const form = document.getElementById('formNuevaReserva');
     const hoy = getHoyISO();
+
+    // A. ABRIR MODAL Y RELLENAR DATOS BÁSICOS
+    modal.style.display = 'flex';
+    document.getElementById('modalTitle').innerText = `Ingreso Directo - Hab. ${hab.numero}`;
     
-    const { value: formValues } = await Swal.fire({
-        title: `<div style="text-align:left; border-bottom: 2px solid var(--vino-tinto); padding-bottom:10px;">
-                    <span style="font-family: var(--font-titles); color: var(--vino-tinto); font-size: 24px; font-weight: bold;">
-                        <i class="fas fa-door-open"></i> Nueva Reserva Directa - Hab. ${hab.numero}
-                    </span>
-                </div>`,
-        width: '1000px',
-        showConfirmButton: false, 
-        customClass: { popup: 'hotel-modal-custom' },
-        html: `
-            <form id="formCheckInDirecto" class="reserva-grid-compacto">
-                
-                <div class="reserva-header-section">Información del Huésped</div>
-                <div class="grid-row">
-                    <div class="f-group">
-                        <label>DNI / PASSPORT</label>
-                        <input type="text" id="resDoc" class="f-input highlight" required placeholder="Buscar...">
-                    </div>
-                    <div class="f-group span-2">
-                        <label>Nombres y Apellidos</label>
-                        <input type="text" id="resHuesped" class="f-input" required>
-                    </div>
-                    <div class="f-group">
-                        <label>Nacimiento</label>
-                        <input type="date" id="resNacimiento" class="f-input">
-                    </div>
-                </div>
+    // Limpiar formulario y poner valores iniciales
+    form.reset();
+    document.getElementById('resCheckIn').value = hoy;
+    document.getElementById('resCheckOut').value = hoy;
+    document.getElementById('resTarifa').value = hab.precio || 0;
+    
+    // Configurar el selector de habitación (solo la actual)
+    const selectHab = document.getElementById('resHabitacion');
+    selectHab.innerHTML = `<option value="${hab.numero}" selected>${hab.numero} - ${hab.tipo}</option>`;
 
-                <div class="grid-row">
-                    <div class="f-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad" class="f-input"></div>
-                    <div class="f-group"><label>Teléfono</label><input type="tel" id="resTelefono" class="f-input" required></div>
-                    <div class="f-group span-2"><label>Correo Electrónico</label><input type="email" id="resCorreo" class="f-input"></div>
-                </div>
+    // B. AUTOCOMPLETADO POR DNI
+    const docInput = document.getElementById('resDoc');
+    docInput.onblur = async () => {
+        const dni = docInput.value.trim();
+        if (dni.length < 3) return;
+        
+        const docSnap = await getDoc(doc(db, "huespedes", dni));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            document.getElementById('resHuesped').value = data.nombre || '';
+            document.getElementById('resTelefono').value = data.telefono || '';
+            document.getElementById('resCorreo').value = data.correo || '';
+            document.getElementById('resNacionalidad').value = data.nacionalidad || '';
+            document.getElementById('resNacimiento').value = data.nacimiento || '';
+            // Tip visual: cambiar color de borde para indicar que se encontró
+            docInput.style.borderColor = 'var(--amarillo-ocre)';
+        }
+    };
 
-                <div class="reserva-header-section">Detalles de la Estancia</div>
-                <div class="grid-row">
-                    <div class="f-group"><label>Habitación</label><input type="text" id="resHabitacion" class="f-input readonly" value="${hab.numero}" readonly></div>
-                    <div class="f-group"><label>Check In</label><input type="date" id="resCheckIn" class="f-input readonly" value="${hoy}" readonly></div>
-                    <div class="f-group"><label>Check Out</label><input type="date" id="resCheckOut" class="f-input" value="${hoy}"></div>
-                    <div class="f-group">
-                        <label>Medio de Reserva</label>
-    <select id="resMedio" class="swal2-select" required>
-        <option value="" disabled selected>Seleccione un medio...</option>
-        <option value="personal">Personal</option>
-        <option value="booking">Booking</option>
-        <option value="expedia">Expedia</option>
-        <option value="dayuse">Day Use</option>
-        <option value="mantenimiento">Mantenimiento</option>
-        <option value="gmail">Gmail</option>
-        <option value="directas">Directas</option>
-        <option value="airbnb">Airbnb</option>
-    </select>
-                    </div>
-                </div>
+    // C. LÓGICA DE CÁLCULOS (Noches x Tarifa - Adelanto)
+    const calcularTotales = () => {
+        const f1 = new Date(document.getElementById('resCheckIn').value);
+        const f2 = new Date(document.getElementById('resCheckOut').value);
+        const tarifa = parseFloat(document.getElementById('resTarifa').value) || 0;
+        const adelanto = parseFloat(document.getElementById('resAdelantoMonto').value) || 0;
+        
+        let noches = Math.ceil((f2 - f1) / (1000 * 60 * 60 * 24));
+        if (noches <= 0) noches = 1; // Mínimo cobramos 1 noche
+        
+        const total = noches * tarifa;
+        document.getElementById('resTotal').value = total.toFixed(2);
+        document.getElementById('resDiferencia').value = (total - adelanto).toFixed(2);
+    };
 
-                <div class="reserva-header-section">Tarifas y Extras</div>
-                <div class="grid-row">
-                    <div class="f-group"><label>N° Personas</label><input type="number" id="resPersonas" class="f-input" min="1" value="1"></div>
-                    <div class="f-group"><label>Tarifa x Noche</label><input type="number" id="resTarifa" class="f-input" value="${hab.precio || 0}"></div>
-                    <div class="f-group"><label>Total</label><input type="number" id="resTotal" class="f-input total-bold" value="${hab.precio || 0}"></div>
-                    <div class="f-group"><label>Cochera</label><input type="text" id="resCochera" class="f-input" placeholder="No / Placa"></div>
-                </div>
+    // Escuchar cambios para recalcular
+    ['resCheckOut', 'resTarifa', 'resAdelantoMonto'].forEach(id => {
+        document.getElementById(id).addEventListener('input', calcularTotales);
+    });
+    calcularTotales(); // Ejecutar una vez al abrir
 
-                <div class="grid-row">
-                    <div class="f-group span-2"><label>Adelantos / Notas</label><input type="text" id="resAdelanto" class="f-input" placeholder="Ej: 50.00 Efectivo"></div>
-                    <div class="f-group"><label>Desayuno</label>
-                        <select id="resDesayuno" class="f-select">
-                            <option value="SIN DESAYUNO" selected>Sin Desayuno</option>
-                            <option value="CON DESAYUNO">Con Desayuno</option>
-                        </select>
-                    </div>
-                    <div class="f-group"><label>Diferencia</label><input type="text" id="resDiferencia" class="f-input readonly alert" value="0.00" readonly></div>
-                </div>
+    // D. GUARDADO EN FIREBASE
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const nPers = document.getElementById('resPersonas').value;
 
-                <div class="reserva-footer">
-    <div style="font-size: 12px; color: #666; text-align: left; display: flex; gap: 10px;">
-        <div>
-            Registrado por: 
-            <input type="text" id="resRecepcion" required style="border:none; border-bottom:1px solid #ccc; outline:none; width:100px;">
-        </div>
-        <div>
-            Confirmado por: 
-            <input type="text" id="resRecepcionconfi" required style="border:none; border-bottom:1px solid #ccc; outline:none; width:100px;">
-        </div>
-    </div>
-    <div class="botones">
-        <button type="button" id="btnCancelarCheckIn" class="btn-secundario">CANCELAR</button>
-        <button type="submit" class="btn-primario">CONFIRMAR INGRESO</button>
-    </div>
-</div>
-            </form>
-        `,
-        didOpen: () => {
-            const form = document.getElementById('formCheckInDirecto');
-            const docInput = document.getElementById('resDoc');
-            const inInput = document.getElementById('resCheckIn');
-            const outInput = document.getElementById('resCheckOut');
-            const tarifaInput = document.getElementById('resTarifa');
-            const totalInput = document.getElementById('resTotal');
-            const adelantoInput = document.getElementById('resAdelanto');
-            const difInput = document.getElementById('resDiferencia');
+        const reservaData = {
+            huesped: document.getElementById('resHuesped').value.toUpperCase(),
+            doc: document.getElementById('resDoc').value,
+            telefono: document.getElementById('resTelefono').value,
+            nacionalidad: document.getElementById('resNacionalidad').value,
+            nacimiento: document.getElementById('resNacimiento').value,
+            correo: document.getElementById('resCorreo').value,
+            habitacion: hab.numero.toString(),
+            checkIn: document.getElementById('resCheckIn').value,
+            checkOut: document.getElementById('resCheckOut').value,
+            medio: document.getElementById('resMedio').value,
+            personas: parseInt(nPers),
+            desayuno: document.getElementById('resInfo').value, // Select Breakfast
+            tarifa: parseFloat(document.getElementById('resTarifa').value),
+            total: parseFloat(document.getElementById('resTotal').value),
+            adelantoMonto: parseFloat(document.getElementById('resAdelantoMonto').value) || 0,
+            adelantoDetalle: document.getElementById('resAdelantoDetalle').value,
+            diferencia: parseFloat(document.getElementById('resDiferencia').value),
+            cochera: document.getElementById('resCochera').value,
+            observaciones: document.getElementById('resObservaciones').value,
+            recepcion: document.getElementById('resRecepcion').value,
+            recepcionconfi: document.getElementById('resRecepcionconfi').value,
+            estado: "checkin",
+            tipoVenta: "Directa",
+            fechaRegistro: new Date().toISOString()
+        };
 
-            // --- AUTOCOMPLETADO (Optimizado) ---
-            docInput.addEventListener('blur', async () => {
-                const dni = docInput.value.trim();
-                if (dni.length < 3) return;
-                try {
-                    const docSnap = await getDoc(doc(db, "huespedes", dni));
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        document.getElementById('resHuesped').value = data.nombre || '';
-                        document.getElementById('resTelefono').value = data.telefono || '';
-                        document.getElementById('resCorreo').value = data.correo || '';
-                        document.getElementById('resNacionalidad').value = data.nacionalidad || '';
-                        document.getElementById('resNacimiento').value = data.nacimiento || '';
-                        Swal.showValidationMessage('Huésped antiguo encontrado.');
-                        setTimeout(() => Swal.resetValidationMessage(), 2000);
-                    }
-                } catch (e) { console.error(e); }
+        try {
+            // 1. Guardar Reserva
+            await addDoc(collection(db, "reservas"), reservaData);
+            
+            // 2. Actualizar Habitación (ESTADO + PERSONAS PARA ICONO)
+            await updateDoc(doc(db, "habitaciones", hab.id), { 
+                estado: "Ocupada",
+                personasActuales: parseInt(nPers)
             });
 
-            // --- CÁLCULOS (Optimizado) ---
-            const realizarCalculos = () => {
-                const f1 = new Date(inInput.value);
-                const f2 = new Date(outInput.value);
-                const tarifa = parseFloat(tarifaInput.value) || 0;
-                
-                let noches = Math.ceil((f2 - f1) / (1000 * 60 * 60 * 24));
-                if (noches <= 0) noches = 1;
-                
-                const nuevoTotal = (noches * tarifa);
-                totalInput.value = nuevoTotal.toFixed(2);
+            // 3. Registrar/Actualizar Huésped para el futuro
+            await setDoc(doc(db, "huespedes", reservaData.doc), {
+                nombre: reservaData.huesped,
+                documento: reservaData.doc,
+                telefono: reservaData.telefono,
+                ultimaVisita: hoy
+            }, { merge: true });
 
-                const montoMatch = adelantoInput.value.match(/(\d+(\.\d+)?)/);
-                const montoAdelanto = montoMatch ? parseFloat(montoMatch[0]) : 0;
-                difInput.value = (nuevoTotal - montoAdelanto).toFixed(2);
-            };
-
-            [outInput, tarifaInput, adelantoInput].forEach(el => el.addEventListener('input', realizarCalculos));
-
-            form.onsubmit = (e) => {
-                e.preventDefault();
-                form.tempValues = {
-                    huesped: document.getElementById('resHuesped').value,
-                    doc: docInput.value,
-                    nacimiento: document.getElementById('resNacimiento').value,
-                    nacionalidad: document.getElementById('resNacionalidad').value,
-                    telefono: document.getElementById('resTelefono').value,
-                    correo: document.getElementById('resCorreo').value,
-                    habitacion: hab.numero.toString(),
-                    medio: document.getElementById('resMedio').value,
-                    checkIn: inInput.value,
-                    checkOut: outInput.value,
-                    personas: document.getElementById('resPersonas').value,
-                    tarifa: parseFloat(tarifaInput.value),
-                    total: parseFloat(totalInput.value),
-                    diferencia: parseFloat(difInput.value),
-                    adelanto: adelantoInput.value,
-                    desayuno: document.getElementById('resDesayuno').value,
-                    recepcion: document.getElementById('resRecepcion').value,
-                    recepcionconfi: document.getElementById('resRecepcionconfi').value,
-                    estado: "checkin",
-                    tipoVenta: "Directa",
-                    fechaRegistro: new Date().toISOString()
-                };
-                Swal.clickConfirm();
-            };
-
-            document.getElementById('btnCancelarCheckIn').onclick = () => Swal.close();
-        },
-        preConfirm: () => document.getElementById('formCheckInDirecto').tempValues || false
-    });
-
-    // --- GUARDADO EN FIREBASE ---
-    if (formValues) {
-        try {
-            await addDoc(collection(db, "reservas"), formValues);
-            await updateDoc(doc(db, "habitaciones", hab.id), { estado: "Ocupada" });
-            
-            const dniHuesped = formValues.doc.toString().trim();
-            if (dniHuesped) {
-                await setDoc(doc(db, "huespedes", dniHuesped), {
-                    nombre: formValues.huesped,
-                    documento: dniHuesped,
-                    telefono: formValues.telefono || "",
-                    correo: formValues.correo || "",
-                    nacionalidad: formValues.nacionalidad || "",
-                    nacimiento: formValues.nacimiento || "",
-                    ultimaVisita: hoy
-                }, { merge: true });
-            }
-            Swal.fire({ icon: 'success', title: 'Ingreso Exitoso', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+            Swal.fire({ icon: 'success', title: '¡Ingreso Exitoso!', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+            cerrarModal(); // Función para cerrar
         } catch (error) {
-            Swal.fire('Error', 'No se pudo registrar el ingreso', 'error');
+            console.error(error);
+            Swal.fire('Error', 'No se pudo completar el registro.', 'error');
         }
+    };
+}
+
+function cerrarModal() {
+    document.getElementById('modalReserva').style.display = 'none';
+}
+
+// Para cerrar el modal si hacen clic fuera del contenido blanco
+window.onclick = function(event) {
+    const modal = document.getElementById('modalReserva');
+    if (event.target == modal) {
+        cerrarModal();
     }
 }
 
-
-
+//5
 async function abrirModalGestionOcupada(hab) {
     const qRes = query(collection(db, "reservas"), 
                  where("habitacion", "==", hab.numero.toString()), 
@@ -480,7 +455,7 @@ async function abrirModalGestionOcupada(hab) {
 }
 
 
-// --- 4. AGREGAR CONSUMO (ESTILO INTEGRADO) ---
+// --- 6. AGREGAR CONSUMO (ESTILO INTEGRADO) ---
 async function agregarConsumo(resId, hab) {
     const ahora = new Date();
     // Ajuste de zona horaria Perú
@@ -580,7 +555,7 @@ async function agregarConsumo(resId, hab) {
     }
 }
 
-// --- 5. CHECK-OUT (ESTILO ELITE) ---
+// --- 7. CHECK-OUT (ESTILO ELITE) ---
 async function realizarCheckOut(resId, hab, rData, totalConsumos) {
     const subHosp = parseFloat(rData.total) || 0;
     const granTotal = subHosp + totalConsumos;
@@ -680,7 +655,7 @@ async function realizarCheckOut(resId, hab, rData, totalConsumos) {
 }
 
 
-// --- 6. FUNCIÓN DE IMPRESIÓN (FORMATO TICKET TÉRMICO) ---
+// --- 8. FUNCIÓN DE IMPRESIÓN (FORMATO TICKET TÉRMICO) ---
 function imprimirTicket(rData, consumos, totalConsumos, granTotal, metodoPago) {
     const ventana = window.open('', '_blank');
     const fechaActual = new Date().toLocaleString('es-PE');

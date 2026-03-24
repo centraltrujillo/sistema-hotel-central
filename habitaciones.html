@@ -11,7 +11,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="css/colors.css">
-    <link rel="stylesheet" href="css/dashboard.css"> 
     <link rel="stylesheet" href="css/habitaciones.css"> 
 </head>
 <body>
@@ -54,6 +53,89 @@
         <section class="hab-grid" id="habGrid">
             </section>
     </main>
+
+    <div id="modalReserva" class="modal-reserva-overlay">
+        
+        <div class="modal-reserva-content">
+            
+            <div class="modal-reserva-header">
+                <h3 id="modalTitle">Nueva Reserva</h3>
+                <span class="close-modal" onclick="cerrarModal()">&times;</span>
+            </div>
+
+            <form id="formNuevaReserva">
+                <div class="form-body-no-scroll">
+                    
+                    <div class="form-section-title">DATOS DEL HUÉSPED</div>
+                    <div class="form-grid-compact">
+                        <div class="form-group span-2"><label>Nombres</label><input type="text" id="resHuesped" required></div>
+                        <div class="form-group"><label>DNI/Pasaporte</label><input type="text" id="resDoc" required></div>
+                        <div class="form-group"><label>Teléfono</label><input type="tel" id="resTelefono" required></div>
+                        <div class="form-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad"></div>
+                        <div class="form-group"><label>Nacimiento</label><input type="date" id="resNacimiento"></div>
+                        <div class="form-group span-2"><label>Correo</label><input type="email" id="resCorreo"></div>
+                    </div>
+
+                    <div class="form-section-title">DETALLES DE LA ESTANCIA</div>
+                    <div class="form-grid-compact">
+                        <div class="form-group"><label>Habitación</label><select id="resHabitacion" required></select></div>
+                        <div class="form-group"><label>Check In</label><input type="date" id="resCheckIn" required></div>
+                        <div class="form-group"><label>Check Out</label><input type="date" id="resCheckOut" required></div>
+
+                        <div class="form-group">
+                            <label>Medio</label>
+                            <select id="resMedio" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="booking">Booking</option>
+                                <option value="airbnb">Airbnb</option>
+                                <option value="directas">Directas</option>
+                                <option value="expedia">Expedia</option>
+                                <option value="personal">Personal</option>
+                                <option value="dayuse">Day Use</option>
+                                <option value="gmail">Gmail</option>
+                            </select>
+                        </div>
+                        <div id="statusDisponibilidad" class="span-4"></div>
+
+                        <div class="form-group"><label>N° Pers.</label><input type="number" id="resPersonas" min="1" value="1"></div>
+                        <div class="form-group"><label>Desayuno</label><select id="resInfo"><option>CON DESAYUNO</option><option>SIN DESAYUNO</option></select></div>
+                        <div class="form-group"><label>Early C.I.</label><input type="time" id="resEarly"></div>
+                        <div class="form-group"><label>Late C.O.</label><input type="time" id="resLate"></div>
+                        <div class="form-group"><label>Cochera</label><input type="text" id="resCochera" placeholder="SI/NO"></div>
+                        <div class="form-group span-3"><label>Traslado</label><input type="text" id="resTraslado"></div>
+                    </div>
+
+                    <div class="form-section-title">TARIFA DE LA RESERVA</div>
+                    <div class="form-grid-compact highlight-section">
+                        <div class="form-group"><label>Tarifa</label><input type="number" id="resTarifa" required></div>
+                        <div class="form-group">
+                            <label>Moneda</label>
+                            <select id="resMoneda">
+                                <option value="PEN">Soles (S/)</option>
+                                <option value="USD">Dólares ($)</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>T. Cambio</label><input type="number" id="resTipoCambio" step="0.01"></div>
+                        <div class="form-group"><label>Total</label><input type="number" id="resTotal" class="input-total" readonly></div>
+                        <div class="form-group"><label>Adelanto</label><input type="number" id="resAdelantoMonto" class="input-adelanto"></div>
+                        <div class="form-group"><label>Pendiente</label><input type="number" id="resDiferencia" class="input-diferencia" readonly></div>
+                        <div class="form-group span-2"><label>Detalle Adelanto</label><input type="text" id="resAdelantoDetalle"></div>
+                    </div>
+
+                    <div class="form-grid-compact" style="margin-top: 10px;">
+                        <div class="form-group span-2"><label>Observaciones</label><input type="text" id="resObservaciones"></div>
+                        <div class="form-group"><label>Recibido por</label><input type="text" id="resRecepcion" required></div>
+                        <div class="form-group"><label>Confirmado por</label><input type="text" id="resRecepcionconfi" required></div>
+                    </div>
+                </div>
+
+                <div class="form-actions-res">
+                    <button type="button" class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+                    <button type="submit" class="btn-save">Guardar Reserva</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script type="module" src="js/habitaciones.js"></script>
     <script>
