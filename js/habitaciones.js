@@ -649,7 +649,7 @@ if (resultado.isConfirmed || resultado.isDenied) {
             }
 
             // C. CIERRE DE CICLO
-await updateDoc(doc(db, "reservas", resId), { estado: "finalizado" });
+await updateDoc(doc(db, "reservas", resId), { estado: "checkout" });
 await updateDoc(doc(db, "habitaciones", hab.id), { 
     estado: "Libre", 
     personasActuales: 0 // <--- AGREGAR ESTO para que el icono vuelva a ser el hotel

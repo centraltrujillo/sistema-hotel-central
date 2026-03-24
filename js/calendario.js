@@ -217,7 +217,7 @@ snap.docs.forEach(dSnap => {
         // TARIFA DE LA RESERVA
         // Precios y Totales (Importante: usar Number para cálculos)
     tarifa: Number(document.getElementById('resTarifa').value) || 0,
-    tipoCambio: Number(document.getElementById('resTipoCambio').value) || 3.85,
+    tipoCambio: Number(document.getElementById('resTipoCambio').value) || 0.00,
     total: Number(document.getElementById('resTotal').value) || 0,
     adelanto: Number(document.getElementById('resAdelantoMonto').value) || 0,
     diferencia: Number(document.getElementById('resDiferencia').value) || 0,
@@ -467,7 +467,7 @@ function verDetalleReserva(res, resId) {
                 </div>
                 <div class="span-1">
                     <label>Adelanto</label>
-                    <b class="input-adelanto" style="padding:2px 8px; border-radius:4px;">${mSymbol}${res.adelanto || 0}</b>
+                    <b class="input-adelanto" style="padding:2px 8px; border-radius:4px;">${mSymbol}${res.adelantoMonto || 0}</b>
                 </div>
                 <div class="span-1">
                     <label>Saldo Pendiente</label>
@@ -654,7 +654,7 @@ function abrirEdicionIntegral(res, resId) {
                 </div>
                 <div class="span-1">
                     <label>T. Cambio</label>
-                    <input type="number" id="sw-tc" class="swal2-input" step="0.01" value="${res.tipoCambio || 3.80}">
+                    <input type="number" id="sw-tc" class="swal2-input" step="0.01" value="${res.tipoCambio || 0.00}">
                 </div>
                 <div class="span-1">
                     <label>Total</label>
@@ -662,7 +662,7 @@ function abrirEdicionIntegral(res, resId) {
                 </div>
                 <div class="span-1">
                     <label>Adelanto</label>
-                    <input type="number" id="sw-adelanto" class="swal2-input input-adelanto" value="${res.adelanto || 0}">
+                    <input type="number" id="sw-adelanto" class="swal2-input input-adelanto" value="${res.adelantoMonto || 0}">
                 </div>
                 <div class="span-1">
                     <label>Pendiente</label>

@@ -156,12 +156,16 @@ body {
 
 .modal-reserva-content {
     background: var(--blanco);
-    width: 95%; max-width: 900px;
-    max-height: 90vh;
+    width: 95%; 
+    max-width: 900px;
+    /* Cambio clave: Usar vh para asegurar que quepa en pantalla */
+    max-height: 85vh; 
     border-radius: 20px;
     box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-    display: flex; flex-direction: column;
+    display: flex; 
+    flex-direction: column; /* Esto permite que el header y footer sean fijos */
     border: 1px solid var(--amarillo-ocre);
+    overflow: hidden; /* Evita que el borde se rompa */
 }
 
 .modal-reserva-header {
@@ -176,7 +180,20 @@ body {
 
 .form-body-no-scroll {
     padding: 25px;
-    overflow-y: auto;
+    flex: 1; /* Ocupa el espacio disponible entre header y footer */
+    overflow-y: auto; /* Activa el scroll vertical solo aquí */
+}
+
+/* Scrollbar personalizado para el modal */
+.form-body-no-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+.form-body-no-scroll::-webkit-scrollbar-track {
+    background: var(--blanco-colonial);
+}
+.form-body-no-scroll::-webkit-scrollbar-thumb {
+    background: var(--amarillo-ocre);
+    border-radius: 10px;
 }
 
 .form-section-title {
@@ -218,8 +235,11 @@ body {
 .form-actions-res {
     padding: 20px 25px;
     background: var(--blanco-colonial);
-    border-radius: 0 0 18px 18px;
-    display: flex; justify-content: flex-end; gap: 15px;
+    border-top: 1px solid rgba(0,0,0,0.05); /* Línea sutil de separación */
+    display: flex; 
+    justify-content: flex-end; 
+    gap: 15px;
+    flex-shrink: 0; /* Evita que el footer se aplaste */
 }
 
 .btn-save { 
@@ -234,6 +254,164 @@ body {
 }
 
 .btn-save:hover { background: var(--rojo-vibrante); transform: scale(1.05); }
+
+/* --- MODAL GESTIÓN OCUPADA (SWEETALERT CUSTOM) --- */
+
+/* Contenedor del título personalizado */
+.modal-header-gestion {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    color: var(--vino-tinto);
+    border-bottom: 2px solid var(--amarillo-ocre);
+    padding-bottom: 10px;
+    width: 100%;
+}
+.modal-header-gestion span { font-family: var(--font-titles); font-size: 24px; }
+.modal-header-gestion small { font-size: 14px; color: var(--gris-antracita); font-weight: 400; }
+
+/* Contenedor principal del contenido */
+.gestion-container {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+/* Ficha del Huésped */
+.ficha-huesped {
+    background: var(--blanco-colonial);
+    padding: 15px;
+    border-radius: 12px;
+    border-left: 5px solid var(--vino-tinto);
+}
+
+.ficha-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.ficha-row.separator {
+    border-top: 1px dashed rgba(0,0,0,0.1);
+    padding-top: 15px;
+}
+
+.ficha-col label {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--marron-zocalo);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.val-main { font-weight: 700; font-size: 16px; margin: 0; color: var(--gris-antracita); }
+.val-sub { font-size: 12px; color: var(--gris-antracita); opacity: 0.8; margin: 0; }
+
+.badge-medio {
+    background: var(--vino-tinto);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+}
+
+/* Sección de Consumos */
+.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.section-title span { font-weight: 800; font-size: 13px; color: var(--marron-zocalo); }
+
+.btn-agregar-sm {
+    background: var(--amarillo-ocre);
+    color: var(--marron-zocalo);
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 11px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.lista-consumos {
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.consumo-item-lista {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #f9f9f9;
+    align-items: center;
+}
+
+.c-qty { font-weight: 800; color: var(--vino-tinto); margin-right: 8px; }
+.c-name { font-size: 14px; color: var(--gris-antracita); }
+.c-date { font-size: 11px; display: block; color: #999; }
+.c-price { font-weight: 700; color: var(--marron-zocalo); }
+
+/* Barra de Total de Consumos */
+.total-bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 20px;
+    padding: 15px;
+    background: #fdfdfd;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.total-label { text-align: right; }
+.total-label small { display: block; font-size: 10px; color: #999; }
+.total-label span { font-weight: 800; font-size: 14px; color: var(--marron-zocalo); }
+.total-monto { font-size: 22px; font-weight: 800; color: var(--vino-tinto); font-family: var(--font-titles); }
+
+/* Footer de Gestión */
+.gestion-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.btn-secundario {
+    background: var(--gris-antracita);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-checkout-final {
+    flex-grow: 1;
+    background: #2E7D32; /* Verde éxito */
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.btn-checkout-final:hover { background: #1b5e20; transform: translateY(-2px); }
+
+/* Ajuste para que el grid ocupe 2 espacios si es necesario */
+.span-2 { grid-column: span 2; }
+
 
 /* --- BOTONES SWEETALERT (CHECK-OUT) --- */
 .btn-pagar-imprimir { background-color: #2E7D32 !important; color: white !important; padding: 12px 24px; border-radius: 8px; font-weight: bold; margin: 5px; border: none; }
