@@ -687,11 +687,27 @@ await updateDoc(doc(db, "habitaciones", hab.id), {
 }
 
 
-// --- 7. FUNCIÓN DE IMPRESIÓN (FORMATO TICKET TÉRMICO) ---
-function imprimirTicket(rData, consumos, totalConsumos, granTotal, metodoPago) {
-    // Abrir ventana inmediatamente para evitar bloqueo de pop-ups
-    const ventana = window.open('', '_blank');
-    const fechaActual = new Date().toLocaleString('es-PE');
+// --- 7. FUNCIÓN DE IMPRESIÓN Y GUARDADO ---
+async function imprimirTicket(rData, consumos, totalConsumos, granTotal, metodoPago) {
+    
+    // 1. GUARDAR EN FIREBASE ANTES DE IMPRIMIR
+    // Asumimos que rData trae el id de la reserva o el id del documento de pago
+    try {
+        if (rData.idPago) {
+            const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+            const pagoRef = doc(db, "pagos", rData.idPago);
+            
+            await updateDoc(pagoRef, {
+                metodoPago: metodoPago || "Efectivo",
+                fechaImpresion: new Date() // Opcional: para saber cuándo se emitió el ticket
+            });
+            console.log("Método de pago actualizado en Firebase");
+        }
+    } catch (error) {
+        console.error("Error al guardar el método de pago:", error);
+        // Opcional: podrías detener la impresión si falla el guardado, 
+        // pero usualmente se deja pasar para no trabar la recepción.
+    }
     
     // Generar filas de consumos usando el campo estandarizado 'precioTotal'
     let filasConsumos = consumos.map(c => `

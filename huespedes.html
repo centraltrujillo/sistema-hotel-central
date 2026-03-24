@@ -16,35 +16,37 @@
     <div class="admin-layout">
         <aside class="sidebar">
             <div class="logo-box">
-                <div class="logo-icon"><img src="img/logo.jpeg" alt="Logo" style="width: 100%; height: auto; border-radius: 8px;"></div>
+                <div class="logo-icon">
+                    <img src="img/logo.jpeg" alt="Logo Hotel Central" class="img-sidebar-logo">
+                </div>
                 <div>
                     <h3>Hotel Central</h3>
                     <p>Sistema de Gestión</p>
                 </div>
             </div>
             <nav class="nav-menu">
-              <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
-              <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
-              <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
-              <a href="huespedes.html" class="nav-link active"><i class="fa-solid fa-users"></i> Huéspedes</a>
-              <a href="calendario.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Calendario</a>
+                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+                <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
+                <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+                <a href="huespedes.html" class="nav-link active"><i class="fa-solid fa-users"></i> Huéspedes</a>
+                <a href="calendario.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Calendario</a>
             </nav>
         </aside>
 
         <main class="main-content">
-            <div class="page-header-container">
+            <header class="page-header-container">
                 <div class="header-text">
                     <h2>Gestión de Huéspedes</h2>
                 </div>
                 <div class="header-buttons">
-                    <button class="btn-export" onclick="exportarHuespedesExcel()">
-                        <i class="fa-solid fa-file-excel"></i> Exportar Excel
+                    <button class="btn-export" onclick="exportarHuespedesExcel()" title="Descargar reporte en Excel">
+                        <i class="fa-solid fa-file-excel"></i> Exportar
                     </button>
                     <button class="btn-add" onclick="abrirModalNuevo()">
                         <i class="fa-solid fa-plus"></i> Nuevo Huésped
                     </button>
                 </div>
-            </div>
+            </header>
 
             <div class="stats-container">
                 <div class="stat-card-main">
@@ -56,20 +58,22 @@
                 </div>
             </div>
 
-            <div class="search-section">
+            <section class="search-section">
                 <div class="search-box">
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="buscarHuesped" placeholder="Buscar por nombre o número de documento...">
+                    <input type="text" id="buscarHuesped" placeholder="Nombre o DNI...">
                 </div>
-                <select id="filtroEstado">
-                    <option value="todos">Ver Historial Completo</option>
-                    <option value="hoy">Solo los de Hoy</option>
-                </select>
-            </div>
+                <div class="filter-group">
+                    <label for="filtroEstado" class="sr-only">Filtrar por:</label>
+                    <select id="filtroEstado">
+                        <option value="todos">Todos los registros</option>
+                        <option value="hoy">Ingresos de hoy</option>
+                    </select>
+                </div>
+            </section>
 
-            <div class="huespedes-grid" id="huespedesContainer"></div>
-
-            <div id="paginacionControls" class="pagination-container"></div>
+            <div class="huespedes-grid" id="huespedesContainer">
+                </div>
         </main>
     </div>
 
@@ -77,65 +81,57 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">Nuevo Huésped</h3>
-                <span class="close-btn" onclick="cerrarModal()">&times;</span>
+                <button class="close-btn" onclick="cerrarModal()" aria-label="Cerrar">&times;</button>
             </div>
             <form id="formHuesped">
                 <input type="hidden" id="huespedId"> 
                 <div class="form-grid">
-                    <div class="form-group"><label>Nombre y Apellidos</label><input type="text" id="nombreH" required></div>
-                    <div class="form-group"><label>Nacionalidad</label><input type="text" id="nacionalidadH"></div>
                     <div class="form-group">
-                        <label>Tipo Documento</label>
+                        <label for="resHuesped">Nombre y Apellidos</label>
+                        <input type="text" id="resHuesped" required placeholder="EJ. JUAN PÉREZ">
+                    </div>
+                    <div class="form-group">
+                        <label for="tipoDocH">Tipo Documento</label>
                         <select id="tipoDocH">
                             <option value="DNI">DNI</option>
                             <option value="Pasaporte">Pasaporte</option>
                             <option value="CE">Carnet de Extranjería</option>
                         </select>
                     </div>
-                    <div class="form-group"><label>N° Documento</label><input type="text" id="documentoH" required></div>
-                    <div class="form-group"><label>Fecha Nacimiento</label><input type="date" id="fechaNacH"></div>
-                    <div class="form-group"><label>Celular</label><input type="tel" id="celularH"></div>
-                    <div class="form-group"><label>Residencia</label><input type="text" id="residenciaH"></div>
-                    <div class="form-group"><label>Correo Electrónico</label><input type="email" id="emailH"></div>
-                    
                     <div class="form-group">
-                        <label>Categoría</label>
-                        <select id="categoriaH">
-                            <option value="Regular">Regular</option>
-                            <option value="Frecuente">Frecuente</option>
-                            <option value="VIP">VIP</option>
-                            <option value="Corporativo">Corporativo</option>
-                        </select>
+                        <label for="resDoc">N° Documento</label>
+                        <input type="text" id="resDoc" required>
                     </div>
-
-                    <div class="form-group full-width"><label>Motivo de Viaje</label><textarea id="motivoH" rows="2"></textarea></div>
+                    <div class="form-group">
+                        <label for="resTelefono">Celular / Teléfono</label>
+                        <input type="tel" id="resTelefono">
+                    </div>
+                    <div class="form-group">
+                        <label for="resNacionalidad">Nacionalidad</label>
+                        <input type="text" id="resNacionalidad" placeholder="Ej. PERUANA">
+                    </div>
+                    <div class="form-group">
+                        <label for="resNacimiento">Fecha de Nacimiento</label>
+                        <input type="date" id="resNacimiento">
+                    </div>
+                    <div class="form-group">
+                        <label for="resCorreo">Correo Electrónico</label>
+                        <input type="email" id="resCorreo" placeholder="ejemplo@correo.com">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="motivoH">Notas o Preferencias</label>
+                        <textarea id="motivoH" rows="2" placeholder="Ej. Alérgico, prefiere piso alto..."></textarea>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-                    <button type="submit" class="btn-primary">Guardar Datos</button>
+                    <button type="submit" class="btn-primary">Guardar Huésped</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script type="module" src="js/huespedes.js"></script>
-    <script>
-        // Función para resetear y abrir el modal correctamente
-        function abrirModalNuevo() {
-            const form = document.getElementById('formHuesped');
-            form.reset();
-            document.getElementById('huespedId').value = "";
-            document.getElementById('modalTitle').innerText = "Nuevo Huésped";
-            
-            // Habilitar campos (por si venían de 'ver detalles')
-            const inputs = form.querySelectorAll('input, select, textarea');
-            inputs.forEach(i => i.disabled = false);
-            
-            const actions = document.querySelector('.form-actions');
-            if (actions) actions.style.display = 'flex';
-            
-            document.getElementById('modalHuesped').style.display = 'flex';
-        }
-    </script>
+
 </body>
 </html>

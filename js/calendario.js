@@ -376,7 +376,6 @@ function calcularMontos(prefix = "res") {
         }
     }
 
-    JavaScript
     // --- 7. VISTA DETALLE ACTUALIZADA ---
     function verDetalleReserva(res, resId) {
         const mSymbol = res.moneda === 'USD' ? '$' : 'S/';

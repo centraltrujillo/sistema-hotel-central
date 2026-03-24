@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Pagos | Hotel Central</title>
+    
+    <link rel="icon" type="image/png" href="img/logo.png" />
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        .table-container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-top: 20px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; padding: 15px; border-bottom: 2px solid var(--gris-suave); color: #64748b; text-transform: uppercase; font-size: 11px; }
+        td { padding: 15px; border-bottom: 1px solid #eee; color: var(--marron-zocalo); }
+        
+        /* Estilos Filtros */
+        .filters-bar { display: flex; align-items: center; gap: 15px; background: white; padding: 15px 25px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .filter-group { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--marron-zocalo); }
+        .filter-group input { padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: var(--font-body); }
+
+        .btn-excel { background: #166534; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700; transition: 0.3s; font-size: 13px; }
+        .btn-excel:hover { background: #0e4b25; transform: translateY(-2px); }
+        
+        .monto-celda { font-weight: 700; color: #166534; font-family: var(--font-titles); font-size: 16px; }
+        .badge-hab { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="logo-box">
+                <div class="logo-icon"><img src="img/logo.jpeg" style="width: 100%; border-radius: 8px;"></div>
+                <div><h3>Hotel Central</h3><p>Administración</p></div>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+                <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
+                <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+                <a href="pagos.html" class="nav-link active"><i class="fa-solid fa-file-invoice-dollar"></i> Historial Pagos</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h2>Registro de Pagos</h2>
+                    <p id="current-date" style="font-size: 0.85rem; color: #64748b;"></p>
+                </div>
+                <button id="btnExportar" class="btn-excel">
+                    <i class="fa-solid fa-file-excel"></i> Exportar a Excel
+                </button>
+            </header>
+
+            <div class="filters-bar">
+                <div class="filter-group">
+                    <i class="fa-solid fa-calendar-day"></i> Desde:
+                    <input type="date" id="fechaInicio">
+                </div>
+                <div class="filter-group">
+                    <i class="fa-solid fa-calendar-day"></i> Hasta:
+                    <input type="date" id="fechaFin">
+                </div>
+                <button id="btnLimpiar" style="background:none; border:none; color:var(--vino-tinto); cursor:pointer; font-size:12px; font-weight:700;">
+                    <i class="fa-solid fa-eraser"></i> Limpiar Filtros
+                </button>
+            </div>
+
+            <div class="table-container animated-fade">
+                <table id="tablaPagos">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Huésped</th>
+                            <th>Hab.</th>
+                            <th>Método</th>
+                            <th>Monto Hosp.</th>
+                            <th>Extras</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-pagos">
+                        <tr><td colspan="7" style="text-align:center;">Cargando registros...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { db } from "./js/firebaseconfig.js";
+        import { collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+        const tbody = document.getElementById('tbody-pagos');
+        const fInicio = document.getElementById('fechaInicio');
+        const fFin = document.getElementById('fechaFin');
+        
+        let todosLosPagos = [];
+
+        // 1. Escuchar datos en tiempo real
+        onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
+            todosLosPagos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            aplicarFiltros(); // Renderiza inicialmente
+        });
+
+        function aplicarFiltros() {
+            const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
+            const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
+
+            const filtrados = todosLosPagos.filter(pago => {
+                const fechaPago = pago.fechaPago?.toDate();
+                if (!fechaPago) return false;
+                if (inicio && fechaPago < inicio) return false;
+                if (fin && fechaPago > fin) return false;
+                return true;
+            });
+
+            renderTable(filtrados);
+        }
+
+        function renderTable(datos) {
+            tbody.innerHTML = '';
+            if(datos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay pagos en este rango de fechas.</td></tr>';
+                return;
+            }
+
+            datos.forEach(data => {
+                const fechaStr = data.fechaPago?.toDate().toLocaleDateString('es-PE') || '---';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${fechaStr}</td>
+                    <td><strong>${data.huesped}</strong></td>
+                    <td><span class="badge-hab">${data.habitacion}</span></td>
+                    <td><i class="fa-solid fa-wallet"></i> ${data.metodoPago || 'Efectivo'}</td>
+                    <td>S/ ${data.montoHospedaje}</td>
+                    <td>S/ ${data.montoExtras}</td>
+                    <td class="monto-celda">S/ ${data.montoTotal}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Eventos de Filtro
+        fInicio.addEventListener('change', aplicarFiltros);
+        fFin.addEventListener('change', aplicarFiltros);
+        document.getElementById('btnLimpiar').addEventListener('click', () => {
+            fInicio.value = ''; fFin.value = ''; aplicarFiltros();
+        });
+
+        // Exportar a Excel (Solo lo que está filtrado en pantalla)
+        document.getElementById('btnExportar').addEventListener('click', () => {
+            const ws = XLSX.utils.json_to_sheet(todosLosPagos.map(p => ({
+                Fecha: p.fechaPago?.toDate().toLocaleDateString('es-PE'),
+                Huesped: p.huesped,
+                Hab: p.habitacion,
+                Metodo: p.metodoPago || 'Efectivo',
+                Total: p.montoTotal
+            })));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Pagos");
+            XLSX.writeFile(wb, `Reporte_Pagos_${new Date().toISOString().split('T')[0]}.xlsx`);
+        });
+
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+        });
+    </script>
+</body>
+</html>

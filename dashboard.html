@@ -39,7 +39,7 @@
         <main class="main-content">
             <header class="header">
                 <div class="header-title">
-                    <h2 id="view-title">Dashboard Financiero</h2>
+                    <h2 id="view-title">Panel de Control</h2>
                     <p id="current-date" style="font-size: 0.85rem; color: #64748b; margin: 0;"></p>
                 </div>
                 
@@ -83,20 +83,16 @@
                 </div>
             </section>
 
-            <section class="charts-grid-triple">
+            <section class="charts-grid-double" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <article class="card animated-fade">
                     <h3><i class="fa-solid fa-chart-line"></i> Ingresos Semanales</h3>
                     <div id="chart-line"></div>
                 </article>
 
                 <article class="card animated-fade" style="animation-delay: 0.1s;">
-                    <h3><i class="fa-solid fa-chart-pie"></i> Perfil de Huésped</h3>
-                    <div id="chart-donut"></div>
-                </article>
-
-                <article class="card animated-fade" style="animation-delay: 0.2s;">
                     <h3><i class="fa-solid fa-chart-bar"></i> Comparativa Mensual</h3>
-                    <div id="chart-radial"></div> </article>
+                    <div id="chart-radial"></div> 
+                </article>
             </section>
 
             <section class="activity-section card animated-fade" style="margin-top: 25px;">
@@ -114,7 +110,6 @@
     <script type="module" src="js/dashboard.js"></script>
     
     <script>
-        // Mostrar fecha actual amigable
         const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', dateOptions);
     </script>

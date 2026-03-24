@@ -9,11 +9,9 @@ const formHuesped = document.getElementById('formHuesped');
 const container = document.getElementById('huespedesContainer');
 const modalTitle = document.getElementById('modalTitle');
 const inputBusqueda = document.getElementById('buscarHuesped');
-
-// KPIs
 const totalH = document.getElementById('totalHuespedesHoy');
 
-// --- VARIABLES DE PAGINACIÓN Y ESTADO ---
+// --- VARIABLES DE ESTADO ---
 let listaHuespedesGlobal = [];
 let listaFiltrada = [];
 let paginaActual = 1;
@@ -22,46 +20,41 @@ const huespedesPorPagina = 10;
 // --- CARGAR DATOS EN TIEMPO REAL ---
 function cargarHuespedes() {
     const q = query(collection(db, "huespedes"), orderBy("ultimaVisita", "desc"));
-
     onSnapshot(q, (snapshot) => {
         listaHuespedesGlobal = [];
         snapshot.forEach((docSnap) => {
             listaHuespedesGlobal.push({ id: docSnap.id, ...docSnap.data() });
         });
-        
         listaFiltrada = [...listaHuespedesGlobal];
         renderizarHuespedes();
         if (totalH) totalH.innerText = snapshot.size;
     });
 }
 
-// --- RENDERIZADO DE TARJETAS CON PAGINACIÓN Y CUMPLEAÑOS ---
+// --- RENDERIZADO DE TARJETAS ---
 function renderizarHuespedes() {
     container.innerHTML = '';
-    
-    // Lógica de Paginación
     const inicio = (paginaActual - 1) * huespedesPorPagina;
     const fin = inicio + huespedesPorPagina;
     const itemsParaMostrar = listaFiltrada.slice(inicio, fin);
 
     if (itemsParaMostrar.length === 0) {
-        container.innerHTML = `<p style="text-align:center; color: #64748b; grid-column: 1/-1; padding: 40px;">No se encontraron huéspedes.</p>`;
+        container.innerHTML = `<p style="text-align:center; color: #64748b; grid-column: 1/-1; padding: 40px;">No se encontraron huéspedes registrados.</p>`;
         actualizarControlesPagina(0);
         return;
     }
 
     itemsParaMostrar.forEach((h) => {
-        const nombre = h.nombre || h.huesped || "Sin nombre";
-        const documento = h.documento || h.doc || "---";
-        const celular = h.celular || h.telefono || "No registrado";
+        const nombre = h.huesped || h.nombre || "SIN NOMBRE";
+        const documento = h.doc || h.documento || "---";
+        const celular = h.telefono || h.celular || "---";
         const categoria = h.categoria || "Regular";
 
-        // Detección de Cumpleaños
         let esCumpleaños = false;
-        if (h.fechaNac) {
+        if (h.nacimiento) {
             const hoy = new Date();
-            const cumple = new Date(h.fechaNac);
-            if (hoy.getDate() === cumple.getDate() + 1 && hoy.getMonth() === cumple.getMonth()) {
+            const cumple = new Date(h.nacimiento);
+            if (hoy.getUTCDate() === cumple.getUTCDate() && hoy.getUTCMonth() === cumple.getUTCMonth()) {
                 esCumpleaños = true;
             }
         }
@@ -84,23 +77,14 @@ function renderizarHuespedes() {
         `;
         container.appendChild(card);
     });
-
     actualizarControlesPagina(listaFiltrada.length);
 }
 
-// --- CONTROLES DE PAGINACIÓN ---
+// --- PAGINACIÓN ---
 function actualizarControlesPagina(totalItems) {
     let paginacionContainer = document.getElementById('paginacionControls');
-    
-    // Crear el contenedor si no existe en el HTML
-    if (!paginacionContainer) {
-        paginacionContainer = document.createElement('div');
-        paginacionContainer.id = 'paginacionControls';
-        paginacionContainer.className = 'pagination-container';
-        container.after(paginacionContainer);
-    }
-
     const totalPaginas = Math.ceil(totalItems / huespedesPorPagina);
+    if (!paginacionContainer) return;
     
     if (totalPaginas <= 1) {
         paginacionContainer.style.display = 'none';
@@ -121,13 +105,13 @@ window.cambiarPagina = (dir) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// --- BÚSQUEDA FILTRADA (CON RESET DE PÁGINA) ---
+// --- BÚSQUEDA ---
 if (inputBusqueda) {
     inputBusqueda.addEventListener('input', (e) => {
         const termino = e.target.value.toLowerCase().trim();
         listaFiltrada = listaHuespedesGlobal.filter(h => {
-            const nombre = (h.nombre || h.huesped || "").toLowerCase();
-            const docNum = (h.documento || h.doc || "").toLowerCase();
+            const nombre = (h.huesped || h.nombre || "").toLowerCase();
+            const docNum = (h.doc || h.documento || "").toLowerCase();
             return nombre.includes(termino) || docNum.includes(termino);
         });
         paginaActual = 1;
@@ -135,62 +119,45 @@ if (inputBusqueda) {
     });
 }
 
-// --- EXPORTAR A EXCEL CON CONTEO DE VISITAS ---
-window.exportarHuespedesExcel = async () => {
-    if (listaHuespedesGlobal.length === 0) return;
-    Swal.fire({ title: 'Generando reporte...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-
-    let excel = `<table border="1"><tr style="background-color: #800020; color: white; font-weight: bold;">
-                <th>NOMBRE</th><th>DOC</th><th>N° DOCUMENTO</th><th>CELULAR</th>
-                <th>CORREO</th><th>CATEGORÍA</th><th>TOTAL VISITAS</th><th>ÚLT. VISITA</th></tr>`;
-
-    for (const h of listaHuespedesGlobal) {
-        const qReservas = query(collection(db, "reservas"), where("doc", "==", h.documento || h.doc || ""));
-        const snapReservas = await getDocs(qReservas);
-        const totalVisitas = snapReservas.size;
-        const fVisita = h.ultimaVisita ? new Date(h.ultimaVisita).toLocaleDateString() : "---";
-        excel += `<tr><td>${h.nombre || h.huesped || "---"}</td><td>${h.tipoDoc || "---"}</td><td>${h.documento || h.doc || "---"}</td>
-                <td>${h.celular || h.telefono || "---"}</td><td>${h.email || h.correo || "---"}</td><td>${h.categoria || "Regular"}</td>
-                <td style="text-align:center;">${totalVisitas}</td><td>${fVisita}</td></tr>`;
-    }
-    excel += `</table>`;
-    const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(excel);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Reporte_Huespedes_Frecuentes.xls`;
-    a.click();
-    Swal.close();
-};
-
 // --- GUARDAR / EDITAR ---
 formHuesped.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = document.getElementById('huespedId').value;
+    
     const datos = {
-        nombre: document.getElementById('nombreH').value,
-        nacionalidad: document.getElementById('nacionalidadH').value,
+        huesped: document.getElementById('resHuesped').value.toUpperCase(),
+        doc: document.getElementById('resDoc').value,
+        telefono: document.getElementById('resTelefono').value,
+        nacionalidad: document.getElementById('resNacionalidad').value,
+        nacimiento: document.getElementById('resNacimiento').value,
+        correo: document.getElementById('resCorreo').value,
         tipoDoc: document.getElementById('tipoDocH').value,
-        documento: document.getElementById('documentoH').value,
-        fechaNac: document.getElementById('fechaNacH').value,
-        celular: document.getElementById('celularH').value,
-        residencia: document.getElementById('residenciaH').value,
-        email: document.getElementById('emailH').value,
         motivo: document.getElementById('motivoH').value,
-        categoria: document.getElementById('categoriaH').value,
         ultimaVisita: new Date().toISOString()
     };
+
     try {
-        if (id) { await updateDoc(doc(db, "huespedes", id), datos); }
-        else { await addDoc(collection(db, "huespedes"), { ...datos, fechaRegistro: serverTimestamp() }); }
+        if (id) { 
+            await updateDoc(doc(db, "huespedes", id), datos); 
+        } else { 
+            await addDoc(collection(db, "huespedes"), { ...datos, fechaRegistro: serverTimestamp() }); 
+        }
         cerrarModal();
-        Swal.fire("Éxito", "Datos guardados", "success");
-    } catch (e) { console.error(e); }
+        Swal.fire("¡Éxito!", "Datos guardados correctamente", "success");
+    } catch (error) { 
+        console.error(error); 
+        Swal.fire("Error", "No se pudo guardar", "error");
+    }
 });
 
-// --- FUNCIONES DE MODAL ---
+// --- FUNCIONES DEL MODAL ---
 window.verDetalles = async (id) => {
     const docSnap = await getDoc(doc(db, "huespedes", id));
-    if (docSnap.exists()) { llenarModal(docSnap.data(), true); modalTitle.innerText = "Ficha del Huésped"; modal.style.display = 'flex'; }
+    if (docSnap.exists()) { 
+        llenarModal(docSnap.data(), true); 
+        modalTitle.innerText = "Ficha del Huésped"; 
+        modal.style.display = 'flex'; 
+    }
 };
 
 window.editarHuesped = async (id) => {
@@ -204,30 +171,58 @@ window.editarHuesped = async (id) => {
 };
 
 function llenarModal(h, esLectura) {
-    document.getElementById('nombreH').value = h.nombre || h.huesped || '';
+    document.getElementById('resHuesped').value = h.huesped || h.nombre || '';
+    document.getElementById('resDoc').value = h.doc || h.documento || '';
+    document.getElementById('resTelefono').value = h.telefono || h.celular || '';
+    document.getElementById('resNacionalidad').value = h.nacionalidad || '';
+    document.getElementById('resNacimiento').value = h.nacimiento || '';
+    document.getElementById('resCorreo').value = h.correo || h.email || '';
     document.getElementById('tipoDocH').value = h.tipoDoc || 'DNI';
-    document.getElementById('documentoH').value = h.documento || h.doc || '';
-    document.getElementById('celularH').value = h.celular || h.telefono || '';
-    document.getElementById('emailH').value = h.email || h.correo || '';
-    document.getElementById('nacionalidadH').value = h.nacionalidad || '';
-    document.getElementById('fechaNacH').value = h.fechaNac || h.fechaNacimiento || '';
-    document.getElementById('residenciaH').value = h.residencia || '';
     document.getElementById('motivoH').value = h.motivo || '';
-    document.getElementById('categoriaH').value = h.categoria || 'Regular';
+
     const inputs = formHuesped.querySelectorAll('input, select, textarea');
     inputs.forEach(i => i.disabled = esLectura);
     const actions = document.querySelector('.form-actions');
     if (actions) actions.style.display = esLectura ? 'none' : 'flex';
 }
 
-window.cerrarModal = () => { modal.style.display = 'none'; formHuesped.reset(); document.getElementById('huespedId').value = ""; };
+window.abrirModalNuevo = () => {
+    formHuesped.reset();
+    document.getElementById('huespedId').value = "";
+    modalTitle.innerText = "Nuevo Huésped";
+    const inputs = formHuesped.querySelectorAll('input, select, textarea');
+    inputs.forEach(i => i.disabled = false);
+    const actions = document.querySelector('.form-actions');
+    if (actions) actions.style.display = 'flex';
+    modal.style.display = 'flex';
+};
 
+window.cerrarModal = () => { 
+    modal.style.display = 'none'; 
+    formHuesped.reset(); 
+};
 
-// --- ASEGURAR DISPONIBILIDAD GLOBAL PARA HTML ---
-window.verDetalles = verDetalles;
-window.editarHuesped = editarHuesped;
-window.cerrarModal = cerrarModal;
-window.cambiarPagina = cambiarPagina; 
+// --- EXPORTAR A EXCEL ---
+window.exportarHuespedesExcel = async () => {
+    if (listaHuespedesGlobal.length === 0) return;
+    Swal.fire({ title: 'Generando reporte...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
 
+    let excel = `<table border="1"><tr style="background-color: #800020; color: white;">
+                <th>NOMBRE</th><th>DOC</th><th>N° DOCUMENTO</th><th>CELULAR</th>
+                <th>CORREO</th><th>ÚLT. VISITA</th></tr>`;
+
+    for (const h of listaHuespedesGlobal) {
+        const fVisita = h.ultimaVisita ? new Date(h.ultimaVisita).toLocaleDateString() : "---";
+        excel += `<tr><td>${h.huesped || h.nombre || "---"}</td><td>${h.tipoDoc || "---"}</td><td>${h.doc || h.documento || "---"}</td>
+                <td>${h.telefono || h.celular || "---"}</td><td>${h.correo || h.email || "---"}</td><td>${fVisita}</td></tr>`;
+    }
+    excel += `</table>`;
+    const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(excel);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Reporte_Huespedes.xls`;
+    a.click();
+    Swal.close();
+};
 
 cargarHuespedes();
