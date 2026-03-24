@@ -204,33 +204,34 @@ function obtenerIconoSegunOcupacion(estado, numPersonas) {
 }
 
 /* ==========================================================================
-   3. MODAL PARA INGRESO DIRECTO (USANDO HTML NATIVO)
+   3. MODAL PARA INGRESO DIRECTO (CORREGIDO)
    ========================================================================== */
    async function modalCheckInDirecto(hab) {
     const modal = document.getElementById('modalReserva');
     const form = document.getElementById('formNuevaReserva');
     const hoy = getHoyISO();
 
-    // A. ABRIR MODAL Y RELLENAR DATOS BÁSICOS
     modal.style.display = 'flex';
     document.getElementById('modalTitle').innerText = `Ingreso Directo - Hab. ${hab.numero}`;
     
-    // Limpiar formulario y poner valores iniciales
     form.reset();
     document.getElementById('resCheckIn').value = hoy;
     document.getElementById('resCheckOut').value = hoy;
     document.getElementById('resTarifa').value = hab.precio || 0;
     
-    // Configurar el selector de habitación (solo la actual)
+    // IMPORTANTE: Asegúrate de que el campo de Moneda y TC existan en tu HTML nativo
+    if(document.getElementById('resTipoCambio')) document.getElementById('resTipoCambio').value = ""; 
+
     const selectHab = document.getElementById('resHabitacion');
     selectHab.innerHTML = `<option value="${hab.numero}" selected>${hab.numero} - ${hab.tipo}</option>`;
 
-    // B. AUTOCOMPLETADO POR DNI
+    // B. AUTOCOMPLETADO POR DNI (Mejorado)
     const docInput = document.getElementById('resDoc');
     docInput.onblur = async () => {
         const dni = docInput.value.trim();
         if (dni.length < 3) return;
         
+        // Usamos la misma lógica de búsqueda que en el modal de edición
         const docSnap = await getDoc(doc(db, "huespedes", dni));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -239,31 +240,42 @@ function obtenerIconoSegunOcupacion(estado, numPersonas) {
             document.getElementById('resCorreo').value = data.correo || '';
             document.getElementById('resNacionalidad').value = data.nacionalidad || '';
             document.getElementById('resNacimiento').value = data.nacimiento || '';
-            // Tip visual: cambiar color de borde para indicar que se encontró
-            docInput.style.borderColor = 'var(--amarillo-ocre)';
+            docInput.style.borderColor = '#d4af37'; // Ocre para éxito
         }
     };
 
-    // C. LÓGICA DE CÁLCULOS (Noches x Tarifa - Adelanto)
+    // C. LÓGICA DE CÁLCULOS (Sincronizada con el resto del sistema)
     const calcularTotales = () => {
-        const f1 = new Date(document.getElementById('resCheckIn').value);
-        const f2 = new Date(document.getElementById('resCheckOut').value);
-        const tarifa = parseFloat(document.getElementById('resTarifa').value) || 0;
+        // CORRECCIÓN: Añadimos la hora T12:00:00 para evitar errores de zona horaria
+        const f1 = new Date(document.getElementById('resCheckIn').value + 'T12:00:00');
+        const f2 = new Date(document.getElementById('resCheckOut').value + 'T12:00:00');
+        const tarifaBase = parseFloat(document.getElementById('resTarifa').value) || 0;
         const adelanto = parseFloat(document.getElementById('resAdelantoMonto').value) || 0;
+        const moneda = document.getElementById('resMoneda')?.value || 'PEN';
+        const tc = parseFloat(document.getElementById('resTipoCambio')?.value) || 0;
         
         let noches = Math.ceil((f2 - f1) / (1000 * 60 * 60 * 24));
-        if (noches <= 0) noches = 1; // Mínimo cobramos 1 noche
+        if (noches <= 0) noches = 1; 
         
-        const total = noches * tarifa;
-        document.getElementById('resTotal').value = total.toFixed(2);
-        document.getElementById('resDiferencia').value = (total - adelanto).toFixed(2);
+        let subtotal = noches * tarifaBase;
+        let totalFinal = subtotal;
+
+        // CORRECCIÓN: Aplicar TC solo si es USD
+        if (moneda === "USD" && tc > 0) {
+            totalFinal = subtotal * tc;
+        }
+
+        document.getElementById('resTotal').value = totalFinal.toFixed(2);
+        document.getElementById('resDiferencia').value = (totalFinal - adelanto).toFixed(2);
     };
 
-    // Escuchar cambios para recalcular
-    ['resCheckOut', 'resTarifa', 'resAdelantoMonto'].forEach(id => {
-        document.getElementById(id).addEventListener('input', calcularTotales);
+    // Escuchar cambios (Añadimos Moneda y TC a los listeners)
+    ['resCheckIn', 'resCheckOut', 'resTarifa', 'resAdelantoMonto', 'resMoneda', 'resTipoCambio'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', calcularTotales);
     });
-    calcularTotales(); // Ejecutar una vez al abrir
+    
+    calcularTotales();
 
     // D. GUARDADO EN FIREBASE
     form.onsubmit = async (e) => {
@@ -271,6 +283,7 @@ function obtenerIconoSegunOcupacion(estado, numPersonas) {
         
         const nPers = document.getElementById('resPersonas').value;
 
+        // CORRECCIÓN: Estandarización de nombres de campos para que coincidan con el detalle
         const reservaData = {
             huesped: document.getElementById('resHuesped').value.toUpperCase(),
             doc: document.getElementById('resDoc').value,
@@ -283,41 +296,44 @@ function obtenerIconoSegunOcupacion(estado, numPersonas) {
             checkOut: document.getElementById('resCheckOut').value,
             medio: document.getElementById('resMedio').value,
             personas: parseInt(nPers),
-            desayuno: document.getElementById('resInfo').value, // Select Breakfast
+            desayuno: document.getElementById('resInfo').value,
             tarifa: parseFloat(document.getElementById('resTarifa').value),
+            moneda: document.getElementById('resMoneda')?.value || 'PEN', // Guardar moneda
+            tipoCambio: parseFloat(document.getElementById('resTipoCambio')?.value) || 0, // Guardar TC
             total: parseFloat(document.getElementById('resTotal').value),
             adelantoMonto: parseFloat(document.getElementById('resAdelantoMonto').value) || 0,
             adelantoDetalle: document.getElementById('resAdelantoDetalle').value,
             diferencia: parseFloat(document.getElementById('resDiferencia').value),
             cochera: document.getElementById('resCochera').value,
             observaciones: document.getElementById('resObservaciones').value,
-            recepcion: document.getElementById('resRecepcion').value,
-            recepcionconfi: document.getElementById('resRecepcionconfi').value,
+            recibidoPor: document.getElementById('resRecepcion').value, // Estandarizado
+            confirmadoPor: document.getElementById('resRecepcionconfi').value, // Estandarizado
             estado: "checkin",
             tipoVenta: "Directa",
             fechaRegistro: new Date().toISOString()
         };
 
         try {
-            // 1. Guardar Reserva
             await addDoc(collection(db, "reservas"), reservaData);
             
-            // 2. Actualizar Habitación (ESTADO + PERSONAS PARA ICONO)
             await updateDoc(doc(db, "habitaciones", hab.id), { 
                 estado: "Ocupada",
                 personasActuales: parseInt(nPers)
             });
 
-            // 3. Registrar/Actualizar Huésped para el futuro
+            // Guardar o actualizar datos del huésped para autocompletado futuro
             await setDoc(doc(db, "huespedes", reservaData.doc), {
                 nombre: reservaData.huesped,
                 documento: reservaData.doc,
                 telefono: reservaData.telefono,
+                correo: reservaData.correo,
+                nacionalidad: reservaData.nacionalidad,
                 ultimaVisita: hoy
             }, { merge: true });
 
-            Swal.fire({ icon: 'success', title: '¡Ingreso Exitoso!', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
-            cerrarModal(); // Función para cerrar
+            Swal.fire({ icon: 'success', title: '¡Check-In Directo Exitoso!', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+            cerrarModal(); 
+            // Tip: Aquí podrías llamar a una función para refrescar el dashboard
         } catch (error) {
             console.error(error);
             Swal.fire('Error', 'No se pudo completar el registro.', 'error');

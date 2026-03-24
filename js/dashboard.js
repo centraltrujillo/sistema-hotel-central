@@ -1,11 +1,11 @@
 import { auth, db } from "./firebaseconfig.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { 
-    collection, onSnapshot, query, where, orderBy, limit 
+    collection, onSnapshot, query, orderBy, limit 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // --- VARIABLES GLOBALES DE GRÁFICOS ---
-let chartLine, chartDonut, chartRadial;
+let chartSemanal, chartDonut, chartMensual;
 
 // --- 1. CONTROL DE ACCESO ---
 onAuthStateChanged(auth, (user) => {
@@ -19,118 +19,121 @@ onAuthStateChanged(auth, (user) => {
 
 // --- 2. INICIALIZACIÓN DE GRÁFICOS (ApexCharts) ---
 function inicializarGraficos() {
-    // A. Gráfico de Líneas (Ingresos Semanales)
-    chartLine = new ApexCharts(document.querySelector("#chart-line"), {
-        chart: { type: 'area', height: 250, toolbar: { show: false }, zoom: { enabled: false } },
-        series: [{ name: 'Ingresos S/', data: [0, 0, 0, 0, 0, 0, 0] }],
+    // A. Gráfico Semanal (Líneas)
+    chartSemanal = new ApexCharts(document.querySelector("#chart-line"), {
+        chart: { type: 'area', height: 250, toolbar: { show: false } },
+        series: [{ name: 'Soles S/', data: [0, 0, 0, 0, 0, 0, 0] }],
         xaxis: { categories: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'] },
         colors: ['#800020'],
-        stroke: { curve: 'smooth', width: 3 },
-        fill: { type: 'gradient', gradient: { opacityFrom: 0.6, opacityTo: 0.1 } },
-        dataLabels: { enabled: false }
+        stroke: { curve: 'smooth' }
     });
-    chartLine.render();
+    chartSemanal.render();
 
-    // B. Gráfico de Dona (Segmentación CRM)
+    // B. Gráfico de Dona (Categorías de Huéspedes)
     chartDonut = new ApexCharts(document.querySelector("#chart-donut"), {
         chart: { type: 'donut', height: 250 },
         series: [0, 0, 0, 0],
         labels: ['VIP', 'Frecuente', 'Corporativo', 'Regular'],
         colors: ['#800020', '#cc9900', '#3d2b1f', '#64748b'],
-        legend: { position: 'bottom' },
-        plotOptions: { pie: { donut: { size: '65%' } } }
+        legend: { position: 'bottom' }
     });
     chartDonut.render();
 
-    // C. Gráfico Radial (% Ocupación)
-    chartRadial = new ApexCharts(document.querySelector("#chart-radial"), {
-        chart: { height: 250, type: 'radialBar' },
-        series: [0],
-        plotOptions: {
-            radialBar: {
-                hollow: { size: '70%' },
-                dataLabels: {
-                    name: { show: false },
-                    value: { fontSize: '22px', fontFamily: 'Playfair Display', formatter: (val) => val + "%" }
-                }
-            }
-        },
+    // C. Gráfico Mensual (Barras) - REEMPLAZA AL RADIAL
+    chartMensual = new ApexCharts(document.querySelector("#chart-radial"), {
+        chart: { type: 'bar', height: 250, toolbar: { show: false } },
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '50%' } },
+        series: [{ name: 'Ingresos Mensuales', data: [0, 0, 0, 0, 0, 0] }],
+        xaxis: { categories: ['Mes 1', 'Mes 2', 'Mes 3', 'Mes 4', 'Mes 5', 'Mes 6'] },
         colors: ['#cc9900']
     });
-    chartRadial.render();
+    chartMensual.render();
 }
 
 // --- 3. LÓGICA DE DATOS EN TIEMPO REAL ---
 function inicializarDashboard() {
     inicializarGraficos();
 
-    // --- KPI & RADIAL: Ocupación ---
-    onSnapshot(collection(db, "habitaciones"), (snapshot) => {
-        const total = 13; // Capacidad total del hotel
-        const ocupadas = snapshot.docs.filter(doc => doc.data().estado === "Ocupada").length;
-        const porcentaje = Math.round((ocupadas / total) * 100);
+    // --- LÓGICA UNIFICADA DE PAGOS (Semanal, Mensual y KPI) ---
+    onSnapshot(collection(db, "pagos"), (snapshot) => {
+        let ingresosSemana = [0, 0, 0, 0, 0, 0, 0];
+        let ingresosPorMes = {}; // Para agrupar por mes/año
+        let totalMesActual = 0;
 
-        document.getElementById('kpi-ocupacion').innerText = `${ocupadas}/${total}`;
-        chartRadial.updateSeries([porcentaje]);
+        const ahora = new Date();
+        const mesActual = ahora.getMonth();
+        const anioActual = ahora.getFullYear();
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const monto = Number(data.montoTotal || 0);
+            const fecha = data.fechaPago?.toDate() || new Date();
+            
+            // 1. Lógica Semanal (Solo si es de la semana actual es opcional, aquí sumamos por día histórico)
+            const dia = fecha.getDay();
+            const index = (dia === 0) ? 6 : dia - 1;
+            ingresosSemana[index] += monto;
+
+            // 2. Lógica Mensual (Agrupación)
+            const keyMes = `${fecha.getMonth()}-${fecha.getFullYear()}`;
+            ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
+
+            // 3. KPI Mes Actual
+            if (fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual) {
+                totalMesActual += monto;
+            }
+        });
+
+        // Actualizar KPI
+        document.getElementById('kpi-ingresos').innerText = `S/ ${totalMesActual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+
+        // Actualizar Gráfico Semanal
+        chartSemanal.updateSeries([{ data: ingresosSemana }]);
+
+        // Actualizar Gráfico Mensual (Últimos 6 meses)
+        const mesesLabels = [];
+        const mesesData = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date();
+            d.setMonth(ahora.getMonth() - i);
+            const m = d.getMonth();
+            const y = d.getFullYear();
+            const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            
+            mesesLabels.push(nombresMeses[m]);
+            mesesData.push(ingresosPorMes[`${m}-${y}`] || 0);
+        }
+        chartMensual.updateOptions({ xaxis: { categories: mesesLabels } });
+        chartMensual.updateSeries([{ data: mesesData }]);
     });
 
-    // --- KPI & DONUT: Huéspedes (CRM) ---
+    // --- CRM: Categorías de Huéspedes ---
     onSnapshot(collection(db, "huespedes"), (snapshot) => {
-        document.getElementById('kpi-huespedes').innerText = snapshot.size;
-
         const cat = { vip: 0, frecuente: 0, corporativo: 0, regular: 0 };
         snapshot.forEach(doc => {
             const c = (doc.data().categoria || "Regular").toLowerCase();
             if (cat[c] !== undefined) cat[c]++;
         });
-
         chartDonut.updateSeries([cat.vip, cat.frecuente, cat.corporativo, cat.regular]);
+        document.getElementById('kpi-huespedes').innerText = snapshot.size;
     });
 
-    // --- KPI & LINE: Ingresos y Flujo ---
-    onSnapshot(collection(db, "reservas"), (snapshot) => {
-        let totalSoles = 0;
-        let ingresosSemana = [0, 0, 0, 0, 0, 0, 0];
-
-        snapshot.forEach(doc => {
-            const res = doc.data();
-            const monto = Number(res.totalPago || res.precio || 0);
-            totalSoles += monto;
-
-            // Lógica de distribución semanal
-            if (res.fechaEntrada) {
-                const fecha = new Date(res.fechaEntrada);
-                const dia = fecha.getDay(); // 0 (Dom) a 6 (Sab)
-                const index = (dia === 0) ? 6 : dia - 1; // Ajuste para que Lunes sea 0
-                ingresosSemana[index] += monto;
-            }
-        });
-
-        document.getElementById('kpi-ingresos').innerText = `S/ ${totalSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-        chartLine.updateSeries([{ data: ingresosSemana }]);
-    });
-
-    // --- ACTIVIDAD RECIENTE (CRM) ---
-    const qOps = query(collection(db, "reservas"), orderBy("fechaRegistro", "desc"), limit(5));
-    onSnapshot(qOps, (snapshot) => {
+    // --- ACTIVIDAD RECIENTE: Últimos Pagos ---
+    const qPagos = query(collection(db, "pagos"), orderBy("fechaPago", "desc"), limit(5));
+    onSnapshot(qPagos, (snapshot) => {
         const list = document.getElementById('list-checkins');
         if (!list) return;
         list.innerHTML = '';
 
-        if (snapshot.empty) {
-            list.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">Sin actividad reciente</p>';
-            return;
-        }
-
         snapshot.forEach(doc => {
             const data = doc.data();
             const item = document.createElement('div');
-            item.className = "activity-item"; // Usa la clase de tu CSS
+            item.className = "activity-item";
             item.innerHTML = `
-                <div class="activity-badge"></div>
+                <div class="activity-badge" style="background: #cc9900;"></div>
                 <div class="activity-info">
-                    <p>${data.huesped || 'Huésped'} - Hab. ${data.habitacion || '??'}</p>
-                    <small>${data.tipoReserva || 'Reserva'} | S/ ${data.totalPago || 0}</small>
+                    <p>${data.huesped} - Hab. ${data.habitacion}</p>
+                    <small>${data.tipoTicket} | <strong>S/ ${data.montoTotal}</strong></small>
                 </div>
             `;
             list.appendChild(item);

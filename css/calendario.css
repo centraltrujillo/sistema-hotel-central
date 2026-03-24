@@ -1,31 +1,16 @@
-/* =========================================
-   1. VARIABLES Y CONFIGURACIÓN BASE
-   =========================================
-*/
-:root {
-    --color-vino: #800020;
-    --color-dorado: #d4a017;
-    --color-fondo: #f8fafc;
-    --color-texto: #334155;
-    --color-borde: #e2e8f0;
-}
-
+/* --- 1. ESTILOS BASE Y CONTENEDORES --- */
 body, html {
     margin: 0;
     padding: 0;
     height: 100vh;
     font-family: 'Lato', sans-serif;
-    background-color: var(--color-fondo);
-    color: var(--color-texto);
+    background-color: #f8fafc;
+    color: #334155;
     overflow: hidden; 
     display: flex;
     flex-direction: column;
 }
 
-/* =========================================
-   2. CONTENEDOR GANTT (TABLA)
-   =========================================
-*/
 #gantt-container {
     background: #ffffff;
     border-radius: 12px;
@@ -36,6 +21,7 @@ body, html {
     overflow: auto;
 }
 
+/* --- 2. ESTRUCTURA DE LA TABLA GANTT --- */
 .gantt-table {
     width: 100%;
     border-collapse: collapse;
@@ -50,31 +36,37 @@ body, html {
     color: #64748b;
     font-weight: 700;
     padding: 8px;
-    border: 1px solid var(--color-borde);
+    border: 1px solid #e2e8f0;
+    text-align: center;
     z-index: 20;
 }
 
-/* Columna Fija de Habitaciones */
+/* Columna de Habitaciones (Fijada) */
 .sticky-col {
     position: sticky;
     left: 0;
-    background-color: var(--color-vino) !important;
+    background-color: #800020 !important; /* Vino */
     color: white !important;
     z-index: 25;
     width: 110px;
     min-width: 110px;
-    border-right: 2px solid var(--color-dorado) !important;
+    border-right: 2px solid #d4a017 !important; /* Dorado */
     text-align: left !important;
     padding-left: 12px !important;
 }
 
-.gantt-table thead th.sticky-col { z-index: 30 !important; }
+/* Esquina superior izquierda (Cruce de headers) */
+.gantt-table thead th.sticky-col {
+    z-index: 30 !important;
+}
 
-.hab-name { font-weight: 700; text-transform: uppercase; }
+.hab-name {
+    font-weight: 700;
+    text-transform: uppercase;
+}
 
-/* Celdas del Calendario */
 .calendar-cell {
-    border: 1px solid var(--color-borde);
+    border: 1px solid #e2e8f0;
     width: 35px;
     min-width: 35px;
     position: relative;
@@ -82,14 +74,12 @@ body, html {
     transition: background 0.2s;
 }
 
-.calendar-cell:hover { background-color: #f1f5f9; }
 .today-header { background-color: #fef3c7 !important; color: #92400e !important; }
 .today-column { background-color: #fffbeb; }
 
-/* =========================================
-   3. BLOQUES DE RESERVAS (DENTRO DEL GANTT)
-   =========================================
-*/
+.calendar-cell:hover { background-color: #f1f5f9; }
+
+/* --- 3. RESERVAS --- */
 .has-reservation {
     color: white;
     font-size: 10px;
@@ -106,83 +96,36 @@ body, html {
     text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
 }
 
-.res-label i { margin-left: 5px; font-size: 12px; }
-
-/* Estado procesado (Check-in/Out) */
-.res-procesada {
-    background-color: #f8fafc !important; 
-    color: #475569 !important; 
-    border: 1px solid var(--color-borde) !important;
-}
-
-.res-procesada .res-label { text-shadow: none !important; }
-
-/* =========================================
-   4. ESTRUCTURA DE FORMULARIOS Y MODALES
-   =========================================
-*/
-
-/* --- AJUSTE PARA EL STATUS DE DISPONIBILIDAD --- */
-#statusDisponibilidad {
-    grid-column: span 4; /* Ocupa toda la fila para que no empuje a los lados */
-    font-size: 11px;
-    font-weight: 700;
-    margin: 0; 
-    height: 0; /* No ocupa espacio si está vacío */
-    overflow: hidden;
-    transition: all 0.3s ease;
-}
-
-/* Cuando el JS le ponga texto, se expandirá suavemente */
-#statusDisponibilidad:not(:empty) {
-    height: auto;
-    padding: 8px;
-    margin: 5px 0 10px 0;
-    border-radius: 6px;
-}
-
-.form-grid-compact, 
-.swal-grid-4 {
+/* --- 4. ESTRUCTURA DE MODALES (GRID 4 COLUMNAS) --- */
+.form-grid-compact, .swal2-html-container {
     display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important; /* 4 columnas exactas */
-    gap: 12px 15px !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px 12px !important;
     text-align: left !important;
-    align-items: end; /* CLAVE: Alinea los inputs en la base, no arriba */
+    overflow-x: hidden !important;
     margin: 1em 1.5em !important;
+    align-items: start;
 }
 
-/* Control individual de cada grupo (Label + Input) */
-.form-group {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-}
-
-.swal2-html-container {
-    text-align: center; 
-}
-
-/* Títulos de Sección */
 .form-section-title, .swal-section-title {
     grid-column: span 4;
-    color: var(--color-vino);
+    color: #800020;
     font-size: 13px;
     font-weight: 700;
     margin: 10px 0 5px 0;
     padding-bottom: 3px;
-    border-bottom: 2px solid var(--color-dorado);
+    border-bottom: 2px solid #d4a017;
     text-transform: uppercase;
 }
 
-/* Etiquetas y Campos */
 .form-group label, .swal2-html-container label {
     font-size: 10px !important;
     font-weight: 700;
     color: #475569;
     text-transform: uppercase;
     display: block;
-    margin-bottom: 4px; /* Un poco más de espacio con el input */
-    white-space: nowrap; /* Evita que el texto de la etiqueta se rompa */
+    margin-bottom: 2px;
+    text-align: left !important;
 }
 
 .form-group input, .form-group select,
@@ -205,37 +148,42 @@ body, html {
     border: 1px solid #cbd5e1 !important;
 }
 
-/* Campos de Solo Lectura */
+/* Solo lectura */
 .input-total[readonly], .input-diferencia[readonly] {
     background-color: #f1f5f9 !important; 
     cursor: not-allowed;
-    color: var(--color-vino);
+    border: 1px solid #e2e8f0 !important;
+    color: #800020;
     font-weight: bold;
 }
-/* =========================================
-   5. UTILIDADES Y SECCIONES ESPECIALES
-   =========================================
-*/
+
+/* --- 5. UTILIDADES DE COLUMNAS --- */
 .span-2 { grid-column: span 2 !important; }
 .span-3 { grid-column: span 3 !important; }
 .span-4 { grid-column: span 4 !important; }
 
-/* Sección de Pagos (Crema) */
+/* --- 6. SECCIÓN HIGHLIGHT (PAGOS) --- */
 .highlight-section {
     grid-column: span 4;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px 12px;
-    background-color: #fff7ed;
+    background-color: #fff7ed; /* Crema suave */
     padding: 12px;
     border-radius: 10px;
-    border: 1px dashed var(--color-dorado);
-    align-items: end; /* <-- Agrega esto para máxima simetría */
+    border: 1px dashed #d4a017; /* Dorado */
 }
 
-/* Badges de Medios de Reserva */
-.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.1); }
+/* --- 7. LEYENDA Y BADGES --- */
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 1px solid rgba(0,0,0,0.1);
+}
 
+/* Estados de colores */
 .dot.booking, .badge-booking { background: #1e40af; }
 .dot.airbnb, .badge-airbnb { background: #ff5a5f; }
 .dot.expedia, .badge-expedia { background: #ffb400; }
@@ -254,19 +202,41 @@ body, html {
     display: inline-block;
 }
 
-/* =========================================
-   6. MODAL PERSONALIZADO (HTML OVERLAY)
-   =========================================
-*/
+/* --- 8. STATUS Y ALERTAS --- */
+#statusDisponibilidad {
+    font-size: 12px;
+    font-weight: 700;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* --- 9. RESPONSIVE --- */
+@media (max-width: 900px) {
+    .swal2-html-container, .form-grid-compact {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .span-3, .span-4 { grid-column: span 2 !important; }
+    .highlight-section { 
+        grid-template-columns: repeat(2, 1fr); 
+        grid-column: span 2;
+    }
+}
+
+/* --- 10. CORRECCIÓN DEL MODAL (CAPA SUPERPUESTA) --- */
 .modal-reserva-overlay {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: none;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Fondo oscuro */
+    display: none; /* Se activa con JS */
     justify-content: center;
     align-items: center;
-    z-index: 2000;
-    backdrop-filter: blur(2px);
+    z-index: 2000; /* Mucho más alto que el z-index 30 del Gantt */
+    backdrop-filter: blur(2px); /* Opcional: difumina un poco el fondo */
 }
 
 .modal-reserva-content {
@@ -276,11 +246,12 @@ body, html {
     max-height: 95vh;
     border-radius: 12px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-    overflow-y: auto;
+    overflow-y: auto; /* Por si el contenido es largo */
     position: relative;
     animation: slideIn 0.3s ease-out;
 }
 
+/* Animación para que no aparezca de golpe */
 @keyframes slideIn {
     from { transform: translateY(-20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
@@ -288,7 +259,7 @@ body, html {
 
 .modal-reserva-header {
     padding: 15px 25px;
-    border-bottom: 1px solid var(--color-borde);
+    border-bottom: 1px solid #e2e8f0;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -297,31 +268,24 @@ body, html {
 
 .modal-reserva-header h3 {
     margin: 0;
-    color: var(--color-vino);
+    color: #800020;
     font-family: 'Playfair Display', serif;
+}
+
+.close-modal {
+    font-size: 28px;
+    cursor: pointer;
+    color: #64748b;
 }
 
 .form-actions-res {
     padding: 20px;
-    border-top: 1px solid var(--color-borde);
+    border-top: 1px solid #e2e8f0;
     display: flex;
     justify-content: flex-end;
     gap: 12px;
     background: #f8fafc;
 }
 
-/* Botones */
 .btn-save { background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 .btn-cancel { background: #e2e8f0; color: #475569; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-
-/* =========================================
-   7. RESPONSIVE
-   =========================================
-*/
-@media (max-width: 900px) {
-    .swal2-html-container, .form-grid-compact, .swal-grid-4 {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-    .span-3, .span-4 { grid-column: span 2 !important; }
-    .highlight-section { grid-template-columns: repeat(2, 1fr); }
-}

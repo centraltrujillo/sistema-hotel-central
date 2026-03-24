@@ -39,14 +39,14 @@
         <main class="main-content">
             <header class="header">
                 <div class="header-title">
-                    <h2 id="view-title">Panel de Control</h2>
+                    <h2 id="view-title">Dashboard Financiero</h2>
                     <p id="current-date" style="font-size: 0.85rem; color: #64748b; margin: 0;"></p>
                 </div>
                 
                 <div class="user-info">
                     <div class="text-right">
                         <span id="userName" style="font-weight: 700; color: var(--vino-tinto);">Cargando...</span><br>
-                        <small id="userRole" style="color: var(--marron-zocalo);">Recepcionista</small>
+                        <small id="userRole" style="color: var(--marron-zocalo);">Administrador</small>
                     </div>
                     <button id="btnLogout" title="Cerrar Sesión">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -57,56 +57,55 @@
             <section class="kpi-grid">
                 <div class="kpi-card animated-fade">
                     <div class="kpi-info">
-                        <span>Ocupación Hoy</span>
-                        <h2 id="kpi-ocupacion">0/13</h2>
-                        <small class="trend">Habitaciones activas</small>
+                        <span>Ingresos del Mes</span>
+                        <h2 id="kpi-ingresos">S/ 0.00</h2>
+                        <small class="trend">Facturación actual</small>
                     </div>
-                    <div class="kpi-icon blue"><i class="fa-solid fa-door-open"></i></div>
+                    <div class="kpi-icon gold"><i class="fa-solid fa-money-bill-trend-up"></i></div>
                 </div>
 
                 <div class="kpi-card animated-fade" style="animation-delay: 0.1s;">
                     <div class="kpi-info">
                         <span>Huéspedes Totales</span>
                         <h2 id="kpi-huespedes">0</h2>
-                        <small class="trend">Base de datos CRM</small>
+                        <small class="trend">Registrados en CRM</small>
                     </div>
-                    <div class="kpi-icon green"><i class="fa-solid fa-user-tag"></i></div>
+                    <div class="kpi-icon blue"><i class="fa-solid fa-users"></i></div>
                 </div>
 
                 <div class="kpi-card animated-fade" style="animation-delay: 0.2s;">
                     <div class="kpi-info">
-                        <span>Ingresos Mensuales</span>
-                        <h2 id="kpi-ingresos">S/ 0.00</h2>
-                        <small class="trend">Facturación total</small>
+                        <span>Estado de Ocupación</span>
+                        <h2 id="kpi-ocupacion">--</h2>
+                        <small class="trend">Habitaciones ocupadas</small>
                     </div>
-                    <div class="kpi-icon gold"><i class="fa-solid fa-sack-dollar"></i></div>
+                    <div class="kpi-icon green"><i class="fa-solid fa-door-open"></i></div>
                 </div>
             </section>
 
             <section class="charts-grid-triple">
                 <article class="card animated-fade">
-                    <h3><i class="fa-solid fa-chart-line"></i> Flujo Financiero</h3>
+                    <h3><i class="fa-solid fa-chart-line"></i> Ingresos Semanales</h3>
                     <div id="chart-line"></div>
                 </article>
 
                 <article class="card animated-fade" style="animation-delay: 0.1s;">
-                    <h3><i class="fa-solid fa-chart-pie"></i> Categorías</h3>
+                    <h3><i class="fa-solid fa-chart-pie"></i> Perfil de Huésped</h3>
                     <div id="chart-donut"></div>
                 </article>
 
                 <article class="card animated-fade" style="animation-delay: 0.2s;">
-                    <h3><i class="fa-solid fa-percent"></i> Ocupación %</h3>
-                    <div id="chart-radial"></div>
-                </article>
+                    <h3><i class="fa-solid fa-chart-bar"></i> Comparativa Mensual</h3>
+                    <div id="chart-radial"></div> </article>
             </section>
 
             <section class="activity-section card animated-fade" style="margin-top: 25px;">
-                <h3><i class="fa-solid fa-clock-rotate-left"></i> Actividad Reciente del Hotel</h3>
+                <h3><i class="fa-solid fa-receipt"></i> Últimos Pagos Registrados</h3>
                 <div id="list-checkins" class="checkins-list">
-                    <p style="text-align: center; color: #888; padding: 20px;">Sincronizando con Firebase...</p>
+                    <p style="text-align: center; color: #888; padding: 20px;">Sincronizando cobros...</p>
                 </div>
                 <div style="text-align: right; margin-top: 15px;">
-                    <a href="reservas.html" class="btn-view-all">Ver todas las reservas →</a>
+                    <a href="pagos.html" class="btn-view-all">Ver historial de pagos →</a>
                 </div>
             </section>
         </main>
