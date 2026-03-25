@@ -102,43 +102,67 @@ document.addEventListener('DOMContentLoaded', function() {
         escucharReservas();
     }
 
-    // --- 4. ESCUCHAR RESERVAS (TIEMPO REAL) ---
-    function escucharReservas() {
-        onSnapshot(collection(db, "reservas"), (snap) => {
-            // Limpiar celdas antes de repintar
-            document.querySelectorAll('.calendar-cell').forEach(c => {
-                c.innerHTML = '';
-                c.style.backgroundColor = 'transparent';
-                c.onclick = null;
-                c.classList.remove('has-reservation');
-            });
-
-            snap.docs.forEach(dSnap => {
-                const res = dSnap.data();
-                const resId = dSnap.id;
-                
-                const inicio = new Date(res.checkIn + "T12:00:00");
-                const fin = new Date(res.checkOut + "T12:00:00");
-                
-                let actual = new Date(inicio);
-                while (actual < fin) {
-                    const fechaStr = actual.toISOString().split('T')[0];
-                    const celda = document.getElementById(`cell-${res.habitacion}-${fechaStr}`);
-                    
-                    if (celda) {
-                        celda.style.backgroundColor = coloresMedio[res.medio?.toLowerCase().trim()] || '#800020';
-                        celda.classList.add('has-reservation');
-                        celda.onclick = () => verDetalleReserva(res, resId);
-                        
-                        if (actual.getTime() === inicio.getTime()) {
-                            celda.innerHTML = `<span class="res-label">${res.huesped.split(' ')[0]}</span>`;
-                        }
-                    }
-                    actual.setDate(actual.getDate() + 1);
-                }
-            });
+ // --- 4. ESCUCHAR RESERVAS (TIEMPO REAL) ---
+ function escucharReservas() {
+    onSnapshot(collection(db, "reservas"), (snap) => {
+        // 1. Limpiar celdas antes de repintar
+        document.querySelectorAll('.calendar-cell').forEach(c => {
+            c.innerHTML = '';
+            c.style.backgroundColor = 'transparent';
+            c.style.color = ''; // Resetear color de texto
+            c.style.border = '1px solid #e2e8f0'; // Resetear borde original
+            c.onclick = null;
+            c.classList.remove('has-reservation');
         });
-    }
+
+        snap.docs.forEach(dSnap => {
+            const res = dSnap.data();
+            const resId = dSnap.id;
+            
+            // Forzamos hora 12:00 para evitar errores de zona horaria
+            const inicio = new Date(res.checkIn + "T12:00:00");
+            const fin = new Date(res.checkOut + "T12:00:00");
+            
+            // 2. Necesitamos el bucle para pintar cada día de la estancia
+            let actual = new Date(inicio);
+            
+            while (actual < fin) {
+                const fechaStr = actual.toISOString().split('T')[0];
+                const celda = document.getElementById(`cell-${res.habitacion}-${fechaStr}`);
+                
+                if (celda) {
+                    // --- LÓGICA DE COLOR POR ESTADO ---
+                    let colorFinal;
+                    
+                    // Verificamos si el estado es checkin o checkout (en minúsculas por seguridad)
+                    const estadoRes = res.estado?.toLowerCase().trim();
+
+                    if (estadoRes === "checkin" || estadoRes === "checkout") {
+                        colorFinal = "#FFFFFF"; // Blanco
+                        celda.style.color = "#334155"; // Texto oscuro
+                        celda.style.border = "1px solid #d1d5db"; // Borde gris para que resalte el blanco
+                    } else {
+                        // Color según el canal (Booking, Airbnb, etc.)
+                        colorFinal = coloresMedio[res.medio?.toLowerCase().trim()] || '#800020';
+                        celda.style.color = "white"; 
+                    }
+
+                    celda.style.backgroundColor = colorFinal;
+                    celda.classList.add('has-reservation');
+                    celda.onclick = () => verDetalleReserva(res, resId);
+                    
+                    // Solo ponemos el nombre en la celda del primer día
+                    if (actual.getTime() === inicio.getTime()) {
+                        celda.innerHTML = `<span class="res-label">${res.huesped.split(' ')[0]}</span>`;
+                    }
+                }
+                // 3. Avanzar al siguiente día
+                actual.setDate(actual.getDate() + 1);
+            }
+        });
+    });
+}
+
 
     // --- 5. LÓGICA DE MODAL NUEVA RESERVA (HTML) ---
     function abrirModalNuevaReserva() {
