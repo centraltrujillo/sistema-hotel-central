@@ -9,6 +9,8 @@ const habGrid = document.getElementById('habGrid');
 const elLibres = document.getElementById('stat-libres');
 const elOcupadas = document.getElementById('stat-ocupadas');
 
+const modal = document.getElementById('modalReserva');
+
 // --- 1. INICIALIZACIÓN (Llamada por auth-check.js) ---
 window.inicializarPagina = () => {
     console.log("Rack de Habitaciones Conectado");
