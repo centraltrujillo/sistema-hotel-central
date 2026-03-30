@@ -128,8 +128,8 @@ async function abrirModalCheckIn(hab) {
 
     if (choice) {
         if (choice === "directo") {
-            abrirModalNuevaReservaDirecta(hab); // Función que me pasarás luego
-        } else {
+            modalCheckInDirecto(hab); 
+                } else {
             ejecutarCheckInReservaExistente(choice, hab, datosReservas[choice]);
         }
     }
@@ -337,6 +337,8 @@ async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
     };
 }
 
+// Dentro de modalCheckInDirecto
+modal.classList.add('active'); // En lugar de modal.style.display = 'flex'
 /* --- UTILITARIOS --- */
 function cerrarModal() {
     const m = document.getElementById('modalReserva');
