@@ -69,7 +69,7 @@
                     <div class="form-section-title">DATOS DEL HUÉSPED</div>
                     <div class="form-grid-compact">
                         <div class="form-group span-2"><label>Nombres</label><input type="text" id="resHuesped" required></div>
-                        <div class="form-group"><label>DNI/Pasaporte</label><input type="text" id="resDoc" required></div>
+                        <div class="form-group"><label>DNI/Pasaporte/CE</label><input type="text" id="resDoc" required></div>
                         <div class="form-group"><label>Teléfono</label><input type="tel" id="resTelefono" required></div>
                         <div class="form-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad"></div>
                         <div class="form-group"><label>Nacimiento</label><input type="date" id="resNacimiento"></div>
@@ -81,6 +81,7 @@
                         <div class="form-group"><label>Habitación</label><select id="resHabitacion" required></select></div>
                         <div class="form-group"><label>Check In</label><input type="date" id="resCheckIn" required></div>
                         <div class="form-group"><label>Check Out</label><input type="date" id="resCheckOut" required></div>
+                        
 
                         <div class="form-group">
                             <label>Medio</label>
@@ -95,8 +96,8 @@
                                 <option value="gmail">Gmail</option>
                             </select>
                         </div>
-                        <div id="statusDisponibilidad" class="span-4"></div>
 
+                        <div id="statusDisponibilidad" class="status-badge span-3"></div>
                         <div class="form-group"><label>N° Pers.</label><input type="number" id="resPersonas" min="1" value="1"></div>
                         <div class="form-group"><label>Desayuno</label><select id="resInfo"><option>CON DESAYUNO</option><option>SIN DESAYUNO</option></select></div>
                         <div class="form-group"><label>Early C.I.</label><input type="time" id="resEarly"></div>

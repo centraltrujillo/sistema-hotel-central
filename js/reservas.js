@@ -23,67 +23,119 @@ const inputTipoCambio = document.getElementById("resTipoCambio");
 let editId = null;
 let listaReservasGlobal = [];
 
-// --- 1. CARGAR HABITACIONES ---
-onSnapshot(collection(db, "habitaciones"), (snapshot) => {
-    const selectHab = document.getElementById("resHabitacion");
-    selectHab.innerHTML = '<option value="">Seleccionar...</option>';
-    snapshot.docs.forEach(docSnap => {
-        const hab = docSnap.data();
-        const opt = document.createElement("option");
-        opt.value = hab.numero;
-        opt.textContent = `Hab. ${hab.numero} - ${hab.tipo}`;
-        selectHab.appendChild(opt);
-    });
-});
+// --- FUNCIÓN DE INICIO (Llamada por auth-check.js) ---
+window.inicializarPagina = () => {
+    console.log("Iniciando Módulo de Reservas - Hotel Central");
+    
+    // Ahora sí, las conexiones a Firebase se disparan solo con sesión activa
+    cargarHabitacionesSelect(); 
+    escucharReservas();        
+};
 
-// --- 2. LÓGICA DE CÁLCULOS (Con recargos por Early/Late) ---
+// --- 1. CARGAR HABITACIONES (Dentro de una función) ---
+const cargarHabitacionesSelect = () => {
+    const selectHab = document.getElementById("resHabitacion");
+    
+    // Al estar dentro, este listener solo nace cuando hay un usuario validado
+    onSnapshot(collection(db, "habitaciones"), (snapshot) => {
+        if (!selectHab) return; 
+        selectHab.innerHTML = '<option value="">Seleccionar...</option>';
+        snapshot.docs.forEach(docSnap => {
+            const hab = docSnap.data();
+            const opt = document.createElement("option");
+            opt.value = hab.numero;
+            opt.textContent = `Hab. ${hab.numero} - ${hab.tipo}`;
+            selectHab.appendChild(opt);
+        });
+    });
+};
+
+// --- 2. LÓGICA DE CÁLCULOS (Recargos, Moneda y Validación) ---
 const calcularMontos = () => {
-    // Cálculo de Noches (Normalizado a medianoche)
+    // Referencias a inputs (Asegúrate que coincidan con tus IDs del HTML)
     const fIn = new Date(inputCheckIn.value + 'T00:00:00');
     const fOut = new Date(inputCheckOut.value + 'T00:00:00');
     const tarifaBase = parseFloat(inputTarifa.value) || 0;
     const tc = parseFloat(inputTipoCambio.value) || 0;
     const moneda = selectMoneda.value;
 
-    // Capturar si los campos de tiempo tienen algún valor
+    // Capturar recargos por Early Check-in o Late Check-out
     const tieneEarly = document.getElementById("resEarly").value !== "";
     const tieneLate = document.getElementById("resLate").value !== "";
 
-    if (inputCheckIn.value && inputCheckOut.value && fOut > fIn) {
-        const noches = Math.ceil((fOut - fIn) / (1000 * 60 * 60 * 24));
-        
-        // Cálculo base: Noches * Tarifa
-        let subtotal = noches * tarifaBase;
-
-        // Aplicar recargos: Media tarifa (0.5) por cada concepto
-        if (tieneEarly) subtotal += (tarifaBase * 0.5);
-        if (tieneLate) subtotal += (tarifaBase * 0.5);
-
-        // Conversión de moneda si aplica (sobre el total con recargos)
-        let totalFinal = subtotal;
-        if (moneda === "USD") totalFinal *= tc;
-
-        inputTotal.value = totalFinal.toFixed(2);
+    // 1. Resetear si las fechas son inválidas o incompletas
+    if (!inputCheckIn.value || !inputCheckOut.value || fOut <= fIn) {
+        inputTotal.value = "0.00";
+        inputDiferencia.value = "0.00";
+        return;
     }
 
-    // Diferencia: Total - Adelanto
-    const totalActual = parseFloat(inputTotal.value) || 0;
-    const adelanto = parseFloat(inputAdelantoMonto.value) || 0;
-    inputDiferencia.value = (totalActual - adelanto).toFixed(2);
+    // 2. Cálculo de Noches (Uso de round para mayor precisión en fechas)
+    const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
+    
+    // 3. Subtotal base en la moneda de origen (Noches * Tarifa)
+    let subtotal = noches * tarifaBase;
+
+    // 4. Aplicación de Recargos (50% de la tarifa base por cada concepto)
+    if (tieneEarly) subtotal += (tarifaBase * 0.5);
+    if (tieneLate) subtotal += (tarifaBase * 0.5);
+
+    // 5. Conversión Final a Soles (Si la tarifa viene en USD)
+    let totalFinal = subtotal;
+    if (moneda === "USD") {
+        if (tc > 0) {
+            totalFinal = subtotal * tc; // Convertimos a Soles para caja
+        } else {
+            // Si elige USD pero olvida el T. Cambio, el total es 0 para alertar
+            totalFinal = 0; 
+        }
+    }
+
+    inputTotal.value = totalFinal.toFixed(2);
+
+    // 6. Diferencia y Validación de Adelanto
+    let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
+
+    // Evitar que el recepcionista ingrese un adelanto mayor al total de la reserva
+    if (adelanto > totalFinal && totalFinal > 0) {
+        adelanto = totalFinal;
+        inputAdelantoMonto.value = totalFinal.toFixed(2);
+        
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'warning',
+            title: 'El adelanto no puede superar al total',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
+
+    inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
 };
 
-// Listeners actualizados para incluir los campos de tiempo
+// --- LISTENERS PARA CÁLCULO EN TIEMPO REAL ---
 [
-    inputTarifa, 
-    inputCheckIn, 
-    inputCheckOut, 
-    inputAdelantoMonto, 
-    inputTipoCambio, 
-    selectMoneda,
+    inputTarifa, inputCheckIn, inputCheckOut, 
+    inputAdelantoMonto, inputTipoCambio, selectMoneda,
     document.getElementById("resEarly"),
     document.getElementById("resLate")
 ].forEach(el => {
-    el.addEventListener("input", calcularMontos);
+    if(el) {
+        el.addEventListener("input", calcularMontos);
+        el.addEventListener("change", calcularMontos);
+    }
+});
+
+
+
+// Configuración base para Toasts del Hotel
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true
 });
 
 
@@ -92,8 +144,10 @@ const calcularMontos = () => {
 document.getElementById("resDoc").addEventListener("blur", async (e) => {
     const dni = e.target.value.trim();
     if (dni.length < 4) return;
+
     const q = query(collection(db, "huespedes"), where("documento", "==", dni));
     const snap = await getDocs(q);
+
     if (!snap.empty) {
         const h = snap.docs[0].data();
         document.getElementById("resHuesped").value = h.nombre || "";
@@ -102,7 +156,11 @@ document.getElementById("resDoc").addEventListener("blur", async (e) => {
         document.getElementById("resNacionalidad").value = h.nacionalidad || "";
         document.getElementById("resNacimiento").value = h.nacimiento || ""; 
         
-        Swal.fire({ toast: true, position: 'top-end', title: 'Huésped registrado cargado', icon: 'success', showConfirmButton: false, timer: 1500 });
+        Toast.fire({
+            icon: 'success',
+            title: 'Huésped ingresado', // sistema lo reconoció
+            background: '#f0fdf4' 
+        });
     }
 });
 
@@ -143,7 +201,7 @@ form.addEventListener("submit", async (e) => {
             checkOut: nuevoOut,
             personas: parseInt(document.getElementById("resPersonas").value) || 1,
             tarifa: Number(inputTarifa.value) || 0,
-            tipoCambio: Number(inputTipoCambio.value) || 3.85,
+            tipoCambio: Number(inputTipoCambio.value) || 0,
             total: Number(inputTotal.value) || 0,
             adelantoMonto: Number(inputAdelantoMonto.value) || 0,
             diferencia: Number(inputDiferencia.value) || 0,
@@ -170,18 +228,25 @@ form.addEventListener("submit", async (e) => {
 
         // d --- SYNC HUÉSPED ---
         const dniLimpio = data.doc ? data.doc.trim() : "";
-        if (dniLimpio !== "") {
-            const hRef = doc(db, "huespedes", dniLimpio);
-            await setDoc(hRef, {
-                nombre: data.huesped.toUpperCase(),
-                documento: dniLimpio,
-                telefono: data.telefono,
-                correo: data.correo,
-                nacionalidad: data.nacionalidad,
-                nacimiento: data.nacimiento,
-                ultimaVisita: new Date().toISOString()
-            }, { merge: true });
-        }
+if (dniLimpio !== "") {
+    const hRef = doc(db, "huespedes", dniLimpio);
+    await setDoc(hRef, {
+        nombre: data.huesped.toUpperCase(),
+        documento: dniLimpio,
+        telefono: data.telefono,
+        correo: data.correo,
+        nacionalidad: data.nacionalidad,
+        nacimiento: data.nacimiento,
+        ultimaVisita: new Date().toISOString()
+    }, { merge: true });
+
+    Toast.fire({
+        icon: 'success',
+        title: 'Huésped guardado', // información nueva se envió a Firebase correctamente
+        background: '#fff',
+        iconColor: '#800020' 
+    });
+}
 
         Swal.fire({ title: '¡Éxito!', text: 'Reserva guardada correctamente', icon: 'success', confirmButtonColor: '#800020' });
         window.cerrarModal();

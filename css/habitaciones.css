@@ -124,8 +124,14 @@ body {
     border-radius: 15px 15px 0 0;
 }
 
-.hab-card.ocupada .hab-header { background: var(--vino-tinto); }
+/* Efecto de pulso suave para habitaciones ocupadas (Opcional) */
+.hab-card.ocupada {
+    border-bottom: 5px solid var(--vino-tinto);
+}
 
+.hab-card.ocupada:hover {
+    border-bottom: 5px solid var(--rojo-vibrante);
+}
 .hab-number { font-family: var(--font-titles); font-size: 24px; display: block; }
 .hab-type { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
 
@@ -419,6 +425,16 @@ body {
 .btn-cancelar-soft { background-color: var(--gris-antracita) !important; color: white !important; padding: 12px 24px; border-radius: 8px; font-weight: bold; margin: 5px; border: none; }
 
 /* --- ESTADOS DE DISPONIBILIDAD (DENTRO DEL MODAL) --- */
+.badge-status-room {
+    background: var(--vino-tinto);
+    color: white;
+    padding: 5px 15px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
 
 #statusDisponibilidad {
     padding: 10px;
@@ -492,4 +508,47 @@ body {
     padding: 10px !important;
     font-weight: 700;
     color: var(--marron-zocalo);
+}
+
+/* --- NUEVOS ESTILOS PARA AUDITORÍA Y PAGOS --- */
+.highlight-pago {
+    background: #fff9c4; /* Un amarillo crema suave */
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid var(--amarillo-ocre);
+    margin-top: 10px;
+}
+
+.audit-row {
+    background: #f5f5f5;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.val-audit {
+    font-weight: 700;
+    color: var(--vino-tinto);
+    font-size: 13px;
+    margin: 0;
+}
+
+.text-obs {
+    font-style: italic;
+    color: #5d4037;
+    font-size: 13px;
+    margin: 5px 0 0 0;
+    line-height: 1.4;
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
