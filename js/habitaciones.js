@@ -10,6 +10,7 @@ const elLibres = document.getElementById('stat-libres');
 const elOcupadas = document.getElementById('stat-ocupadas');
 
 const modal = document.getElementById('modalReserva');
+const form = document.getElementById('formNuevaReserva');
 
 // --- 1. INICIALIZACIÓN (Llamada por auth-check.js) ---
 window.inicializarPagina = () => {
@@ -339,16 +340,21 @@ async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
     };
 }
 
-// Dentro de modalCheckInDirecto
-modal.classList.add('active'); // En lugar de modal.style.display = 'flex'
-/* --- UTILITARIOS --- */
-function cerrarModal() {
+window.cerrarModal = function() {
     const m = document.getElementById('modalReserva');
-    if(m) m.style.display = 'none';
-}
+    if (m) {
+        // Usamos ambos por seguridad: clase para animar y display para asegurar cierre
+        m.classList.remove('active'); 
+        m.style.display = 'none'; 
+    }
+};
 
 window.addEventListener('click', (e) => {
-    if (e.target.id === 'modalReserva') cerrarModal();
+    // Usamos el ID directamente para evitar el error de "not defined"
+    const modalElement = document.getElementById('modalReserva');
+    if (e.target === modalElement) {
+        window.cerrarModal();
+    }
 });
 
 
@@ -418,34 +424,41 @@ window.addEventListener('click', (e) => {
                             <p class="val-sub">${r.correo || 'Sin correo'}</p>
                         </div>
                         <div class="ficha-col">
-                            <label><i class="fas fa-concierge-bell"></i> Canal de Venta</label>
+                            <label><i class="fas fa-concierge-bell"></i> Medio de Reserva</label>
                             <p><span class="badge-medio">${(r.medio || 'Personal').toUpperCase()}</span></p>
-                            <p class="val-sub">Ref: ${r.tipoVenta || 'Directa'}</p>
                         </div>
                     </div>
 
                     <div class="ficha-row separator">
-                        <div class="ficha-col">
-                            <label><i class="fas fa-sign-in-alt"></i> Fecha Ingreso</label>
-                            <p><b>${r.checkIn}</b></p>
-                            <p class="val-sub">${r.earlyCheckIn || 'Check-in estándar'}</p>
-                        </div>
-                        <div class="ficha-col">
-                            <label><i class="fas fa-sign-out-alt"></i> Fecha Salida</label>
-                            <p><b style="color: #800020;">${r.checkOut}</b></p>
-                            <p class="val-sub">${r.lateCheckOut || 'Check-out estándar'}</p>
-                        </div>
-                        <div class="ficha-col">
-                            <label><i class="fas fa-users"></i> Pax & Servicios</label>
-                            <p>${r.personas} Adultos</p>
-                            <p class="val-sub">Cochera: <b>${r.cochera || 'No'}</b></p>
-                        </div>
-                        <div class="ficha-col">
-                            <label><i class="fas fa-coffee"></i> Alimentación</label>
-                            <p>${r.desayuno || 'Solo Habitación'}</p>
-                            <p class="val-sub">Traslado: ${r.traslado || 'No'}</p>
-                        </div>
+                    <div class="ficha-col">
+                        <label><i class="fas fa-sign-in-alt"></i> Fecha Ingreso</label>
+                        <p><b>${r.checkIn}</b></p>
+                        <p class="val-sub">
+                            <i class="fa-regular fa-clock"></i> 
+                            ${r.earlyCheckIn ? `Hora: ${r.earlyCheckIn}` : 'Horario estándar'}
+                        </p>
                     </div>
+                
+                    <div class="ficha-col">
+                        <label><i class="fas fa-sign-out-alt"></i> Fecha Salida</label>
+                        <p><b style="color: #800020;">${r.checkOut}</b></p>
+                        <p class="val-sub">
+                            <i class="fa-regular fa-clock"></i> 
+                            ${r.lateCheckOut ? `Hora: ${r.lateCheckOut}` : 'Horario estándar'}
+                        </p>
+                    </div>
+                
+                    <div class="ficha-col">
+                        <label><i class="fas fa-users"></i> Pax & Servicios</label>
+                        <p>${r.personas} Adultos</p>
+                        <p class="val-sub">Cochera: <b>${r.cochera || 'No'}</b></p>
+                    </div>
+                    <div class="ficha-col">
+                        <label><i class="fas fa-coffee"></i> Alimentación</label>
+                        <p>${r.desayuno || 'Solo Habitación'}</p>
+                        <p class="val-sub">Traslado: ${r.traslado || 'No'}</p>
+                    </div>
+                </div>
 
                     <div class="ficha-row highlight-pago">
                         <div class="ficha-col">
@@ -457,7 +470,7 @@ window.addEventListener('click', (e) => {
                             <p><b>S/ ${parseFloat(r.total).toFixed(2)}</b></p>
                         </div>
                         <div class="ficha-col">
-                            <label>Adelantos / Garantía</label>
+                            <label>Adelantos</label>
                             <p style="color: #27ae60;">- S/ ${parseFloat(r.adelantoMonto || 0).toFixed(2)}</p>
                             <small>${r.adelantoDetalle || ''}</small>
                         </div>
@@ -469,7 +482,7 @@ window.addEventListener('click', (e) => {
 
                     <div class="ficha-row audit-row">
                         <div class="ficha-col span-2">
-                            <label><i class="fas fa-comment-dots"></i> Observaciones del Recepcionista:</label>
+                            <label><i class="fas fa-comment-dots"></i> Observaciones:</label>
                             <p class="text-obs">${r.observaciones ? `"${r.observaciones}"` : 'Sin notas adicionales.'}</p>
                         </div>
                         <div class="ficha-col">
@@ -485,7 +498,7 @@ window.addEventListener('click', (e) => {
 
                 <div class="consumos-section">
                     <div class="section-title">
-                        <span><i class="fas fa-utensils"></i> CONSUMOS ADICIONALES (FRIGOBAR / CAFETERÍA)</span>
+                        <span><i class="fas fa-utensils"></i> CONSUMOS ADICIONALES (TIENDA / CAFETERÍA)</span>
                         <button id="btnAddConsumo" class="btn-agregar-sm">+ CARGAR ITEM</button>
                     </div>
                     
