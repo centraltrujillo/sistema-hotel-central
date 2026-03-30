@@ -1,5 +1,5 @@
 import { auth } from "./firebaseconfig.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
 // Este código se ejecuta en CUALQUIER página que lo incluya
 onAuthStateChanged(auth, (user) => {
