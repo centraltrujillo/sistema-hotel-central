@@ -62,6 +62,50 @@ body {
 .header-actions {
     display: flex;
     gap: 12px;
+    align-items: center;
+}
+
+.btn-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #ffffff;
+    color: #800020; /* Color vino institucional */
+    text-decoration: none;
+    font-family: 'Lato', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Efecto al pasar el mouse (Hover) */
+.btn-header:hover {
+    background-color: #800020;
+    color: #ffffff;
+    border-color: #800020;
+    transform: translateY(-2px); /* Pequeño salto hacia arriba */
+    box-shadow: 0 4px 6px -1px rgba(128, 0, 32, 0.2);
+}
+
+/* Iconos */
+.btn-header i {
+    font-size: 14px;
+    transition: transform 0.3s ease;
+}
+
+.btn-header:hover i {
+    transform: scale(1.1); /* El icono crece un poquito al hacer hover */
+}
+
+/* Estado Activo (Para cuando estés en esa página) */
+.btn-header.active {
+    background-color: #f8fafc;
+    border-color: #d4a017; /* Borde dorado para resaltar donde estás */
+    color: #800020;
 }
 
 /* Botón de retroceso circular */
