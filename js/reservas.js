@@ -23,15 +23,6 @@ const inputTipoCambio = document.getElementById("resTipoCambio");
 let editId = null;
 let listaReservasGlobal = [];
 
-// --- FUNCIÓN DE INICIO (Llamada por auth-check.js) ---
-window.inicializarPagina = () => {
-    console.log("Iniciando Módulo de Reservas - Hotel Central");
-    
-    // Ahora sí, las conexiones a Firebase se disparan solo con sesión activa
-    cargarHabitacionesSelect(); 
-    escucharReservas();        
-};
-
 // --- 1. CARGAR HABITACIONES (Dentro de una función) ---
 const cargarHabitacionesSelect = () => {
     const selectHab = document.getElementById("resHabitacion");
@@ -258,6 +249,7 @@ if (dniLimpio !== "") {
 });
 
 // --- 5. RENDERIZADO ---
+const escucharReservas = () => { 
 onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), (snapshot) => {
     tablaBody.innerHTML = "";
     listaReservasGlobal = [];
@@ -297,6 +289,9 @@ onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), 
         if (el) el.textContent = conteo[k];
     });
 });
+};
+
+
 
 // --- FUNCIÓN DE VERIFICACIÓN EN TIEMPO REAL (MODIFICADA) ---
 const verificarDisponibilidadRealTime = async () => {
@@ -476,4 +471,13 @@ window.exportarExcel = async () => {
     a.href = URL.createObjectURL(blob);
     a.download = "Reporte_Reservas.xls";
     a.click();
+};
+
+// --- FUNCIÓN DE INICIO (Llamada por auth-check.js) ---
+window.inicializarPagina = () => {
+    console.log("Iniciando Módulo de Reservas - Hotel Central");
+    
+    // Ahora sí, las conexiones a Firebase se disparan solo con sesión activa
+    cargarHabitacionesSelect(); 
+    escucharReservas();        
 };
