@@ -42,7 +42,7 @@ const calcularMontos = () => {
     const fIn = new Date(inputCheckIn.value + 'T00:00:00');
     const fOut = new Date(inputCheckOut.value + 'T00:00:00');
     const tarifaBase = parseFloat(inputTarifa.value) || 0;
-    const tc = parseFloat(inputTipoCambio.value) || 3.85;
+    const tc = parseFloat(inputTipoCambio.value) || 0;
     const moneda = selectMoneda.value;
 
     // Capturar si los campos de tiempo tienen algún valor
@@ -106,44 +106,27 @@ document.getElementById("resDoc").addEventListener("blur", async (e) => {
     }
 });
 
-// --- 4. GUARDAR / ACTUALIZAR (CON VALIDACIÓN DE OVERBOOKING) ---
+// --- 4. GUARDAR / ACTUALIZAR ---
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     const habSeleccionada = document.getElementById("resHabitacion").value;
     const nuevoIn = document.getElementById("resCheckIn").value;
     const nuevoOut = document.getElementById("resCheckOut").value;
 
     try {
         // a --- VALIDACIÓN DE DISPONIBILIDAD ---
-        const q = query(
-            collection(db, "reservas"), 
-            where("habitacion", "==", habSeleccionada)
-        );
-        
+        const q = query(collection(db, "reservas"), where("habitacion", "==", habSeleccionada));
         const querySnapshot = await getDocs(q);
         let ocupado = false;
 
         querySnapshot.forEach((docSnap) => {
+            if (editId && docSnap.id === editId) return;
             const resExistente = docSnap.data();
-            const idExistente = docSnap.id;
-
-            // Ignorar la misma reserva si estamos editando
-            if (editId && idExistente === editId) return;
-
-            // Lógica de solapamiento
-            if (nuevoIn < resExistente.checkOut && nuevoOut > resExistente.checkIn) {
-                ocupado = true;
-            }
+            if (nuevoIn < resExistente.checkOut && nuevoOut > resExistente.checkIn) ocupado = true;
         });
 
         if (ocupado) {
-            return Swal.fire({
-                title: 'Habitación Ocupada',
-                text: 'La habitación ya tiene una reserva en esas fechas.',
-                icon: 'error',
-                confirmButtonColor: '#800020'
-            });
+            return Swal.fire({ title: 'Habitación Ocupada', text: 'Ya hay una reserva en estas fechas.', icon: 'error', confirmButtonColor: '#800020' });
         }
 
         // b --- PREPARACIÓN DE DATOS ---
@@ -158,14 +141,12 @@ form.addEventListener("submit", async (e) => {
             medio: document.getElementById("resMedio").value,
             checkIn: nuevoIn,
             checkOut: nuevoOut,
-
             personas: parseInt(document.getElementById("resPersonas").value) || 1,
-    tarifa: Number(inputTarifa.value) || 0,
-    tipoCambio: Number(inputTipoCambio.value) || 3.85,
-    total: Number(inputTotal.value) || 0,
-    adelantoMonto: Number(inputAdelantoMonto.value) || 0,
-    diferencia: Number(inputDiferencia.value) || 0,
-
+            tarifa: Number(inputTarifa.value) || 0,
+            tipoCambio: Number(inputTipoCambio.value) || 3.85,
+            total: Number(inputTotal.value) || 0,
+            adelantoMonto: Number(inputAdelantoMonto.value) || 0,
+            diferencia: Number(inputDiferencia.value) || 0,
             early: document.getElementById("resEarly").value,
             late: document.getElementById("resLate").value,
             moneda: selectMoneda.value,
@@ -176,9 +157,9 @@ form.addEventListener("submit", async (e) => {
             observaciones: document.getElementById("resObservaciones").value,
             recepcion: document.getElementById("resRecepcion").value,
             recepcionconfi: document.getElementById("resRecepcionconfi").value,
-            estado: editId  ? (listaReservasGlobal.find(r => r.id === editId)?.estado || "reservada")  : "reservada",
+            estado: editId ? (listaReservasGlobal.find(r => r.id === editId)?.estado || "reservada") : "reservada",
             fechaRegistro: editId ? (listaReservasGlobal.find(r => r.id === editId)?.fechaRegistro || new Date().toISOString()) : new Date().toISOString()
-    };
+        };
 
         // c --- GUARDAR O ACTUALIZAR ---
         if (editId) {
@@ -187,27 +168,27 @@ form.addEventListener("submit", async (e) => {
             await addDoc(collection(db, "reservas"), data);
         }
 
-        // --- 4. SYNC HUÉSPED (CORREGIDO) ---
-const hRef = doc(db, "huespedes", data.doc); 
+        // d --- SYNC HUÉSPED ---
+        const dniLimpio = data.doc ? data.doc.trim() : "";
+        if (dniLimpio !== "") {
+            const hRef = doc(db, "huespedes", dniLimpio);
+            await setDoc(hRef, {
+                nombre: data.huesped.toUpperCase(),
+                documento: dniLimpio,
+                telefono: data.telefono,
+                correo: data.correo,
+                nacionalidad: data.nacionalidad,
+                nacimiento: data.nacimiento,
+                ultimaVisita: new Date().toISOString()
+            }, { merge: true });
+        }
 
-await setDoc(hRef, { 
-    // Usamos 'huesped' para que coincida con lo que espera tu modal de edición
-    huesped: data.huesped.toUpperCase(), 
-    doc: data.doc, 
-    telefono: data.telefono, 
-    correo: data.correo,
-    nacionalidad: data.nacionalidad,
-    nacimiento: data.nacimiento,
-    // CLAVE: Esto permite que aparezca en el 'orderBy' de huespedes.js
-    ultimaVisita: new Date().toISOString() 
-}, { merge: true });
-
-        Swal.fire('¡Listo!', 'La reserva se guardó correctamente', 'success');
+        Swal.fire({ title: '¡Éxito!', text: 'Reserva guardada correctamente', icon: 'success', confirmButtonColor: '#800020' });
         window.cerrarModal();
 
     } catch (error) {
-        console.error("Error completo:", error);
-        Swal.fire('Error', 'No se pudo conectar con la base de datos o validar disponibilidad', 'error');
+        console.error("Error:", error);
+        Swal.fire('Error', 'No se pudo guardar la reserva', 'error');
     }
 });
 
@@ -252,7 +233,7 @@ onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), 
     });
 });
 
-// --- FUNCIÓN DE VERIFICACIÓN EN TIEMPO REAL ---
+// --- FUNCIÓN DE VERIFICACIÓN EN TIEMPO REAL (MODIFICADA) ---
 const verificarDisponibilidadRealTime = async () => {
     const hab = document.getElementById("resHabitacion").value;
     const fIn = document.getElementById("resCheckIn").value;
@@ -260,16 +241,20 @@ const verificarDisponibilidadRealTime = async () => {
     const statusDiv = document.getElementById("statusDisponibilidad");
     const btnGuardar = form.querySelector('button[type="submit"]');
 
-    // Solo validar si tenemos los 3 datos necesarios
-if (!hab || !fIn || !fOut) {
-    statusDiv.textContent = "";
-    btnGuardar.disabled = false; // Asegúrate de que no se quede bloqueado por error
-    btnGuardar.style.opacity = "1";
-    return;
-}
+    // 1. Limpieza total si faltan datos (Esto activa el CSS :empty)
+    if (!hab || !fIn || !fOut) {
+        statusDiv.innerHTML = ""; // Al dejarlo vacío, el div desaparece del diseño
+        btnGuardar.disabled = false;
+        btnGuardar.style.opacity = "1";
+        btnGuardar.style.cursor = "pointer";
+        return;
+    }
 
-    statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
-    statusDiv.style.color = "orange";
+    // 2. Estado de carga: agregamos un fondo sutil para que se note la actividad
+    statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando disponibilidad...';
+    statusDiv.style.color = "#d4a017"; // Uso de tu variable --amarillo-ocre
+    statusDiv.style.backgroundColor = "#fffbeb"; // Fondo ámbar muy claro
+    statusDiv.style.border = "1px solid #fef3c7";
 
     try {
         const q = query(collection(db, "reservas"), where("habitacion", "==", hab));
@@ -285,22 +270,30 @@ if (!hab || !fIn || !fOut) {
             }
         });
 
+        // 3. Resultado: Ajustamos colores y bordes para que parezca una notificación
         if (ocupado) {
             statusDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Habitación ocupada en estas fechas';
-            statusDiv.style.color = "#e11d48"; // Rojo
+            statusDiv.style.color = "#f43f5e"; // --danger-red
+            statusDiv.style.backgroundColor = "#fff1f2";
+            statusDiv.style.border = "1px solid #ffe4e6";
+            
             btnGuardar.disabled = true;
             btnGuardar.style.opacity = "0.5";
             btnGuardar.style.cursor = "not-allowed";
         } else {
             statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> Habitación disponible';
-            statusDiv.style.color = "#10b981"; // Verde
+            statusDiv.style.color = "#10b981"; // --success-green
+            statusDiv.style.backgroundColor = "#f0fdf4";
+            statusDiv.style.border = "1px solid #dcfce7";
+            
             btnGuardar.disabled = false;
             btnGuardar.style.opacity = "1";
             btnGuardar.style.cursor = "pointer";
         }
     } catch (error) {
-        console.error(error);
-        statusDiv.textContent = "Error al verificar";
+        console.error("Error al verificar:", error);
+        statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error de conexión';
+        statusDiv.style.color = "#475569";
     }
 };
 
@@ -374,10 +367,9 @@ btnAbrirModal.onclick = () => {
     form.reset();
     document.getElementById("modalTitle").textContent = "Nueva Reserva"; 
     
-    // Forzar valores por defecto visuales que el reset() a veces no pone bonito
     inputTotal.value = "0.00";
     inputDiferencia.value = "0.00";
-    inputTipoCambio.value = "3.50"; // O el valor que manejes por defecto
+    inputTipoCambio.value = ""; 
     
     modal.classList.add("active"); 
 };

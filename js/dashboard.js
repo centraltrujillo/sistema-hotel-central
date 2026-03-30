@@ -5,7 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // --- VARIABLES GLOBALES DE GRÁFICOS ---
-let chartSemanal, chartDonut, chartMensual;
+let chartSemanal, chartMensual;
 
 // --- 1. CONTROL DE ACCESO ---
 onAuthStateChanged(auth, (user) => {
@@ -19,33 +19,39 @@ onAuthStateChanged(auth, (user) => {
 
 // --- 2. INICIALIZACIÓN DE GRÁFICOS (ApexCharts) ---
 function inicializarGraficos() {
-    // A. Gráfico Semanal (Líneas)
+    // A. Gráfico Semanal (Líneas con degradado)
     chartSemanal = new ApexCharts(document.querySelector("#chart-line"), {
-        chart: { type: 'area', height: 250, toolbar: { show: false } },
-        series: [{ name: 'Soles S/', data: [0, 0, 0, 0, 0, 0, 0] }],
+        chart: { 
+            type: 'area', 
+            height: 250, 
+            toolbar: { show: false },
+            zoom: { enabled: false }
+        },
+        series: [{ name: 'Ingresos S/', data: [0, 0, 0, 0, 0, 0, 0] }],
         xaxis: { categories: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'] },
-        colors: ['#800020'],
-        stroke: { curve: 'smooth' }
+        colors: ['#800020'], // Vino Tinto
+        stroke: { curve: 'smooth', width: 3 },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.45,
+                opacityTo: 0.05,
+                stops: [20, 100]
+            }
+        },
+        dataLabels: { enabled: false },
+        grid: { borderColor: '#f1f1f1' }
     });
     chartSemanal.render();
 
-    // B. Gráfico de Dona (Categorías de Huéspedes)
-    chartDonut = new ApexCharts(document.querySelector("#chart-donut"), {
-        chart: { type: 'donut', height: 250 },
-        series: [0, 0, 0, 0],
-        labels: ['VIP', 'Frecuente', 'Corporativo', 'Regular'],
-        colors: ['#800020', '#cc9900', '#3d2b1f', '#64748b'],
-        legend: { position: 'bottom' }
-    });
-    chartDonut.render();
-
-    // C. Gráfico Mensual (Barras) - REEMPLAZA AL RADIAL
+    // B. Gráfico Mensual (Barras Oro)
     chartMensual = new ApexCharts(document.querySelector("#chart-radial"), {
         chart: { type: 'bar', height: 250, toolbar: { show: false } },
         plotOptions: { bar: { borderRadius: 4, columnWidth: '50%' } },
         series: [{ name: 'Ingresos Mensuales', data: [0, 0, 0, 0, 0, 0] }],
-        xaxis: { categories: ['Mes 1', 'Mes 2', 'Mes 3', 'Mes 4', 'Mes 5', 'Mes 6'] },
-        colors: ['#cc9900']
+        xaxis: { categories: [] },
+        colors: ['#cc9900'] // Amarillo Ocre/Oro
     });
     chartMensual.render();
 }
@@ -54,71 +60,94 @@ function inicializarGraficos() {
 function inicializarDashboard() {
     inicializarGraficos();
 
-    // --- LÓGICA UNIFICADA DE PAGOS (Semanal, Mensual y KPI) ---
+    // A. LÓGICA DE PAGOS (KPI Ingresos + Gráficos)
     onSnapshot(collection(db, "pagos"), (snapshot) => {
         let ingresosSemana = [0, 0, 0, 0, 0, 0, 0];
-        let ingresosPorMes = {}; // Para agrupar por mes/año
+        let ingresosPorMes = {}; 
         let totalMesActual = 0;
+        let totalMesAnterior = 0;
 
         const ahora = new Date();
         const mesActual = ahora.getMonth();
         const anioActual = ahora.getFullYear();
 
+        const fechaPasada = new Date();
+        fechaPasada.setMonth(ahora.getMonth() - 1);
+        const mesPasado = fechaPasada.getMonth();
+        const anioPasado = fechaPasada.getFullYear();
+
         snapshot.forEach(doc => {
             const data = doc.data();
             const monto = Number(data.montoTotal || 0);
             const fecha = data.fechaPago?.toDate() || new Date();
+            const m = fecha.getMonth();
+            const y = fecha.getFullYear();
             
-            // 1. Lógica Semanal (Solo si es de la semana actual es opcional, aquí sumamos por día histórico)
+            // Lógica Semanal
             const dia = fecha.getDay();
             const index = (dia === 0) ? 6 : dia - 1;
             ingresosSemana[index] += monto;
 
-            // 2. Lógica Mensual (Agrupación)
-            const keyMes = `${fecha.getMonth()}-${fecha.getFullYear()}`;
+            // Agrupación Mensual
+            const keyMes = `${m}-${y}`;
             ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
 
-            // 3. KPI Mes Actual
-            if (fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual) {
-                totalMesActual += monto;
-            }
+            // Comparativa de Meses para KPI
+            if (m === mesActual && y === anioActual) totalMesActual += monto;
+            if (m === mesPasado && y === anioPasado) totalMesAnterior += monto;
         });
 
-        // Actualizar KPI
+        // Actualizar UI Ingresos
         document.getElementById('kpi-ingresos').innerText = `S/ ${totalMesActual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+        actualizarTendencia(totalMesActual, totalMesAnterior, 'trend-ingresos');
 
-        // Actualizar Gráfico Semanal
+        // Actualizar Gráficos
         chartSemanal.updateSeries([{ data: ingresosSemana }]);
 
-        // Actualizar Gráfico Mensual (Últimos 6 meses)
         const mesesLabels = [];
         const mesesData = [];
+        const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        
         for (let i = 5; i >= 0; i--) {
             const d = new Date();
             d.setMonth(ahora.getMonth() - i);
-            const m = d.getMonth();
-            const y = d.getFullYear();
-            const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            
-            mesesLabels.push(nombresMeses[m]);
-            mesesData.push(ingresosPorMes[`${m}-${y}`] || 0);
+            const mLabel = d.getMonth();
+            const yLabel = d.getFullYear();
+            mesesLabels.push(nombresMeses[mLabel]);
+            mesesData.push(ingresosPorMes[`${mLabel}-${yLabel}`] || 0);
         }
         chartMensual.updateOptions({ xaxis: { categories: mesesLabels } });
         chartMensual.updateSeries([{ data: mesesData }]);
     });
 
-    // --- CRM: Categorías de Huéspedes ---
-    onSnapshot(collection(db, "huespedes"), (snapshot) => {
-        const cat = { vip: 0, frecuente: 0, corporativo: 0, regular: 0 };
+    // B. LÓGICA DE OCUPACIÓN (Basado en tu Firebase de habitaciones)
+    onSnapshot(collection(db, "habitaciones"), (snapshot) => {
+        const totalHabitaciones = snapshot.size || 25; 
+        let ocupadas = 0;
+
         snapshot.forEach(doc => {
-            const c = (doc.data().categoria || "Regular").toLowerCase();
-            if (cat[c] !== undefined) cat[c]++;
+            const data = doc.data();
+            if (data.estado === "Ocupado" || data.estado === "Ocupada") {
+                ocupadas++;
+            }
         });
-        chartDonut.updateSeries([cat.vip, cat.frecuente, cat.corporativo, cat.regular]);
-        document.getElementById('kpi-huespedes').innerText = snapshot.size;
+
+        document.getElementById('kpi-ocupacion').innerText = `${ocupadas}/${totalHabitaciones}`;
+        const porcentaje = ((ocupadas / totalHabitaciones) * 100).toFixed(0);
+        const trend = document.getElementById('trend-ocupacion');
+        if(trend) {
+            trend.innerText = `${porcentaje}% de ocupación actual`;
+            trend.className = "trend-value trend-neutral";
+        }
     });
 
-    // --- ACTIVIDAD RECIENTE: Últimos Pagos ---
+    // C. LÓGICA DE HUÉSPEDES
+    onSnapshot(collection(db, "huespedes"), (snapshot) => {
+        document.getElementById('kpi-huespedes').innerText = snapshot.size;
+        // Aquí podrías añadir lógica de tendencia si guardas fecha de registro
+    });
+
+    // D. ACTIVIDAD RECIENTE (Últimos 5 pagos)
     const qPagos = query(collection(db, "pagos"), orderBy("fechaPago", "desc"), limit(5));
     onSnapshot(qPagos, (snapshot) => {
         const list = document.getElementById('list-checkins');
@@ -130,7 +159,7 @@ function inicializarDashboard() {
             const item = document.createElement('div');
             item.className = "activity-item";
             item.innerHTML = `
-                <div class="activity-badge" style="background: #cc9900;"></div>
+                <div class="activity-badge"></div>
                 <div class="activity-info">
                     <p>${data.huesped} - Hab. ${data.habitacion}</p>
                     <small>${data.tipoTicket} | <strong>S/ ${data.montoTotal}</strong></small>
@@ -141,7 +170,60 @@ function inicializarDashboard() {
     });
 }
 
-// --- 4. LOGOUT ---
+//  E. LÓGICA DE RESERVAS HOY ---
+const hoyInicio = new Date();
+hoyInicio.setHours(0, 0, 0, 0);
+
+const hoyFin = new Date();
+hoyFin.setHours(23, 59, 59, 999);
+
+// Consulta para reservas cuya fecha de creación o estadía sea HOY
+onSnapshot(collection(db, "reservas"), (snapshot) => {
+    let reservasHoy = 0;
+    
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        // Asumiendo que tienes un campo 'fechaCheckIn' en tu colección 'reservas'
+        const fechaReserva = data.fechaCheckIn?.toDate(); 
+        
+        if (fechaReserva >= hoyInicio && fechaReserva <= hoyFin) {
+            reservasHoy++;
+        }
+    });
+
+    const kpiReservas = document.getElementById('kpi-reservas-hoy');
+    if (kpiReservas) {
+        kpiReservas.innerText = reservasHoy;
+    }
+    
+    // Opcional: Actualizar tendencia de reservas (comparado con un número estático por ahora)
+    const trendRes = document.getElementById('trend-reservas');
+    if (trendRes) {
+        trendRes.innerText = "Sincronizado";
+        trendRes.className = "trend-value trend-neutral";
+    }
+});
+
+
+// --- 4. FUNCIONES DE APOYO ---
+function actualizarTendencia(actual, anterior, elementoId) {
+    const elemento = document.getElementById(elementoId);
+    if (!elemento) return;
+
+    if (anterior === 0) {
+        elemento.innerText = "Primeros datos";
+        elemento.className = "trend-value trend-neutral";
+        return;
+    }
+
+    const diferencia = actual - anterior;
+    const porcentaje = ((diferencia / anterior) * 100).toFixed(1);
+    
+    elemento.innerText = `${Math.abs(porcentaje)}% vs mes anterior`;
+    elemento.className = porcentaje >= 0 ? "trend-value trend-positive" : "trend-value trend-negative";
+}
+
+// --- 5. LOGOUT ---
 document.getElementById('btnLogout')?.addEventListener('click', async () => {
     if (confirm("¿Cerrar sesión en Hotel Central?")) {
         await signOut(auth);

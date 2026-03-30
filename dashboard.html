@@ -39,7 +39,7 @@
         <main class="main-content">
             <header class="header">
                 <div class="header-title">
-                    <h2 id="view-title">Panel de Control</h2>
+                    <h2 id="view-title">Dashboard</h2>
                     <p id="current-date" style="font-size: 0.85rem; color: #64748b; margin: 0;"></p>
                 </div>
                 
@@ -57,29 +57,38 @@
             <section class="kpi-grid">
                 <div class="kpi-card animated-fade">
                     <div class="kpi-info">
-                        <span>Ingresos del Mes</span>
-                        <h2 id="kpi-ingresos">S/ 0.00</h2>
-                        <small class="trend">Facturación actual</small>
+                        <span class="kpi-label">Ingresos Mensuales</span>
+                        <h2 id="kpi-ingresos" class="kpi-number">S/ 0.00</h2>
+                        <small id="trend-ingresos" class="trend-value">--% vs mes anterior</small>
                     </div>
                     <div class="kpi-icon gold"><i class="fa-solid fa-money-bill-trend-up"></i></div>
                 </div>
-
+            
                 <div class="kpi-card animated-fade" style="animation-delay: 0.1s;">
                     <div class="kpi-info">
-                        <span>Huéspedes Totales</span>
-                        <h2 id="kpi-huespedes">0</h2>
-                        <small class="trend">Registrados en CRM</small>
+                        <span class="kpi-label">Huéspedes Actuales</span>
+                        <h2 id="kpi-huespedes" class="kpi-number">0</h2>
+                        <small id="trend-huespedes" class="trend-value">--% vs mes anterior</small>
                     </div>
                     <div class="kpi-icon blue"><i class="fa-solid fa-users"></i></div>
                 </div>
-
+            
                 <div class="kpi-card animated-fade" style="animation-delay: 0.2s;">
                     <div class="kpi-info">
-                        <span>Estado de Ocupación</span>
-                        <h2 id="kpi-ocupacion">--</h2>
-                        <small class="trend">Habitaciones ocupadas</small>
+                        <span class="kpi-label">Ocupación Real</span>
+                        <h2 id="kpi-ocupacion" class="kpi-number">0/13</h2>
+                        <small id="trend-ocupacion" class="trend-value">--% vs mes anterior</small>
                     </div>
                     <div class="kpi-icon green"><i class="fa-solid fa-door-open"></i></div>
+                </div>
+            
+                <div class="kpi-card animated-fade" style="animation-delay: 0.3s;">
+                    <div class="kpi-info">
+                        <span class="kpi-label">Reservas Hoy</span>
+                        <h2 id="kpi-reservas-hoy" class="kpi-number">0</h2>
+                        <small id="trend-reservas" class="trend-value">--% vs ayer</small>
+                    </div>
+                    <div class="kpi-icon purple"><i class="fa-solid fa-calendar-check"></i></div>
                 </div>
             </section>
 

@@ -434,16 +434,32 @@
     grid-column: span 3;
 }
 
+#statusDisponibilidad i {
+    font-size: 14px;
+}
+
 #statusDisponibilidad {
-    grid-column: span 3; /* Asegura que ocupe el ancho de los 3 inputs de arriba */
-    min-height: 20px;
-    font-size: 12px;
-    font-weight: 600;
+    grid-column: span 4; /* Ocupa todo el ancho para centrar el mensaje */
     display: flex;
     align-items: center;
-    gap: 5px;
-    margin-top: -5px; /* Lo pega un poco más a los inputs de arriba */
-    margin-bottom: 5px;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0; /* Sin padding inicial */
+    margin: 0;  /* Sin margen inicial */
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    min-height: 0; /* Altura 0 cuando está vacío */
+}
+
+/* Solo cuando tiene contenido se le aplica espacio */
+#statusDisponibilidad:not(:empty) {
+    padding: 8px;
+    margin: 5px 0 10px 0;
+    min-height: 35px;
+    background: #f8fafc; /* Fondo suave para resaltar el estado */
+    border: 1px solid #e2e8f0;
 }
 
 

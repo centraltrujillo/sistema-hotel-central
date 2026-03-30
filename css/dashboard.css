@@ -167,7 +167,53 @@ body {
 }
 .kpi-icon.blue { background: #e0f2fe; color: #0369a1; }
 .kpi-icon.green { background: #dcfce7; color: #166534; }
-.kpi-icon.gold { background: #fef3c7; color: var(--amarillo-ocre); }
+.kpi-icon.purple { background: #f3e8ff; color: #7e22ce; }
+.kpi-icon.gold {background: #fef3c7; color: var(--amarillo-ocre);}
+
+/* --- 4.1. ESTADOS DE TENDENCIA (AUTOMÁTICOS) --- */
+.trend-value {
+    font-size: 11px; /* Según tu estándar para detalles */
+    font-weight: 700;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Verde para subidas positivas (Ingresos, Huéspedes) */
+.trend-positive {
+    color: #10b981; 
+}
+.trend-positive::before {
+    content: "\f062"; /* Icono arrow-up de FontAwesome */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+}
+
+/* Rojo para bajadas (o según la lógica del negocio) */
+.trend-negative {
+    color: #ef4444;
+}
+.trend-negative::before {
+    content: "\f063"; /* Icono arrow-down de FontAwesome */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+}
+
+/* Gris para cuando no hay cambio o datos previos */
+.trend-neutral {
+    color: #64748b;
+}
+
+@keyframes pulse-data {
+    0% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.kpi-number.loading {
+    animation: pulse-data 1s infinite alternate;
+    color: #cbd5e1;
+}
 
 /* --- 5. GRÁFICOS --- */
 .charts-grid-triple {
