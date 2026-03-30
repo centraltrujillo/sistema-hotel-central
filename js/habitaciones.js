@@ -299,7 +299,7 @@ async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
                 recibidoPor: document.getElementById('resRecepcion').value,
                 confirmadoPor: document.getElementById('resRecepcionconfi').value,
                 estado: "checkin",
-                tipoVenta: "Directa",
+                tipoVenta: "Personal",
                 fechaRegistro: new Date().toISOString(),
                 // Estructura para Auditoría de Caja y Frigobar
                 pagos: adelantoMonto > 0 ? [{
@@ -435,7 +435,7 @@ window.addEventListener('click', (e) => {
                         <p><b>${r.checkIn}</b></p>
                         <p class="val-sub">
                             <i class="fa-regular fa-clock"></i> 
-                            ${r.earlyCheckIn ? `Hora: ${r.earlyCheckIn}` : 'Horario estándar'}
+                            ${r.early ? `Hora: ${r.early}` : 'Horario estándar'}
                         </p>
                     </div>
                 
@@ -444,7 +444,7 @@ window.addEventListener('click', (e) => {
                         <p><b style="color: #800020;">${r.checkOut}</b></p>
                         <p class="val-sub">
                             <i class="fa-regular fa-clock"></i> 
-                            ${r.lateCheckOut ? `Hora: ${r.lateCheckOut}` : 'Horario estándar'}
+                            ${r.late ? `Hora: ${r.late}` : 'Horario estándar'}
                         </p>
                     </div>
                 
@@ -688,7 +688,11 @@ window.addEventListener('click', (e) => {
                     <select id="metodoPago" class="swal2-select" style="width: 100%; margin: 8px 0 0 0; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; height: 45px;">
                         <option value="Efectivo">💵 Efectivo</option>
                         <option value="Tarjeta">💳 Tarjeta (POS)</option>
-                        <option value="Transferencia">📱 Yape / Plin / Transferencia</option>
+                        <option value="Transferencia">📱 Yape</option>
+                        <option value="Transferencia">📱 Plin</option>
+                        <option value="Transferencia">📱 Transferencia</option>
+
+
                     </select>
                 </div>
             </div>`,
@@ -717,7 +721,7 @@ window.addEventListener('click', (e) => {
             montoTotal: granTotalAPagar,
             metodoPago: metodoSeleccionado,
             fechaPago: new Date().toISOString(),
-            atendidoPor: rData.recibidoPor || "Recepcionista", // Trazabilidad
+            atendidoPor: rData.recepcion || "Recepcionista",
             estado: "completado"
         });
 

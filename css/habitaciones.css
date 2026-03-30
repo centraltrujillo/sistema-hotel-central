@@ -335,6 +335,50 @@ body {
     font-weight: 700;
 }
 
+/* 1. Botón Confirmar (Verde Esmeralda - Pagar e Imprimir) */
+.btn-checkout-confirm {
+    background-color: #27ae60 !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px 24px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2) !important;
+    transition: all 0.3s ease !important;
+    margin: 0 10px !important;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.btn-checkout-confirm:hover {
+    background-color: #219150 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(39, 174, 96, 0.3) !important;
+}
+
+/* 2. Botón Denegar (Vino Tinto - Sólo Registrar Pago) */
+.btn-checkout-deny {
+    background-color: #800020 !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px 24px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 6px rgba(128, 0, 32, 0.2) !important;
+    transition: all 0.3s ease !important;
+    margin: 0 10px !important;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.btn-checkout-deny:hover {
+    background-color: #600018 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(128, 0, 32, 0.3) !important;
+}
+
 /* Unifica estas reglas en una sola sección */
 .span-3 {
     grid-column: span 3;
@@ -400,7 +444,7 @@ body {
 
 .badge-status-room {
     background: #ffffff;
-    color: #800020;
+    color: var(--amarillo-ocre);
     padding: 5px 15px;
     border-radius: 50px;
     font-size: 12px;
