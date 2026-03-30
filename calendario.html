@@ -12,34 +12,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <style>
-        /* Estilos rápidos de utilidad */
-        .header-actions { display: flex; gap: 10px; align-items: center; }
-        .btn-header {
-            padding: 8px 15px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 13px;
-            display: flex; align-items: center; gap: 8px;
-            transition: 0.3s; text-decoration: none;
-        }
-        .btn-add { background-color: #10b981; color: white; }
-        .btn-rooms { background-color: #800020; color: white; }
-        .btn-header:hover { opacity: 0.9; transform: translateY(-2px); }
-        .back-arrow { color: #800020; margin-right: 15px; font-size: 20px; text-decoration: none; transition: 0.3s; }
-        .back-arrow:hover { transform: translateX(-5px); }
-        .select-date { background: white; color: #334155; border: 1px solid #e2e8f0; padding: 7px 10px; font-family: 'Lato', sans-serif; outline: none; }
-        
-        /* Ajuste para el scroll del Gantt */
-        #gantt-container {
-            width: 100%;
-            overflow-x: auto;
-            background: white;
-            position: relative;
-        }
-    </style>
 </head>
 <body>
     <div class="admin-layout">
@@ -57,11 +29,6 @@
                 </div>
                 
                 <div class="header-actions">
-                    <button id="btn-go-today" class="btn-header" style="background-color: #f1f5f9; color: #800020; border: 1px solid #d4a017;">
-                        <i class="fas fa-calendar-day"></i> Hoy
-                    </button>
-                    <select id="select-month" class="btn-header select-date"></select>
-                    <select id="select-year" class="btn-header select-date"></select>
                     <button id="btn-nueva-reserva" class="btn-header btn-add"><i class="fas fa-plus"></i> Nueva reserva</button>
                     <a href="habitaciones.html" class="btn-header btn-rooms"><i class="fas fa-bed"></i> Ver habitaciones</a>
                 </div>
@@ -82,6 +49,12 @@
                     <div class="legend-item"><span class="dot mantenimiento"></span> Mantenimiento</div>
                 </div>
             </div>
+
+            <button id="btn-go-today" class="btn-header" style="background-color: #f1f5f9; color: #800020; border: 1px solid #d4a017;">
+                <i class="fas fa-calendar-day"></i> Hoy
+            </button>
+            <select id="select-month" class="btn-header select-date"></select>
+            <select id="select-year" class="btn-header select-date"></select>
 
             <div id="gantt-container" class="card" style="padding: 0; border: 1px solid #e2e8f0;">
                 <table id="gantt-table" style="width: 100%; border-collapse: collapse;">
