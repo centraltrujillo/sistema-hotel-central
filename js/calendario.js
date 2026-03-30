@@ -1,4 +1,4 @@
-import { db } from "./firebaseconfig.js";
+import { auth, db } from "./firebaseconfig.js";
 import { 
     collection, onSnapshot, doc, updateDoc, query, where, getDocs, deleteDoc, addDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
@@ -214,15 +214,15 @@ document.addEventListener('DOMContentLoaded', function() {
         medio: document.getElementById('resMedio').value,
         personas: document.getElementById('resPersonas').value,
         desayuno: document.getElementById('resInfo').value, // ID 'resInfo' en tu HTML
-        earlyCI: document.getElementById('resEarly').value,
-        lateCO: document.getElementById('resLate').value,
+        early: document.getElementById('resEarly').value,
+        late: document.getElementById('resLate').value,
         cochera: document.getElementById('resCochera').value,
         traslado: document.getElementById('resTraslado').value,
 
         // TARIFA DE LA RESERVA
         // Precios y Totales (Importante: usar Number para cálculos)
     tarifa: Number(document.getElementById('resTarifa').value) || 0,
-    tipoCambio: Number(document.getElementById('resTipoCambio').value) || 3.85,
+    tipoCambio: Number(document.getElementById('resTipoCambio').value) || 0,
     total: Number(document.getElementById('resTotal').value) || 0,
     adelanto: Number(document.getElementById('resAdelantoMonto').value) || 0,
     diferencia: Number(document.getElementById('resDiferencia').value) || 0,
@@ -231,8 +231,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // SECCIÓN FINAL (Observaciones y Personal)
         observaciones: document.getElementById('resObservaciones').value,
-        recibidoPor: document.getElementById('resRecepcion').value,
-        confirmadoPor: document.getElementById('resRecepcionconfi').value,
+        recepcion: document.getElementById('resRecepcion').value,
+        recepcionconfi: document.getElementById('resRecepcionconfi').value,
 
         // METADATOS
         estado: "reservada",
@@ -442,8 +442,8 @@ function calcularMontos(prefix = "res") {
     
                 <div class="span-1"><label>Personas</label>${res.personas}</div>
                 <div class="span-1"><label>Desayuno</label>${res.desayuno || '---'}</div>
-                <div class="span-1"><label>Early C.I.</label>${res.earlyCI || '--:--'}</div>
-                <div class="span-1"><label>Late C.O.</label>${res.lateCO || '--:--'}</div>
+                <div class="span-1"><label>Early C.I.</label>${res.early || '--:--'}</div>
+                <div class="span-1"><label>Late C.O.</label>${res.late || '--:--'}</div>
                 
                 <div class="span-1"><label>Cochera</label>${res.cochera || 'NO'}</div>
                 <div class="span-3"><label>Traslado</label>${res.traslado || 'Sin servicio de traslado'}</div>
@@ -481,7 +481,7 @@ function calcularMontos(prefix = "res") {
                 <div class="span-4"><label>Observaciones</label><p style="font-size:13px; background: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 3px solid #800020;">${res.observaciones || 'Sin observaciones adicionales.'}</p></div>
     
                 <div class="span-4" style="font-size: 11px; color: #64748b; text-align: right; border-top: 1px solid #eee; padding-top: 10px;">
-                    <b>Recibido por:</b> ${res.recibidoPor || 'Sistema'} | <b>Confirmado por:</b> ${res.confirmadoPor || 'Pendiente'}<br>
+                    <b>Recibido por:</b> ${res.recepcion || 'Sistema'} | <b>Confirmado por:</b> ${res.recepcionconfi || 'Pendiente'}<br>
                     <b>Fecha de Registro:</b> ${res.fechaRegistro ? new Date(res.fechaRegistro).toLocaleString() : '---'}
                 </div>
     
@@ -582,7 +582,6 @@ function abrirEdicionIntegral(res, resId) {
                     <option value="airbnb" ${res.medio == 'airbnb' ? 'selected' : ''}>Airbnb</option>
                     <option value="directas" ${res.medio == 'directas' ? 'selected' : ''}>Directas</option>
                     <option value="expedia" ${res.medio == 'expedia' ? 'selected' : ''}>Expedia</option>
-                    <option value="whatsapp" ${res.medio == 'whatsapp' ? 'selected' : ''}>WhatsApp</option>
                     <option value="personal" ${res.medio == 'personal' ? 'selected' : ''}>Personal</option>
                     <option value="dayuse" ${res.medio == 'dayuse' ? 'selected' : ''}>Day Use</option>
                     <option value="gmail" ${res.medio == 'gmail' ? 'selected' : ''}>Gmail</option>
@@ -612,11 +611,11 @@ function abrirEdicionIntegral(res, resId) {
             </div>
             <div class="span-1">
                 <label>Early C.I.</label>
-                <input type="time" id="sw-early" class="swal2-input" value="${res.earlyCI || ''}">
+                <input type="time" id="sw-early" class="swal2-input" value="${res.early || ''}">
             </div>
             <div class="span-1">
                 <label>Late C.O.</label>
-                <input type="time" id="sw-late" class="swal2-input" value="${res.lateCO || ''}">
+                <input type="time" id="sw-late" class="swal2-input" value="${res.late || ''}">
             </div>
             <div class="span-1">
                 <label>Cochera</label>
@@ -669,35 +668,50 @@ function abrirEdicionIntegral(res, resId) {
             </div>
             <div class="span-1">
                 <label>Recibido por</label>
-                <input id="sw-recepcion" class="swal2-input" value="${res.recibidoPor || ''}">
+                <input id="sw-recepcion" class="swal2-input" value="${res.recepcion || ''}">
             </div>
             <div class="span-1">
                 <label>Confirmado por</label>
-                <input id="sw-recepcionconfi" class="swal2-input" value="${res.confirmadoPor || ''}">
+                <input id="sw-recepcionconfi" class="swal2-input" value="${res.recepcionconfi || ''}">
             </div>
 
             <input type="hidden" id="sw-fechaRegistro" value="${res.fechaRegistro}">
         `,
         didOpen: () => {
+            // 1. Verificación inicial al abrir
             verificarDisponibilidad("sw-");
             
-            // Listeners para recálculo automático mientras se escribe
+            // 2. Listeners para recálculo automático (Ya incluye el adelanto aquí)
             const idsCalculo = ['sw-in', 'sw-out', 'sw-tarifa', 'sw-adelanto', 'sw-moneda', 'sw-tc'];
             idsCalculo.forEach(id => {
                 const el = document.getElementById(id);
-                if(el) el.addEventListener('input', () => calcularMontos("sw-"));
+                // Usamos 'input' para que calcule mientras escriben, 'change' para los select
+                if(el) {
+                    const evento = el.tagName === 'SELECT' ? 'change' : 'input';
+                    el.addEventListener(evento, () => calcularMontos("sw-"));
+                }
             });
 
+            // 3. Listener específico para disponibilidad si cambian habitación
             document.getElementById('sw-habitacion').addEventListener('change', () => verificarDisponibilidad("sw-"));
             
-            document.getElementById('sw-doc').onblur = (e) => buscarHuesped(e.target.value, {
-                'sw-huesped': 'nombre', 'sw-telefono': 'telefono', 'sw-nacionalidad': 'nacionalidad', 'sw-correo': 'correo'
-            });
+            // 4. Búsqueda automática de huésped por DNI
+            const docInput = document.getElementById('sw-doc');
+            if(docInput) {
+                docInput.onblur = (e) => buscarHuesped(e.target.value, {
+                    'sw-huesped': 'nombre', 
+                    'sw-telefono': 'telefono', 
+                    'sw-nacionalidad': 'nacionalidad', 
+                    'sw-correo': 'correo'
+                });
+            }
         },
+
         preConfirm: () => {
-            const statusText = document.getElementById('statusDisponibilidad').innerText;
-            if (statusText.includes("NO DISPONIBLE")) {
-                Swal.showValidationMessage("Habitación ocupada en esas fechas");
+            const statusDiv = document.getElementById('statusDisponibilidad');
+            // Ajustamos la búsqueda de texto según lo que realmente escribe tu función de verificación
+            if (statusDiv.innerText.toUpperCase().includes("OCUPADA") || statusDiv.innerText.toUpperCase().includes("NO DISPONIBLE")) {
+                Swal.showValidationMessage("La habitación ya está ocupada en esas fechas");
                 return false;
             }
 
@@ -716,8 +730,8 @@ function abrirEdicionIntegral(res, resId) {
                 estado: document.getElementById('sw-estado').value,
                 personas: document.getElementById('sw-personas').value,
                 desayuno: document.getElementById('sw-info').value,
-                earlyCI: document.getElementById('sw-early').value,
-                lateCO: document.getElementById('sw-late').value,
+                early: document.getElementById('sw-early').value,
+                late: document.getElementById('sw-late').value,
                 cochera: document.getElementById('sw-cochera').value,
                 traslado: document.getElementById('sw-traslado').value,
                 tarifa: parseFloat(document.getElementById('sw-tarifa').value) || 0,
@@ -728,8 +742,8 @@ function abrirEdicionIntegral(res, resId) {
                 diferencia: parseFloat(document.getElementById('sw-diferencia').value) || 0,
                 adelantoDetalle: document.getElementById('sw-adelantoDetalle').value,
                 observaciones: document.getElementById('sw-observaciones').value,
-                recibidoPor: document.getElementById('sw-recepcion').value,
-                confirmadoPor: document.getElementById('sw-recepcionconfi').value,
+                recepcion: document.getElementById('sw-recepcion').value,
+                recepcionconfi: document.getElementById('sw-recepcionconfi').value,
                 fechaRegistro: document.getElementById('sw-fechaRegistro').value,
                 ultimaEdicion: new Date().toISOString()
             };

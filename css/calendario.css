@@ -64,32 +64,33 @@ body, html {
 }
 
 .calendar-cell {
-    border: 1px solid #f1f5f9; /* Líneas internas más suaves */
-    width: 38px; /* Un poco más anchas */
-    min-width: 38px;
+    border: 1px solid #f1f5f9;
+    width: 45px; /* Un poco más de aire para el nombre */
+    min-width: 45px;
+    height: 45px;
     position: relative;
     cursor: pointer;
-    transition: background 0.2s;
 }
 
 /* --- 3. RESERVAS --- */
 .has-reservation {
-    color: white;
-    font-size: 11px; /* Un punto más para legibilidad */
-    font-weight: 600;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    
-    /* Centrado vertical y horizontal */
+    position: absolute;
+    top: 5px;
+    left: 2px;
+    right: 2px;
+    bottom: 5px;
+    z-index: 10;
     display: flex;
-    align-items: center; 
-    justify-content: flex-start;
-    
-    height: 80%; /* No ocupa todo el alto para que se vea la cuadrícula */
-    margin-top: 4px; /* Un pequeño margen superior */
-    border-radius: 4px; /* Bordes redondeados para un look moderno */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    align-items: center;
+    justify-content: center; /* Centramos el nombre */
+    border-radius: 4px;
+    transition: transform 0.2s;
+}
+
+.has-reservation:hover {
+    transform: scale(1.05); /* Efecto hover elegante */
+    z-index: 15;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .res-label {
@@ -111,7 +112,7 @@ body, html {
     align-items: start;
 }
 
-.form-section-title, .swal-section-title {
+.form-section-title {
     grid-column: span 4;
     color: #800020;
     font-size: 13px;
@@ -150,6 +151,17 @@ body, html {
     margin: 0 !important;
     border-radius: 8px !important;
     border: 1px solid #cbd5e1 !important;
+}
+
+/* Reemplaza o añade a tu sección 4 */
+.swal-grid-4 {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px 12px !important;
+    text-align: left !important;
+    width: 95% !important; /* Evita que choque con los bordes del modal */
+    margin: 15px auto !important;
+    align-items: end !important; /* Alinea etiquetas e inputs a la base */
 }
 
 /* Solo lectura */
@@ -214,6 +226,19 @@ body, html {
     display: flex;
     align-items: center;
     gap: 5px;
+}
+
+.swal-section-title {
+    grid-column: span 4;
+    color: #800020;
+    font-family: 'Playfair Display', serif; /* El toque boutique */
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 15px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #d4a017; /* El dorado que mencionaste */
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 /* --- 9. RESPONSIVE --- */
@@ -290,3 +315,34 @@ body, html {
 
 .btn-save { background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 .btn-cancel { background: #e2e8f0; color: #475569; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+
+/* Forzar que los inputs no tengan márgenes que rompan el grid */
+.swal2-input, .swal2-select, .swal2-textarea {
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-family: 'Lato', sans-serif !important;
+}
+
+.swal-grid-4 div {
+    display: flex;
+    flex-direction: column;
+}
+
+.swal-grid-4 label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #64748b;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+}
+
+.today-header {
+    background-color: #fef2f2 !important; /* Rojo muy suave */
+    color: #800020 !important;
+    border-bottom: 3px solid #800020 !important;
+}
+
+.today-column {
+    background-color: rgba(128, 0, 32, 0.03) !important; /* Un tinte vino casi invisible */
+}
