@@ -514,7 +514,7 @@ window.addEventListener('click', (e) => {
 }
 
 /* ==========================================================================
-   5. AGREGAR CONSUMO (ESTILO INTEGRADO Y CARGA DINÁMICA)
+   6. AGREGAR CONSUMO (ESTILO INTEGRADO Y CARGA DINÁMICA)
    ========================================================================== */
    async function agregarConsumo(resId, hab) {
     const ahora = new Date();
@@ -627,7 +627,7 @@ window.addEventListener('click', (e) => {
 }
 
 /* ==========================================================================
-   6. CHECK-OUT (ESTILO ELITE - CIERRE DE CUENTA Y CAJA)
+   7. CHECK-OUT (ESTILO ELITE - CIERRE DE CUENTA Y CAJA)
    ========================================================================== */
    async function realizarCheckOut(resId, hab, rData, totalConsumos) {
     const subHosp = parseFloat(rData.total) || 0;
@@ -747,7 +747,7 @@ window.addEventListener('click', (e) => {
 }
 
 /* ==========================================================================
-   7. FUNCIÓN DE IMPRESIÓN DE TICKET (ESTILO TÉRMICO 80mm)
+   8. FUNCIÓN DE IMPRESIÓN DE TICKET (ESTILO TÉRMICO 80mm)
    ========================================================================== */
    async function imprimirTicket(rData, consumos, totalConsumos, granTotal, metodoPago) {
     
