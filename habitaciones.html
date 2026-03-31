@@ -107,7 +107,11 @@
 
                     <div class="form-section-title">TARIFA DE LA RESERVA</div>
                     <div class="form-grid-compact highlight-section">
-                        <div class="form-group"><label>Tarifa</label><input type="number" id="resTarifa" required></div>
+                        <div class="form-group">
+                            <label>Tarifa</label>
+                            <input type="number" id="resTarifa" step="0.01" required>
+                        </div>
+                    
                         <div class="form-group">
                             <label>Moneda</label>
                             <select id="resMoneda">
@@ -115,11 +119,31 @@
                                 <option value="USD">Dólares ($)</option>
                             </select>
                         </div>
-                        <div class="form-group"><label>T. Cambio</label><input type="number" id="resTipoCambio" step="0.01"></div>
-                        <div class="form-group"><label>Total</label><input type="number" id="resTotal" class="input-total" readonly></div>
-                        <div class="form-group"><label>Adelanto</label><input type="number" id="resAdelantoMonto" class="input-adelanto"></div>
-                        <div class="form-group"><label>Pendiente</label><input type="number" id="resDiferencia" class="input-diferencia" readonly></div>
-                        <div class="form-group span-2"><label>Detalle Adelanto</label><input type="text" id="resAdelantoDetalle"></div>
+                    
+                        <div class="form-group">
+                            <label>T. Cambio</label>
+                            <input type="number" id="resTipoCambio" step="0.001">
+                        </div>
+                    
+                        <div class="form-group">
+                            <label>Total</label>
+                            <input type="number" id="resTotal" class="input-total" step="0.01" readonly>
+                        </div>
+                    
+                        <div class="form-group">
+                            <label>Adelanto</label>
+                            <input type="number" id="resAdelantoMonto" class="input-adelanto" step="0.01">
+                        </div>
+                    
+                        <div class="form-group">
+                            <label>Pendiente</label>
+                            <input type="number" id="resDiferencia" class="input-diferencia" step="0.01" readonly>
+                        </div>
+                    
+                        <div class="form-group span-2">
+                            <label>Detalle Adelanto</label>
+                            <input type="text" id="resAdelantoDetalle">
+                        </div>
                     </div>
 
                     <div class="form-grid-compact" style="margin-top: 10px;">

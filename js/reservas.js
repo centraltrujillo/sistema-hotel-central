@@ -452,25 +452,88 @@ window.cerrarModal = () => {
     }
 };
 
-
-// --- 6. EXPORTAR EXCEL ---
+// --- 6. EXPORTAR EXCEL CON RANGO DE FECHAS ---
 window.exportarExcel = async () => {
-    const excel = `
-        <table border="1">
-            <tr style="background:#800020; color:white;">
-                <th>HUÉSPED</th><th>DOC</th><th>HAB</th><th>IN</th><th>OUT</th><th>TOTAL</th><th>MEDIO</th>
-            </tr>
-            ${listaReservasGlobal.map(r => `
-                <tr>
-                    <td>${r.huesped}</td><td>${r.doc}</td><td>${r.habitacion}</td>
-                    <td>${r.checkIn}</td><td>${r.checkOut}</td><td>${r.total}</td><td>${r.medio}</td>
-                </tr>`).join('')}
-        </table>`;
-    const blob = new Blob(['\ufeff' + excel], { type: 'application/vnd.ms-excel' });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "Reporte_Reservas.xls";
-    a.click();
+    // 1. Abrimos el modal para pedir las fechas
+    const { value: formValues } = await Swal.fire({
+        title: '<span style="color:#800020; font-family:Playfair Display;">Exportar Reservas</span>',
+        html: `
+            <div style="text-align: left; font-family: 'Lato', sans-serif;">
+                <label style="font-size: 13px; font-weight: bold;">Fecha Inicio:</label>
+                <input type="date" id="swal-input-inicio" class="swal2-input" style="margin-top: 5px;">
+                <br><br>
+                <label style="font-size: 13px; font-weight: bold;">Fecha Fin:</label>
+                <input type="date" id="swal-input-fin" class="swal2-input" style="margin-top: 5px;">
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-file-excel"></i> Exportar',
+        confirmButtonColor: '#166534',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const inicio = document.getElementById('swal-input-inicio').value;
+            const fin = document.getElementById('swal-input-fin').value;
+            if (!inicio || !fin) {
+                Swal.showValidationMessage('Por favor selecciona ambas fechas');
+                return false;
+            }
+            return { inicio, fin };
+        }
+    });
+
+    // 2. Si el usuario confirmó, procedemos a filtrar y descargar
+    if (formValues) {
+        const { inicio, fin } = formValues;
+        
+        // Convertimos las fechas del input a objetos Date para comparar (usando T00:00:00 para evitar desfases)
+        const dInicio = new Date(inicio + "T00:00:00");
+        const dFin = new Date(fin + "T23:59:59");
+
+        // Filtramos la lista global (usando la fecha de checkIn como referencia)
+        const reservasFiltradas = listaReservasGlobal.filter(r => {
+            const fechaReserva = new Date(r.checkIn + "T12:00:00");
+            return fechaReserva >= dInicio && fechaReserva <= dFin;
+        });
+
+        if (reservasFiltradas.length === 0) {
+            Swal.fire("Sin datos", "No hay reservas en el rango seleccionado.", "info");
+            return;
+        }
+
+        // 3. Generamos el HTML del Excel con los datos filtrados
+        const excelHTML = `
+            <table border="1">
+                <thead>
+                    <tr style="background:#800020; color:white; font-weight:bold;">
+                        <th>HUESPED</th><th>DOC</th><th>HAB</th><th>CHECK-IN</th><th>CHECK-OUT</th><th>TOTAL</th><th>MEDIO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${reservasFiltradas.map(r => `
+                        <tr>
+                            <td>${r.huesped}</td>
+                            <td>${r.doc}</td>
+                            <td>${r.habitacion}</td>
+                            <td>${r.checkIn}</td>
+                            <td>${r.checkOut}</td>
+                            <td>${parseFloat(r.total || 0).toFixed(2)}</td>
+                            <td>${r.medio || 'Directo'}</td>
+                        </tr>`).join('')}
+                </tbody>
+            </table>`;
+
+        // 4. Descarga del archivo
+        const blob = new Blob(['\ufeff' + excelHTML], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Reporte_Reservas_${inicio}_al_${fin}.xls`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
 };
 
 // --- FUNCIÓN DE INICIO (Llamada por auth-check.js) ---

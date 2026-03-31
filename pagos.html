@@ -57,7 +57,7 @@
                     <p id="current-date" style="font-size: 0.85rem; color: #64748b;"></p>
                 </div>
                 <button id="btnExportar" class="btn-excel">
-                    <i class="fa-solid fa-file-excel"></i> Exportar a Excel
+                    <i class="fa-solid fa-file-excel"></i>
                 </button>
             </header>
 
@@ -98,6 +98,7 @@
         const fInicio = document.getElementById('fechaInicio');
         const fFin = document.getElementById('fechaFin');
         let todosLosPagos = [];
+        let pagosFiltrados = [];
 
         function convertirFecha(datoFecha) {
             if (!datoFecha) return null;
@@ -111,18 +112,22 @@
             aplicarFiltros();
         });
 
-        function aplicarFiltros() {
-            const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
-            const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
-            const filtrados = todosLosPagos.filter(pago => {
-                const fechaObj = convertirFecha(pago.fechaPago);
-                if (!fechaObj) return false;
-                if (inicio && fechaObj < inicio) return false;
-                if (fin && fechaObj > fin) return false;
-                return true;
-            });
-            renderTable(filtrados);
-        }
+// Modifica tu función aplicarFiltros para guardar el resultado en la variable global
+function aplicarFiltros() {
+    const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
+    const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
+    
+    // Guardamos el resultado del filtro en la variable global
+    pagosFiltrados = todosLosPagos.filter(pago => {
+        const fechaObj = convertirFecha(pago.fechaPago);
+        if (!fechaObj) return false;
+        if (inicio && fechaObj < inicio) return false;
+        if (fin && fechaObj > fin) return false;
+        return true;
+    });
+    
+    renderTable(pagosFiltrados);
+}
 
         function renderTable(datos) {
     tbody.innerHTML = '';
@@ -244,13 +249,34 @@
         fFin.addEventListener('change', aplicarFiltros);
         document.getElementById('btnLimpiar').addEventListener('click', () => { fInicio.value = ''; fFin.value = ''; aplicarFiltros(); });
         document.getElementById('btnExportar').addEventListener('click', () => {
-            const ws = XLSX.utils.json_to_sheet(todosLosPagos.map(p => ({
-                Fecha: convertirFecha(p.fechaPago)?.toLocaleDateString(),
-                Huesped: p.huesped, Hab: p.habitacion, Metodo: p.metodoPago, Total: p.montoTotal
-            })));
-            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Pagos");
-            XLSX.writeFile(wb, "Reporte_Pagos.xlsx");
-        });
+    // Si no hay filtros aplicados, usamos todos los pagos. Si los hay, usamos los filtrados.
+    const datosAExportar = (fInicio.value || fFin.value) ? pagosFiltrados : todosLosPagos;
+
+    if (datosAExportar.length === 0) {
+        Swal.fire("Atención", "No hay datos en el rango seleccionado para exportar.", "warning");
+        return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(datosAExportar.map(p => ({
+        "Fecha de Pago": convertirFecha(p.fechaPago)?.toLocaleDateString('es-PE'),
+        "Huésped": p.huesped || 'S/N',
+        "Habitación": p.habitacion || '--',
+        "Método de Pago": p.metodoPago || 'Efectivo',
+        "Monto Hospedaje": p.montoHospedaje ? parseFloat(p.montoHospedaje).toFixed(2) : '0.00',
+        "Monto Extras": p.montoExtras ? parseFloat(p.montoExtras).toFixed(2) : '0.00',
+        "Gran Total": p.montoTotal ? parseFloat(p.montoTotal).toFixed(2) : '0.00'
+    })));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte de Pagos");
+    
+    // Nombre de archivo dinámico según las fechas
+    const nombreArchivo = fInicio.value && fFin.value 
+        ? `Reporte_Pagos_${fInicio.value}_al_${fFin.value}.xlsx` 
+        : "Reporte_General_Pagos.xlsx";
+
+    XLSX.writeFile(wb, nombreArchivo);
+});
 
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     </script>
