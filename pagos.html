@@ -78,12 +78,12 @@
                             <th>Hab.</th>
                             <th>Método</th>
                             <th>Hospedaje</th>
-                            <th>Consumos/Extras</th>
+                            <th>Extras</th>
                             <th>Total</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-pagos">
-                        <tr><td colspan="7" style="text-align:center;">Cargando registros...</td></tr>
+                        <tr><td colspan="7" style="text-align:center; padding:20px;">Cargando registros...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -99,14 +99,15 @@
         const fFin = document.getElementById('fechaFin');
         let todosLosPagos = [];
 
-        // Función para parsear fechas de cualquier formato
-        function obtenerFecha(fecha) {
-            if (!fecha) return null;
-            if (fecha.toDate) return fecha.toDate();
-            return new Date(fecha);
+        // FUNCIÓN CLAVE: Convierte cualquier fecha de Firebase (Texto o Timestamp) a Objeto Date
+        function convertirFecha(datoFecha) {
+            if (!datoFecha) return null;
+            if (typeof datoFecha.toDate === 'function') return datoFecha.toDate();
+            const d = new Date(datoFecha);
+            return isNaN(d.getTime()) ? null : d;
         }
 
-        // 1. ESCUCHAR PAGOS
+        // 1. Escuchar datos en tiempo real
         onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
             todosLosPagos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             aplicarFiltros();
@@ -116,11 +117,11 @@
             const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
             const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
 
-            const filtrados = todosLosPagos.filter(p => {
-                const fP = obtenerFecha(p.fechaPago);
-                if (!fP) return false;
-                if (inicio && fP < inicio) return false;
-                if (fin && fP > fin) return false;
+            const filtrados = todosLosPagos.filter(pago => {
+                const fechaObj = convertirFecha(pago.fechaPago);
+                if (!fechaObj) return false;
+                if (inicio && fechaObj < inicio) return false;
+                if (fin && fechaObj > fin) return false;
                 return true;
             });
             renderTable(filtrados);
@@ -129,103 +130,100 @@
         function renderTable(datos) {
             tbody.innerHTML = '';
             if(datos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay registros.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No se encontraron registros.</td></tr>';
                 return;
             }
 
-            datos.forEach((p, index) => {
-                const f = obtenerFecha(p.fechaPago);
+            datos.forEach((p) => {
+                const f = convertirFecha(p.fechaPago);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${f.toLocaleDateString('es-PE')}<br><small style="color:#64748b;">${f.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small></td>
-                    <td><strong>${p.huesped}</strong></td>
-                    <td><span class="badge-hab">${p.habitacion}</span></td>
+                    <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">${f ? f.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td>
+                    <td><strong>${p.huesped || 'S/N'}</strong></td>
+                    <td><span class="badge-hab">${p.habitacion || '--'}</span></td>
                     <td><i class="fa-solid fa-wallet"></i> ${p.metodoPago || 'Efectivo'}</td>
                     <td>S/ ${parseFloat(p.montoHospedaje || 0).toFixed(2)}</td>
                     <td>
-                        <button class="btn-ver-extras" data-index="${index}">
+                        <button class="btn-ver-extras" onclick="abrirDetalleExtras('${p.idReserva}', ${p.montoExtras || 0}, ${p.early || 0}, ${p.late || 0})">
                             S/ ${parseFloat(p.montoExtras || 0).toFixed(2)} <i class="fa-solid fa-eye"></i>
                         </button>
                     </td>
                     <td class="monto-celda">S/ ${parseFloat(p.montoTotal || 0).toFixed(2)}</td>
                 `;
-                
-                // Evento para el botón de ver extras
-                tr.querySelector('.btn-ver-extras').addEventListener('click', () => verDetalle(p));
                 tbody.appendChild(tr);
             });
         }
 
-        // 2. FUNCIÓN PARA EL MODAL DETALLADO
-        async function verDetalle(pago) {
-            Swal.fire({ title: 'Cargando detalle...', didOpen: () => Swal.showLoading() });
+        // 2. MODAL DETALLADO DE EXTRAS (Early, Late y Consumos)
+        window.abrirDetalleExtras = async function(idReserva, totalExtras, early, late) {
+            Swal.fire({ title: 'Cargando...', didOpen: () => Swal.showLoading() });
 
             try {
-                // Buscamos consumos en la base de datos
-                const q = query(collection(db, "consumos"), where("idReserva", "==", pago.idReserva));
+                const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
                 const snap = await getDocs(q);
                 
-                let filasHTML = "";
+                let tablaHTML = `<table style="width:100%; border-collapse:collapse; font-size:13px; text-align:left;">
+                                    <tr style="border-bottom:2px solid #eee;">
+                                        <th style="padding:8px;">Cant.</th>
+                                        <th style="padding:8px;">Descripción</th>
+                                        <th style="padding:8px; text-align:right;">Subtotal</th>
+                                    </tr>`;
                 
-                // A. Agregar Early Check-in si existe
-                if(parseFloat(pago.early || 0) > 0) {
-                    filasHTML += `<tr><td>1</td><td><b>EARLY CHECK-IN</b></td><td align="right">S/ ${parseFloat(pago.early).toFixed(2)}</td></tr>`;
+                // Sumar Early/Late si existen
+                if(early > 0) {
+                    tablaHTML += `<tr><td style="padding:8px;">1</td><td style="padding:8px;">EARLY CHECK-IN</td><td style="padding:8px; text-align:right;">S/ ${parseFloat(early).toFixed(2)}</td></tr>`;
                 }
-                
-                // B. Agregar Late Check-out si existe
-                if(parseFloat(pago.late || 0) > 0) {
-                    filasHTML += `<tr><td>1</td><td><b>LATE CHECK-OUT</b></td><td align="right">S/ ${parseFloat(pago.late).toFixed(2)}</td></tr>`;
+                if(late > 0) {
+                    tablaHTML += `<tr><td style="padding:8px;">1</td><td style="padding:8px;">LATE CHECK-OUT</td><td style="padding:8px; text-align:right;">S/ ${parseFloat(late).toFixed(2)}</td></tr>`;
                 }
 
-                // C. Agregar consumos de productos
+                // Sumar consumos
                 snap.forEach(doc => {
                     const c = doc.data();
-                    filasHTML += `<tr><td>${c.cantidad}</td><td>${c.descripcion || c.producto}</td><td align="right">S/ ${parseFloat(c.precioTotal).toFixed(2)}</td></tr>`;
+                    tablaHTML += `<tr>
+                        <td style="padding:8px;">${c.cantidad || 1}</td>
+                        <td style="padding:8px;">${c.descripcion || c.producto}</td>
+                        <td style="padding:8px; text-align:right;">S/ ${parseFloat(c.precioTotal).toFixed(2)}</td>
+                    </tr>`;
                 });
 
-                if(filasHTML === "") filasHTML = '<tr><td colspan="3" align="center" style="padding:15px; color:#94a3b8;">Sin consumos adicionales.</td></tr>';
+                tablaHTML += `</table>
+                    <div style="margin-top:15px; border-top:2px solid #800020; padding-top:10px; text-align:right;">
+                        <b style="color:#800020; font-size:15px;">TOTAL EXTRAS: S/ ${parseFloat(totalExtras).toFixed(2)}</b>
+                    </div>`;
 
                 Swal.fire({
-                    title: '<span style="color:#800020">Detalle de Cargos Extras</span>',
-                    html: `
-                        <div style="font-size:14px; text-align:left;">
-                            <p><b>Huésped:</b> ${pago.huesped}</p>
-                            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-                                <tr style="border-bottom:2px solid #eee;"><th>Cant.</th><th align="left">Descripción</th><th align="right">Total</th></tr>
-                                ${filasHTML}
-                            </table>
-                            <div style="margin-top:15px; text-align:right; border-top:1px solid #800020; padding-top:10px;">
-                                <b style="color:#800020; font-size:16px;">TOTAL EXTRAS: S/ ${parseFloat(pago.montoExtras).toFixed(2)}</b>
-                            </div>
-                        </div>`,
+                    title: '<span style="color:#800020; font-family:Playfair Display;">Detalle de Extras</span>',
+                    html: tablaHTML,
                     confirmButtonText: 'Cerrar',
-                    confirmButtonColor: '#800020',
-                    width: '500px'
+                    confirmButtonColor: '#800020'
                 });
 
             } catch (e) {
                 console.error(e);
-                Swal.fire("Error", "No se pudo cargar el detalle", "error");
+                Swal.fire("Error", "No se pudo cargar el detalle.", "error");
             }
-        }
+        };
 
-        // Eventos de botones
+        // Eventos
         fInicio.addEventListener('change', aplicarFiltros);
         fFin.addEventListener('change', aplicarFiltros);
         document.getElementById('btnLimpiar').addEventListener('click', () => { fInicio.value = ''; fFin.value = ''; aplicarFiltros(); });
-        
+
         document.getElementById('btnExportar').addEventListener('click', () => {
             const dataExcel = todosLosPagos.map(p => ({
-                Fecha: obtenerFecha(p.fechaPago).toLocaleDateString(),
+                Fecha: convertirFecha(p.fechaPago)?.toLocaleDateString() || '',
                 Huesped: p.huesped,
                 Hab: p.habitacion,
                 Metodo: p.metodoPago,
+                Hospedaje: p.montoHospedaje,
+                Extras: p.montoExtras,
                 Total: p.montoTotal
             }));
             const ws = XLSX.utils.json_to_sheet(dataExcel);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Pagos");
-            XLSX.writeFile(wb, "Reporte_Pagos.xlsx");
+            XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+            XLSX.writeFile(wb, "Reporte_Pagos_Central.xlsx");
         });
 
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
