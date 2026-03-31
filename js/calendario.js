@@ -221,11 +221,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // TARIFA DE LA RESERVA
         // Precios y Totales (Importante: usar Number para cálculos)
-    tarifa: Number(document.getElementById('resTarifa').value) || 0,
     tipoCambio: Number(document.getElementById('resTipoCambio').value) || 0,
+    tarifa: Number(document.getElementById('resTarifa').value) || 0,
     total: Number(document.getElementById('resTotal').value) || 0,
     adelanto: Number(document.getElementById('resAdelantoMonto').value) || 0,
     diferencia: Number(document.getElementById('resDiferencia').value) || 0,
+    estado: "reservada",
         moneda: document.getElementById('resMoneda').value,
         adelantoDetalle: document.getElementById('resAdelantoDetalle').value,
 
@@ -236,45 +237,51 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // METADATOS
         estado: "reservada",
-        fechaRegistro: new Date().toISOString()
-    };
-
+        fechaRegistro: editId ? document.getElementById('resFechaRegistroHidden')?.value || new Date().toISOString() : new Date().toISOString()    };
     try {
-        // --- PASO 1: GUARDAR RESERVA CON ID ALEATORIO ---
-        // addDoc genera automáticamente un ID como "hY7tG2p..."
-        const docReserva = await addDoc(collection(db, "reservas"), nuevaReserva);
-        console.log("Reserva guardada con ID aleatorio:", docReserva.id);
-
-        // --- PASO 2: GUARDAR/ACTUALIZAR HUÉSPED CON ID = DNI ---
-        if (nuevaReserva.doc) {
-            // Referenciamos el documento usando el DNI como nombre del ID
-            const huespedRef = doc(db, "huespedes", nuevaReserva.doc); 
+        if (editId) {
+            // --- MODO EDICIÓN ---
+            // Usamos doc() y setDoc() para SOBREESCRIBIR el documento existente
+            const reservaRef = doc(db, "reservas", editId);
+            await setDoc(reservaRef, nuevaReserva, { merge: true });
             
-            await setDoc(huespedRef, {
-                nombre: nuevaReserva.huesped,
-                documento: nuevaReserva.doc,
-                telefono: nuevaReserva.telefono,
-                nacionalidad: nuevaReserva.nacionalidad,
-                nacimiento: nuevaReserva.nacimiento,
-                correo: nuevaReserva.correo,
-                ultimaVisita: new Date().toISOString(),
-                // Guardamos una referencia a su última reserva por si acaso
-                ultimaReservaId: docReserva.id 
-            }, { merge: true }); // merge: true es VITAL para no borrar datos previos
+            Swal.fire({
+                title: '¡Actualizado!',
+                text: 'La reserva se ha modificado correctamente.',
+                icon: 'success',
+                confirmButtonColor: '#800020'
+            });
+        } else {
+            // --- MODO NUEVA RESERVA ---
+            // Usamos addDoc para crear un documento con ID aleatorio nuevo
+            const docReserva = await addDoc(collection(db, "reservas"), nuevaReserva);
+            
+            // Lógica de guardado de huésped (la que ya tienes)
+            if (nuevaReserva.doc) {
+                const huespedRef = doc(db, "huespedes", nuevaReserva.doc);
+                await setDoc(huespedRef, {
+                    nombre: nuevaReserva.huesped,
+                    documento: nuevaReserva.doc,
+                    ultimaVisita: new Date().toISOString()
+                }, { merge: true });
+            }
+
+            Swal.fire({
+                title: '¡Registro Exitoso!',
+                text: 'Nueva reserva creada.',
+                icon: 'success',
+                confirmButtonColor: '#800020'
+            });
         }
 
-        Swal.fire({
-            title: '¡Registro Exitoso!',
-            text: `Reserva #${docReserva.id.substring(0,5)} creada para el DNI: ${nuevaReserva.doc}`,
-            icon: 'success',
-            confirmButtonColor: '#800020'
-        });
-
+        // --- LIMPIEZA FINAL ---
         cerrarModal();
+        editId = null; // IMPORTANTE: Resetear el ID para la próxima reserva
+        document.getElementById('formNuevaReserva').reset(); // Limpiar campos
 
     } catch (error) {
-        console.error("Error al procesar:", error);
-        Swal.fire('Error', 'Hubo un problema con la base de datos', 'error');
+        console.error("Error al procesar la reserva:", error);
+        Swal.fire('Error', 'No se pudo guardar la información.', 'error');
     }
 };
 
