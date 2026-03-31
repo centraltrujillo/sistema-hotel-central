@@ -1,9 +1,9 @@
-/* --- 1. CONFIGURACIÓN BASE CORREGIDA --- */
+/* --- 1. CONFIGURACIÓN BASE Y CONTENEDOR --- */
 body {
     background-color: var(--blanco-colonial);
     font-family: var(--font-main);
     margin: 0;
-    height: 100vh; /* Fijo para evitar scroll general del navegador */
+    height: 100vh;
     overflow: hidden; 
     display: flex;
     flex-direction: column;
@@ -14,48 +14,30 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
-    flex: 1; /* Ocupa el resto de la pantalla dinámicamente */
-    min-height: 0; /* Permite scroll en hijos flex */
+    max-width: 1800px; 
+    margin: 0 auto; 
+    flex: 1;
+    min-height: 0;
     box-sizing: border-box;
     animation: slideUpFade 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
-/* --- 2. GRID DE HABITACIONES (Asegurando el scroll) --- */
-.hab-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-    gap: 25px;
-    width: 100%;
-    flex: 1; 
-    overflow-y: auto; /* El scroll SOLO ocurre aquí */
-    padding: 10px 5px 40px 5px;
-    min-height: 0; 
-}
-
+/* --- 2. HEADER: IZQUIERDA (Títulos y Volver) --- */
 .header-flex {
     display: flex;
     justify-content: space-between; 
     align-items: center;
-    width: 100%; /* Importante */
+    width: 100%;
     border-bottom: 2px solid var(--amarillo-ocre);
     padding-bottom: 15px;
     margin-bottom: 20px;
     flex-shrink: 0;
 }
 
-/* Agrupador izquierdo: Botón atrás + Título */
 .header-left {
     display: flex;
     align-items: center;
     gap: 20px;
-}
-
-.title-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
 }
 
 .main-title {
@@ -74,36 +56,64 @@ body {
     opacity: 0.7;
 }
 
-/* Agrupador derecho: Botones de navegación */
-.header-actions {
-    display: flex;
-    gap: 12px;
-}
-
-/* Botón de retroceso circular */
 .btn-back {
     background: var(--marron-zocalo);
     color: var(--blanco) !important;
-    width: 42px;
-    height: 42px;
+    width: 42px; height: 42px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     text-decoration: none;
     transition: 0.3s;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-.btn-back:hover {
-    background: var(--vino-tinto);
-    transform: scale(1.1);
+.btn-back:hover { background: var(--vino-tinto); transform: scale(1.1); }
+
+/* --- 3. HEADER: DERECHA (Navegación) --- */
+.header-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
 }
+
+.btn-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px;
+    background-color: var(--blanco);
+    color: var(--marron-zocalo);
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    border: 1px solid var(--amarillo-ocre);
+    transition: all 0.3s ease;
+}
+
+.btn-header:hover {
+    background-color: var(--vino-tinto);
+    color: var(--blanco) !important;
+    border-color: var(--vino-tinto);
+    transform: translateY(-2px);
+}
+
+/* --- 4. GRID PRINCIPAL --- */
+.hab-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+    gap: 25px;
+    width: 100%;
+    flex: 1; 
+    overflow-y: auto;
+    padding: 10px 5px 40px 5px;
+    min-height: 0; 
+}
+
+
 
 /* --- ESTADÍSTICAS (KPIs) --- */
 .hab-stats {
     display: flex;
-    justify-content: flex-start; /* O flex-end si los quieres a la derecha */
+    justify-content: flex-end; /* O flex-end si los quieres a la derecha */
     gap: 20px;
     margin-bottom: 20px;
     flex-shrink: 0;
@@ -133,23 +143,20 @@ body {
     color: var(--gris-antracita);
     font-family: var(--font-titles);
 }
-
 /* --- GRID Y TARJETAS --- */
-
 
 .hab-card {
     background: var(--blanco);
     border-radius: 15px;
     box-shadow: 0 6px 12px rgba(0,0,0,0.08);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Transición más fluida */
     border-bottom: 5px solid var(--amarillo-ocre);
     position: relative;
-    
-    /* Añade esto para asegurar que no se aplaste */
     display: flex;
     flex-direction: column;
-    min-height: 250px; 
+    min-height: 250px;
+    overflow: hidden; /* Para que el radio de la cabecera no se escape */
 }
 
 .hab-card:hover {
@@ -157,37 +164,84 @@ body {
     box-shadow: 0 12px 20px rgba(0,0,0,0.12);
 }
 
-.hab-header {
-    background: var(--gris-antracita);
-    color: var(--blanco);
-    padding: 12px;
-    text-align: center;
-    border-radius: 15px 15px 0 0;
-}
-
-/* Efecto de pulso suave para habitaciones ocupadas (Opcional) */
+/* Diferenciación visual clara para OCUPADA */
 .hab-card.ocupada {
     border-bottom: 5px solid var(--vino-tinto);
 }
 
 .hab-card.ocupada:hover {
-    border-bottom: 5px solid var(--rojo-vibrante);
+    border-bottom-color: var(--rojo-vibrante);
 }
-.hab-number { font-family: var(--font-titles); font-size: 24px; display: block; }
-.hab-type { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
 
-.hab-body { padding: 20px 15px; text-align: center; }
-.hab-icon { font-size: 40px; color: var(--amarillo-ocre); margin-bottom: 15px; transition: 0.3s; }
-.hab-card.ocupada .hab-icon { color: var(--marron-zocalo); }
+/* CABECERA DE TARJETA */
+.hab-header {
+    background: var(--gris-antracita);
+    color: var(--blanco);
+    padding: 15px 12px; /* Un poco más de aire */
+    text-align: center;
+    transition: background 0.3s ease;
+}
 
+/* Si quieres que la cabecera también cambie en ocupadas */
+.hab-card.ocupada .hab-header {
+    background: #2c3e50; /* Un tono más profundo o incluso un gris casi negro */
+}
+
+.hab-number { 
+    font-family: var(--font-titles); 
+    font-size: 24px; 
+    display: block; 
+    font-weight: 700;
+}
+
+.hab-type { 
+    font-size: 11px; 
+    text-transform: uppercase; 
+    letter-spacing: 1.5px; 
+    opacity: 0.9;
+}
+
+/* CUERPO DE TARJETA */
+.hab-body { 
+    padding: 20px 15px; 
+    text-align: center; 
+    flex-grow: 1; /* Empuja el contenido hacia abajo */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.hab-icon { 
+    font-size: 45px; 
+    color: var(--amarillo-ocre); 
+    margin-bottom: 5px; 
+    transition: 0.3s ease; 
+}
+
+.hab-card.ocupada .hab-icon { 
+    color: var(--marron-zocalo); 
+}
+
+/* ESTADO (BADGE) */
 .hab-badge {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 900;
-    padding: 4px 12px;
+    padding: 5px 14px;
     border-radius: 50px;
     background: var(--blanco-colonial);
     color: var(--marron-zocalo);
     border: 1px solid rgba(0,0,0,0.1);
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+/* Cambio de color del badge según estado */
+.hab-card.ocupada .hab-badge {
+    background: #fff1f2;
+    color: var(--vino-tinto);
+    border-color: var(--vino-tinto);
 }
 
 /* 5. MODAL DE RESERVAS (ESTRUCTURA OPTIMIZADA CERO-SCROLL) */
@@ -235,7 +289,7 @@ body {
 .close-modal { font-size: 28px; cursor: pointer; line-height: 1; }
 .close-modal:hover { color: var(--amarillo-ocre); }
 
-/* 6. FORMULARIO COMPACTO (4 COLUMNAS) */
+/* FORMULARIO COMPACTO (4 COLUMNAS) */
 .form-body-no-scroll {
     padding: 10px 25px;
     display: flex;
@@ -342,6 +396,40 @@ body {
     border-radius: 8px;
     font-weight: 700;
 }
+
+/* Unifica estas reglas en una sola sección */
+.span-3 {
+    grid-column: span 3;
+}
+
+#statusDisponibilidad i {
+    font-size: 14px;
+}
+
+#statusDisponibilidad {
+    grid-column: span 4; /* Ocupa todo el ancho para centrar el mensaje */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0; /* Sin padding inicial */
+    margin: 0;  /* Sin margen inicial */
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    min-height: 0; /* Altura 0 cuando está vacío */
+}
+
+/* Solo cuando tiene contenido se le aplica espacio */
+#statusDisponibilidad:not(:empty) {
+    padding: 8px;
+    margin: 5px 0 10px 0;
+    min-height: 35px;
+    background: #f8fafc; /* Fondo suave para resaltar el estado */
+    border: 1px solid #e2e8f0;
+}
+
 
 /* 1. Botón Confirmar (Verde Esmeralda - Pagar e Imprimir) */
 .btn-checkout-confirm {
@@ -728,52 +816,6 @@ body {
 .btn-solo-pagar { background-color: var(--vino-tinto) !important; color: white !important; padding: 12px 24px; border-radius: 8px; font-weight: bold; margin: 5px; border: none; }
 .btn-cancelar-soft { background-color: var(--gris-antracita) !important; color: white !important; padding: 12px 24px; border-radius: 8px; font-weight: bold; margin: 5px; border: none; }
 
-/* --- ESTADOS DE DISPONIBILIDAD (DENTRO DEL MODAL) --- */
-.badge-status-room {
-    background: var(--vino-tinto);
-    color: white;
-    padding: 5px 15px;
-    border-radius: 50px;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-#statusDisponibilidad {
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    text-align: center;
-    margin-top: 5px;
-    display: none; /* Se muestra vía JS cuando se selecciona fecha/hab */
-    transition: all 0.3s ease;
-}
-
-/* Clase que aplicará tu JS si la habitación está LIBRE */
-.status-disponible {
-    display: block !important;
-    background-color: #e8f5e9; /* Verde muy claro */
-    color: #2e7d32;           /* Verde esmeralda */
-    border: 1px solid #2e7d32;
-}
-
-/* Clase que aplicará tu JS si la habitación está OCUPADA */
-.status-ocupado {
-    display: block !important;
-    background-color: #ffebee; /* Rojo muy claro */
-    color: var(--rojo-vibrante);
-    border: 1px solid var(--rojo-vibrante);
-    animation: shake 0.4s ease-in-out; /* Alerta visual */
-}
-
-/* Animación de sacudida para advertir error */
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
 
 /* Ajuste para que el span-4 ocupe todo el ancho del grid del modal */
 .span-4 {
@@ -854,5 +896,27 @@ body {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* --- AJUSTES RESPONSIVOS (SIEMPRE AL FINAL) --- */
+@media (max-width: 1024px) {
+    .main-content { padding: 15px; }
+    .hab-grid {
+        gap: 15px;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .main-content { padding: 10px; }
+    .header-flex {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    .hab-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
     }
 }
