@@ -24,17 +24,25 @@ function getHoyISO() {
     return fecha.toISOString().split('T')[0];
 }
 
+// 1. Variable global (fuera de la función) para controlar el listener
+let unsubHabs = null; 
+
 // --- 2. CARGAR TABLERO EN TIEMPO REAL ---
 function cargarHabitaciones() {
+    // Si ya existe un listener activo, no creamos otro.
+    if (unsubHabs) {
+        console.log("El listener ya está activo, ignorando llamada duplicada.");
+        return; 
+    }
+
     const qHabs = query(collection(db, "habitaciones"), orderBy("numero", "asc"));
     const hoy = getHoyISO();
 
-    // Listener en tiempo real para habitaciones
-    onSnapshot(qHabs, async (snapshot) => {
-        habGrid.innerHTML = '';
-        let stats = { libres: 0, ocupadas: 0 };
+    console.log("Iniciando conexión en tiempo real con Rack de Habitaciones...");
 
-        // Buscamos reservas para hoy de forma eficiente
+    // Guardamos la función de desuscripción en la variable global
+    unsubHabs = onSnapshot(qHabs, async (snapshot) => {
+        // --- OPTIMIZACIÓN: Buscamos reservas ANTES de limpiar el HTML ---
         const qRes = query(collection(db, "reservas"), 
                      where("checkIn", "==", hoy), 
                      where("estado", "==", "reservada"));
@@ -42,12 +50,15 @@ function cargarHabitaciones() {
         const snapRes = await getDocs(qRes);
         const listaReservasHoy = snapRes.docs.map(d => String(d.data().habitacion));
 
+        // Ahora sí, limpiamos y dibujamos (evita parpadeos en blanco largos)
+        habGrid.innerHTML = '';
+        let stats = { libres: 0, ocupadas: 0 };
+
         snapshot.docs.forEach(docSnap => {
             const hab = { id: docSnap.id, ...docSnap.data() };
             const est = hab.estado || "Libre";
             const nPers = parseInt(hab.personasActuales) || 0;
 
-            // Actualizar contadores
             if (est === "Libre" || est === "Disponible") stats.libres++;
             else if (est === "Ocupada") stats.ocupadas++;
 
@@ -69,7 +80,7 @@ function cargarHabitaciones() {
                     <div class="hab-footer-info">
                         <span class="hab-badge">${est.toUpperCase()}</span>
                         ${tieneReservaHoy && (est === "Libre" || est === "Disponible") 
-                            ? '<div class="reserva-hoy-tag">⚠️ RESERVA PARA HOY</div>' 
+                            ? '<div class="reserva-hoy-tag" style="color: #800020; font-size: 10px; font-weight: 800; margin-top: 5px;">⚠️ RESERVA HOY</div>' 
                             : ''}
                     </div>
                 </div>`;
@@ -662,8 +673,8 @@ window.addEventListener('click', (e) => {
         width: '550px',
         customClass: {
             popup: 'hotel-modal-custom',
-            confirmButton: 'btn-checkout-confirm', // Definir en CSS (Verde esmeralda)
-            denyButton: 'btn-checkout-deny',      // Definir en CSS (Vino tinto)
+            confirmButton: 'btn-checkout-confirm', 
+            denyButton: 'btn-checkout-deny',     
             cancelButton: 'btn-cancelar-soft'
         },
         html: `
@@ -758,9 +769,6 @@ window.addEventListener('click', (e) => {
             showConfirmButton: false
         });
 
-        // Refrescar el rack de habitaciones si la función existe
-        if (typeof cargarHabitaciones === 'function') cargarHabitaciones();
-
     } catch (error) {
         console.error("Error crítico en checkout:", error);
         Swal.fire('Error de Sistema', 'No se pudo procesar el pago. Verifique su conexión.', 'error');
@@ -772,29 +780,71 @@ window.addEventListener('click', (e) => {
    ========================================================================== */
    async function imprimirTicket(rData, consumos, totalConsumos, granTotal, metodoPago) {
     
-    // 1. OBTENER FECHA Y HORA ACTUAL PARA EL TICKET
-    const ahora = new Date();
-    const fechaTicket = ahora.toLocaleDateString('es-PE') + ' ' + ahora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    // 1. OBTENER NOMBRE DEL USUARIO DESDE LA COLECCIÓN 'USUARIOS'
+    let nombreAtendido = "RECEPCIONISTA"; 
+    try {
+        const user = auth.currentUser;
+        if (user) {
+            // Buscamos el documento por el UID del usuario logueado
+            const userDocRef = doc(db, "usuarios", user.uid);
+            const userSnap = await getDoc(userDocRef);
+            
+            if (userSnap.exists()) {
+                // Extraemos el campo 'nombre' que vimos en tu captura de Firebase
+                nombreAtendido = userSnap.data().nombre || "ADMINISTRADOR";
+            }
+        }
+    } catch (error) {
+        console.error("Error al recuperar nombre de usuario para ticket:", error);
+    }
 
-    // 2. ABRIR VENTANA DE IMPRESIÓN (Crucial: Definir 'ventana')
+    // 2. CONFIGURACIÓN DE FECHA Y VENTANA
+    const ahora = new Date();
+    const fechaEmision = ahora.toLocaleDateString('es-PE') + ' ' + ahora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+
     const ventana = window.open('', '_blank', 'width=300,height=600');
     if (!ventana) {
-        Swal.fire("Error", "El navegador bloqueó la ventana emergente de impresión.", "error");
+        Swal.fire("Error", "Ventana de impresión bloqueada por el navegador.", "error");
         return;
     }
 
-    // 3. GENERAR FILAS DE CONSUMOS (Si existen)
-    let filasConsumos = "";
-    if (consumos && consumos.length > 0) {
-        filasConsumos = consumos.map(c => `
+    // 3. FORMATEO DE FECHAS "DEL 00/00 AL 00/00"
+    const formatF = (f) => {
+        if (!f) return "00/00";
+        const p = f.split('-');
+        return p.length === 3 ? `${p[2]}/${p[1]}` : f;
+    };
+
+    // 4. LÓGICA DE FILAS: EARLY, LATE Y CONSUMOS
+    let filasExtrasHTML = "";
+    
+    // Early Check-in
+    if (parseFloat(rData.early || 0) > 0) {
+        filasExtrasHTML += `
             <tr>
-                <td style="padding: 2px 0; vertical-align: top;">${c.cantidad || 1}x ${c.descripcion || c.producto}</td>
-                <td style="text-align: right; vertical-align: top;">S/ ${parseFloat(c.precioTotal || 0).toFixed(2)}</td>
-            </tr>
-        `).join('');
+                <td style="padding: 2px 0;">(+) EARLY CHECK-IN</td>
+                <td class="text-right">S/ ${parseFloat(rData.early).toFixed(2)}</td>
+            </tr>`;
+    }
+    
+    // Late Check-out
+    if (parseFloat(rData.late || 0) > 0) {
+        filasExtrasHTML += `
+            <tr>
+                <td style="padding: 2px 0;">(+) LATE CHECK-OUT</td>
+                <td class="text-right">S/ ${parseFloat(rData.late).toFixed(2)}</td>
+            </tr>`;
     }
 
-    // 4. CONSTRUCCIÓN DEL HTML DEL TICKET
+    // Consumos de productos/servicios
+    let filasConsumos = (consumos || []).map(c => `
+        <tr>
+            <td style="padding: 2px 0;">${c.cantidad || 1}x ${c.descripcion || c.producto}</td>
+            <td class="text-right">S/ ${parseFloat(c.precioTotal || 0).toFixed(2)}</td>
+        </tr>
+    `).join('');
+
+    // 5. CONSTRUCCIÓN DEL TICKET HTML
     ventana.document.write(`
         <html>
         <head>
@@ -803,36 +853,30 @@ window.addEventListener('click', (e) => {
                 @page { margin: 0; }
                 body { 
                     font-family: 'Courier New', Courier, monospace; 
-                    width: 260px; 
-                    margin: 0; 
-                    padding: 10px; 
-                    color: #000;
-                    font-size: 12px; 
-                    line-height: 1.2;
+                    width: 260px; margin: 0; padding: 10px; color: #000;
+                    font-size: 11px; line-height: 1.2;
                 }
                 .text-center { text-align: center; }
                 .text-right { text-align: right; }
                 .divider { border-top: 1px dashed #000; margin: 8px 0; }
                 table { width: 100%; border-collapse: collapse; }
                 .bold { font-weight: bold; }
-                .title { font-size: 16px; margin-bottom: 2px; text-transform: uppercase; }
-                .total-row { font-size: 14px; font-weight: bold; }
+                .total-row { font-size: 13px; font-weight: bold; }
             </style>
         </head>
         <body onload="window.print(); window.close();">
             <div class="text-center">
-                <span class="bold title">HOTEL CENTRAL</span><br>
-                <span style="font-size: 10px;">RUC: 20601852153</span><br>
-                <span style="font-size: 10px;">Jr. Simón Bolívar 355 - Trujillo</span>
+                <span class="bold" style="font-size: 15px;">HOTEL CENTRAL</span><br>
+                <span style="font-size: 9px;">RUC: 20601852153</span><br>
+                <span style="font-size: 9px;">Jr. Simón Bolívar 355 - Trujillo</span>
             </div>
             
             <div class="divider"></div>
             
             <div>
-                <b style="font-size: 13px;">COMPROBANTE DE PAGO</b><br>
-                <b>Fecha:</b> ${fechaTicket}<br>
-                <b>Habitación:</b> ${rData.habitacion}<br>
-                <b>Huésped:</b> ${rData.huesped.toUpperCase()}
+                <b>HABITACIÓN:</b> ${rData.habitacion}<br>
+                <b>HUÉSPED:</b> ${rData.huesped.toUpperCase()}<br>
+                <b>FECHA EMISIÓN:</b> ${fechaEmision}
             </div>
             
             <div class="divider"></div>
@@ -840,15 +884,21 @@ window.addEventListener('click', (e) => {
             <table>
                 <thead>
                     <tr style="border-bottom: 1px solid #000;">
-                        <th align="left">CONCEPTO</th>
-                        <th align="right">SUBT.</th>
+                        <th align="left">DESCRIPCIÓN</th>
+                        <th align="right">TOTAL</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 5px 0;">Estadía (${rData.checkIn} al ${rData.checkOut})</td>
-                        <td class="text-right">S/ ${parseFloat(rData.total).toFixed(2)}</td>
+                        <td style="padding: 5px 0;">
+                            SERVICIO DE ALOJAMIENTO<br>
+                            DEL ${formatF(rData.checkIn)} AL ${formatF(rData.checkOut)}
+                        </td>
+                        <td class="text-right" style="vertical-align: bottom;">
+                            S/ ${parseFloat(rData.total).toFixed(2)}
+                        </td>
                     </tr>
+                    ${filasExtrasHTML}
                     ${filasConsumos}
                 </tbody>
             </table>
@@ -857,21 +907,21 @@ window.addEventListener('click', (e) => {
             
             <table>
                 <tr class="total-row">
-                    <td>TOTAL PAGADO</td>
+                    <td>TOTAL COBRADO</td>
                     <td class="text-right">S/ ${granTotal.toFixed(2)}</td>
                 </tr>
             </table>
 
             <div style="margin-top: 10px;">
-                <span>Medio de Pago: <b>${metodoPago?.toUpperCase() || 'EFECTIVO'}</b></span>
+                <span>MEDIO DE PAGO: <b>${metodoPago?.toUpperCase() || 'EFECTIVO'}</b></span><br>
+                <span style="font-size: 9px; font-style: italic;">Atendido por: ${nombreAtendido.toUpperCase()}</span>
             </div>
             
             <div class="divider"></div>
             
-            <div class="text-center" style="font-size: 10px; margin-top: 10px;">
+            <div class="text-center" style="font-size: 9px; margin-top: 10px;">
                 *** Gracias por su estadía ***<br>
-                Trujillo - La Libertad<br>
-                <b>www.hotelcentraltrujillo.com</b>
+                Trujillo - La Libertad
             </div>
         </body>
         </html>
