@@ -31,8 +31,8 @@
         .monto-celda { font-weight: 700; color: #166534; font-size: 16px; }
         .badge-hab { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: 700; }
         
-        .btn-ver-extras { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.2s; }
-        .btn-ver-extras:hover { background: #e2e8f0; border-color: #94a3b8; }
+        .btn-detalle { background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.2s; color: #475569; }
+        .btn-detalle:hover { background: #f1f5f9; border-color: #cbd5e1; color: #1e293b; }
     </style>
 </head>
 <body>
@@ -77,9 +77,9 @@
                             <th>Huésped</th>
                             <th>Hab.</th>
                             <th>Método</th>
-                            <th>Hospedaje</th>
+                            <th>Hospedaje Total</th>
                             <th>Extras</th>
-                            <th>Total</th>
+                            <th>Gran Total</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-pagos">
@@ -99,7 +99,6 @@
         const fFin = document.getElementById('fechaFin');
         let todosLosPagos = [];
 
-        // FUNCIÓN CLAVE: Convierte cualquier fecha de Firebase (Texto o Timestamp) a Objeto Date
         function convertirFecha(datoFecha) {
             if (!datoFecha) return null;
             if (typeof datoFecha.toDate === 'function') return datoFecha.toDate();
@@ -107,7 +106,6 @@
             return isNaN(d.getTime()) ? null : d;
         }
 
-        // 1. Escuchar datos en tiempo real
         onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
             todosLosPagos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             aplicarFiltros();
@@ -116,7 +114,6 @@
         function aplicarFiltros() {
             const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
             const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
-
             const filtrados = todosLosPagos.filter(pago => {
                 const fechaObj = convertirFecha(pago.fechaPago);
                 if (!fechaObj) return false;
@@ -142,9 +139,13 @@
                     <td><strong>${p.huesped || 'S/N'}</strong></td>
                     <td><span class="badge-hab">${p.habitacion || '--'}</span></td>
                     <td><i class="fa-solid fa-wallet"></i> ${p.metodoPago || 'Efectivo'}</td>
-                    <td>S/ ${parseFloat(p.montoHospedaje || 0).toFixed(2)}</td>
                     <td>
-                        <button class="btn-ver-extras" onclick="abrirDetalleExtras('${p.idReserva}', ${p.montoExtras || 0}, ${p.early || 0}, ${p.late || 0})">
+                        <button class="btn-detalle" onclick="abrirDetalleHospedaje('${p.id}', '${p.checkIn}', '${p.checkOut}', ${p.precioNoche || 0}, ${p.early || 0}, ${p.late || 0}, ${p.montoHospedaje || 0})">
+                            S/ ${parseFloat(p.montoHospedaje || 0).toFixed(2)} <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </td>
+                    <td>
+                        <button class="btn-detalle" onclick="abrirDetalleExtras('${p.idReserva}', ${p.montoExtras || 0})">
                             S/ ${parseFloat(p.montoExtras || 0).toFixed(2)} <i class="fa-solid fa-eye"></i>
                         </button>
                     </td>
@@ -154,76 +155,77 @@
             });
         }
 
-        // 2. MODAL DETALLADO DE EXTRAS (Early, Late y Consumos)
-        window.abrirDetalleExtras = async function(idReserva, totalExtras, early, late) {
-            Swal.fire({ title: 'Cargando...', didOpen: () => Swal.showLoading() });
+        // --- MODAL 1: DETALLE DE HOSPEDAJE ---
+        window.abrirDetalleHospedaje = function(id, inF, outF, precio, early, late, total) {
+            const f1 = new Date(inF);
+            const f2 = new Date(outF);
+            const noches = Math.max(1, Math.round((f2 - f1) / (1000 * 60 * 60 * 24)));
+            const subtotalBase = noches * precio;
 
+            let html = `
+                <div style="text-align:left; font-size:14px;">
+                    <p><b>Periodo:</b> ${inF.split('-').reverse().join('/')} al ${outF.split('-').reverse().join('/')}</p>
+                    <hr>
+                    <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                        <tr><td>Base (${noches} noche/s x S/ ${precio.toFixed(2)}):</td><td align="right">S/ ${subtotalBase.toFixed(2)}</td></tr>
+                        ${early > 0 ? `<tr><td>(+) Early Check-in:</td><td align="right">S/ ${early.toFixed(2)}</td></tr>` : ''}
+                        ${late > 0 ? `<tr><td>(+) Late Check-out:</td><td align="right">S/ ${late.toFixed(2)}</td></tr>` : ''}
+                        <tr style="border-top:1px solid #eee;"><td style="padding-top:10px;"><b>TOTAL HOSPEDAJE:</b></td><td align="right" style="padding-top:10px;"><b>S/ ${total.toFixed(2)}</b></td></tr>
+                    </table>
+                </div>`;
+
+            Swal.fire({
+                title: '<span style="color:#800020; font-family:Playfair Display;">Desglose de Hospedaje</span>',
+                html: html,
+                confirmButtonText: 'Cerrar',
+                confirmButtonColor: '#800020'
+            });
+        };
+
+        // --- MODAL 2: DETALLE DE EXTRAS (Consumos) ---
+        window.abrirDetalleExtras = async function(idReserva, totalExtras) {
+            Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
             try {
                 const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
                 const snap = await getDocs(q);
+                let tablaHTML = `<table style="width:100%; font-size:13px; text-align:left; border-collapse:collapse;">
+                                    <tr style="border-bottom:2px solid #eee;"><th>Cant.</th><th>Descripción</th><th align="right">Subtotal</th></tr>`;
                 
-                let tablaHTML = `<table style="width:100%; border-collapse:collapse; font-size:13px; text-align:left;">
-                                    <tr style="border-bottom:2px solid #eee;">
-                                        <th style="padding:8px;">Cant.</th>
-                                        <th style="padding:8px;">Descripción</th>
-                                        <th style="padding:8px; text-align:right;">Subtotal</th>
-                                    </tr>`;
-                
-                // Sumar Early/Late si existen
-                if(early > 0) {
-                    tablaHTML += `<tr><td style="padding:8px;">1</td><td style="padding:8px;">EARLY CHECK-IN</td><td style="padding:8px; text-align:right;">S/ ${parseFloat(early).toFixed(2)}</td></tr>`;
-                }
-                if(late > 0) {
-                    tablaHTML += `<tr><td style="padding:8px;">1</td><td style="padding:8px;">LATE CHECK-OUT</td><td style="padding:8px; text-align:right;">S/ ${parseFloat(late).toFixed(2)}</td></tr>`;
+                if (snap.empty) {
+                    tablaHTML += `<tr><td colspan="3" align="center" style="padding:15px; color:#94a3b8;">No hay consumos registrados.</td></tr>`;
+                } else {
+                    snap.forEach(doc => {
+                        const c = doc.data();
+                        tablaHTML += `<tr><td>${c.cantidad || 1}</td><td>${c.descripcion || c.producto}</td><td align="right">S/ ${parseFloat(c.precioTotal).toFixed(2)}</td></tr>`;
+                    });
                 }
 
-                // Sumar consumos
-                snap.forEach(doc => {
-                    const c = doc.data();
-                    tablaHTML += `<tr>
-                        <td style="padding:8px;">${c.cantidad || 1}</td>
-                        <td style="padding:8px;">${c.descripcion || c.producto}</td>
-                        <td style="padding:8px; text-align:right;">S/ ${parseFloat(c.precioTotal).toFixed(2)}</td>
-                    </tr>`;
-                });
-
-                tablaHTML += `</table>
-                    <div style="margin-top:15px; border-top:2px solid #800020; padding-top:10px; text-align:right;">
-                        <b style="color:#800020; font-size:15px;">TOTAL EXTRAS: S/ ${parseFloat(totalExtras).toFixed(2)}</b>
-                    </div>`;
+                tablaHTML += `</table><div style="margin-top:15px; border-top:1px solid #800020; padding-top:10px; text-align:right;">
+                                <b style="color:#800020;">TOTAL CONSUMOS: S/ ${totalExtras.toFixed(2)}</b>
+                             </div>`;
 
                 Swal.fire({
-                    title: '<span style="color:#800020; font-family:Playfair Display;">Detalle de Extras</span>',
+                    title: '<span style="color:#800020; font-family:Playfair Display;">Detalle de Consumos</span>',
                     html: tablaHTML,
                     confirmButtonText: 'Cerrar',
                     confirmButtonColor: '#800020'
                 });
-
             } catch (e) {
-                console.error(e);
                 Swal.fire("Error", "No se pudo cargar el detalle.", "error");
             }
         };
 
-        // Eventos
+        // Eventos básicos
         fInicio.addEventListener('change', aplicarFiltros);
         fFin.addEventListener('change', aplicarFiltros);
         document.getElementById('btnLimpiar').addEventListener('click', () => { fInicio.value = ''; fFin.value = ''; aplicarFiltros(); });
-
         document.getElementById('btnExportar').addEventListener('click', () => {
-            const dataExcel = todosLosPagos.map(p => ({
-                Fecha: convertirFecha(p.fechaPago)?.toLocaleDateString() || '',
-                Huesped: p.huesped,
-                Hab: p.habitacion,
-                Metodo: p.metodoPago,
-                Hospedaje: p.montoHospedaje,
-                Extras: p.montoExtras,
-                Total: p.montoTotal
-            }));
-            const ws = XLSX.utils.json_to_sheet(dataExcel);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-            XLSX.writeFile(wb, "Reporte_Pagos_Central.xlsx");
+            const ws = XLSX.utils.json_to_sheet(todosLosPagos.map(p => ({
+                Fecha: convertirFecha(p.fechaPago)?.toLocaleDateString(),
+                Huesped: p.huesped, Hab: p.habitacion, Metodo: p.metodoPago, Total: p.montoTotal
+            })));
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Pagos");
+            XLSX.writeFile(wb, "Reporte_Pagos.xlsx");
         });
 
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
