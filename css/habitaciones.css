@@ -10,22 +10,24 @@ body {
 }
 
 .main-content {
-    padding: var(--spacing-lg);
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    height: 100vh; /* Cambia 100% por 100vh */
+    width: 100%; /* Asegura que ocupe todo el ancho */
+    max-width: 1400px; /* Opcional: para que no se estire infinito en pantallas ultra-wide */
+    margin: 0 auto; /* Centra todo el bloque */
+    height: 100vh;
     box-sizing: border-box;
-    animation: slideUpFade 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
-/* --- HEADER PROFESIONAL --- */
 .header-flex {
     display: flex;
-    justify-content: space-between; /* Separa título de botones */
-    align-items: center;           /* Centra todo verticalmente */
+    justify-content: space-between; 
+    align-items: center;
+    width: 100%; /* Importante */
     border-bottom: 2px solid var(--amarillo-ocre);
-    padding: 10px 0 var(--spacing-md) 0;
-    margin-bottom: var(--spacing-md);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
     flex-shrink: 0;
 }
 
@@ -87,8 +89,10 @@ body {
 /* --- ESTADÍSTICAS (KPIs) --- */
 .hab-stats {
     display: flex;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
+    justify-content: flex-start; /* O flex-end si los quieres a la derecha */
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .stat-item {
@@ -119,14 +123,13 @@ body {
 /* --- GRID Y TARJETAS --- */
 .hab-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); /* Subí un poco el mínimo para mejor visualización */
-    gap: var(--spacing-lg);
-    
-    flex: 1;            /* Reemplaza flex-grow: 1 */
-    min-height: 0;      /* CRÍTICO: Permite que el scroll funcione y el grid no colapse */
-    overflow-y: auto;   /* El scroll debe estar aquí */
-    
-    padding: 10px 5px 40px 5px; /* Evita que la última fila choque con el fondo */
+    /* Esto creará columnas automáticas que se ajustan al ancho disponible */
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+    gap: 25px;
+    width: 100%;
+    flex: 1; /* Esto empuja todo hacia arriba y activa el scroll */
+    overflow-y: auto;
+    padding: 10px;
 }
 
 .hab-card {
