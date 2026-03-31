@@ -189,14 +189,7 @@ async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
     form.reset();
     if(statusDiv) statusDiv.innerHTML = "";
     
-    // Configurar fechas mínimas (No permitir pasado)
-    ['resCheckIn', 'resCheckOut'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) {
-            el.setAttribute('min', hoy);
-            el.value = hoy;
-        }
-    });
+    
 
     document.getElementById('resTarifa').value = hab.precio || 0;
     document.getElementById('resMedio').value = "personal";
@@ -224,33 +217,94 @@ async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
         } catch (e) { console.error("Error CRM:", e); }
     };
 
-    // --- C. MOTOR DE CÁLCULOS (MONEDA, TC Y NOCHES) ---
-    const calcularTodo = () => {
-        const fIn = document.getElementById('resCheckIn').value;
-        const fOut = document.getElementById('resCheckOut').value;
-        if (fOut < fIn) document.getElementById('resCheckOut').value = fIn;
 
-        const f1 = new Date(document.getElementById('resCheckIn').value + 'T12:00:00');
-        const f2 = new Date(document.getElementById('resCheckOut').value + 'T12:00:00');
-        const tarifa = parseFloat(document.getElementById('resTarifa').value) || 0;
-        const adelanto = parseFloat(document.getElementById('resAdelantoMonto').value) || 0;
-        const moneda = document.getElementById('resMoneda')?.value || 'PEN';
-        const tc = parseFloat(document.getElementById('resTipoCambio')?.value) || 1;
+// --- 2. LÓGICA DE CÁLCULOS (Recargos, Moneda y Validación) ---
+const calcularMontos = () => {
+    // Referencias a inputs (Asegúrate que coincidan con tus IDs del HTML)
+    const fIn = new Date(inputCheckIn.value + 'T00:00:00');
+    const fOut = new Date(inputCheckOut.value + 'T00:00:00');
+    const tarifaBase = parseFloat(inputTarifa.value) || 0;
+    const tc = parseFloat(inputTipoCambio.value) || 0;
+    const moneda = selectMoneda.value;
+
+    // Capturar recargos por Early Check-in o Late Check-out
+    const tieneEarly = document.getElementById("resEarly").value !== "";
+    const tieneLate = document.getElementById("resLate").value !== "";
+
+    // 1. Resetear si las fechas son inválidas o incompletas
+    if (!inputCheckIn.value || !inputCheckOut.value || fOut <= fIn) {
+        inputTotal.value = "0.00";
+        inputDiferencia.value = "0.00";
+        return;
+    }
+
+    // 2. Cálculo de Noches (Uso de round para mayor precisión en fechas)
+    const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
+    
+    // 3. Subtotal base en la moneda de origen (Noches * Tarifa)
+    let subtotal = noches * tarifaBase;
+
+    // 4. Aplicación de Recargos (50% de la tarifa base por cada concepto)
+    if (tieneEarly) subtotal += (tarifaBase * 0.5);
+    if (tieneLate) subtotal += (tarifaBase * 0.5);
+
+    // 5. Conversión Final a Soles (Si la tarifa viene en USD)
+    let totalFinal = subtotal;
+    if (moneda === "USD") {
+        if (tc > 0) {
+            totalFinal = subtotal * tc; // Convertimos a Soles para caja
+        } else {
+            // Si elige USD pero olvida el T. Cambio, el total es 0 para alertar
+            totalFinal = 0; 
+        }
+    }
+
+    inputTotal.value = totalFinal.toFixed(2);
+
+    // 6. Diferencia y Validación de Adelanto
+    let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
+
+    // Evitar que el recepcionista ingrese un adelanto mayor al total de la reserva
+    if (adelanto > totalFinal && totalFinal > 0) {
+        adelanto = totalFinal;
+        inputAdelantoMonto.value = totalFinal.toFixed(2);
         
-        let noches = Math.ceil((f2 - f1) / (1000 * 60 * 60 * 24)) || 1;
-        let subtotal = noches * tarifa;
-        let totalFinal = (moneda === "USD") ? (subtotal * tc) : subtotal;
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'warning',
+            title: 'El adelanto no puede superar al total',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
 
-        document.getElementById('resTotal').value = totalFinal.toFixed(2);
-        document.getElementById('resDiferencia').value = (totalFinal - adelanto).toFixed(2);
-        
-        if(statusDiv) statusDiv.innerHTML = `<b style="color:#800020">Estadía: ${noches} día(s)</b>`;
-    };
+    inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
+};
 
-    ['resCheckIn', 'resCheckOut', 'resTarifa', 'resAdelantoMonto', 'resMoneda', 'resTipoCambio'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', calcularTodo);
-    });
-    calcularTodo();
+// --- LISTENERS PARA CÁLCULO EN TIEMPO REAL ---
+[
+    inputTarifa, inputCheckIn, inputCheckOut, 
+    inputAdelantoMonto, inputTipoCambio, selectMoneda,
+    document.getElementById("resEarly"),
+    document.getElementById("resLate")
+].forEach(el => {
+    if(el) {
+        el.addEventListener("input", calcularMontos);
+        el.addEventListener("change", calcularMontos);
+    }
+});
+
+
+
+// Configuración base para Toasts del Hotel
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true
+});
 
     // --- D. GUARDADO ATÓMICO (RESERVA + HABITACIÓN + CRM) ---
     form.onsubmit = async (e) => {

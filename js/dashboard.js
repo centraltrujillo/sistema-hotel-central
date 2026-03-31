@@ -183,8 +183,7 @@ onSnapshot(collection(db, "reservas"), (snapshot) => {
     
     snapshot.forEach(doc => {
         const data = doc.data();
-        // Asumiendo que tienes un campo 'fechaCheckIn' en tu colección 'reservas'
-        const fechaReserva = data.fechaCheckIn?.toDate(); 
+        const fechaReserva = data.checkIn?.toDate(); 
         
         if (fechaReserva >= hoyInicio && fechaReserva <= hoyFin) {
             reservasHoy++;

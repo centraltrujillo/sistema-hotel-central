@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/dashboard.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -17,19 +18,21 @@
     <style>
         .table-container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-top: 20px; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th { text-align: left; padding: 15px; border-bottom: 2px solid var(--gris-suave); color: #64748b; text-transform: uppercase; font-size: 11px; }
-        td { padding: 15px; border-bottom: 1px solid #eee; color: var(--marron-zocalo); }
+        th { text-align: left; padding: 15px; border-bottom: 2px solid #f1f5f9; color: #64748b; text-transform: uppercase; font-size: 11px; }
+        td { padding: 15px; border-bottom: 1px solid #eee; color: #1e293b; }
         
-        /* Estilos Filtros */
         .filters-bar { display: flex; align-items: center; gap: 15px; background: white; padding: 15px 25px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .filter-group { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--marron-zocalo); }
-        .filter-group input { padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: var(--font-body); }
+        .filter-group { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #1e293b; }
+        .filter-group input { padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
 
         .btn-excel { background: #166534; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700; transition: 0.3s; font-size: 13px; }
         .btn-excel:hover { background: #0e4b25; transform: translateY(-2px); }
         
-        .monto-celda { font-weight: 700; color: #166534; font-family: var(--font-titles); font-size: 16px; }
+        .monto-celda { font-weight: 700; color: #166534; font-size: 16px; }
         .badge-hab { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: 700; }
+        
+        .btn-ver-extras { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.2s; }
+        .btn-ver-extras:hover { background: #e2e8f0; border-color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -59,20 +62,14 @@
             </header>
 
             <div class="filters-bar">
-                <div class="filter-group">
-                    <i class="fa-solid fa-calendar-day"></i> Desde:
-                    <input type="date" id="fechaInicio">
-                </div>
-                <div class="filter-group">
-                    <i class="fa-solid fa-calendar-day"></i> Hasta:
-                    <input type="date" id="fechaFin">
-                </div>
-                <button id="btnLimpiar" style="background:none; border:none; color:var(--vino-tinto); cursor:pointer; font-size:12px; font-weight:700;">
+                <div class="filter-group"><i class="fa-solid fa-calendar-day"></i> Desde: <input type="date" id="fechaInicio"></div>
+                <div class="filter-group"><i class="fa-solid fa-calendar-day"></i> Hasta: <input type="date" id="fechaFin"></div>
+                <button id="btnLimpiar" style="background:none; border:none; color:#800020; cursor:pointer; font-size:12px; font-weight:700;">
                     <i class="fa-solid fa-eraser"></i> Limpiar Filtros
                 </button>
             </div>
 
-            <div class="table-container animated-fade">
+            <div class="table-container">
                 <table id="tablaPagos">
                     <thead>
                         <tr>
@@ -80,8 +77,8 @@
                             <th>Huésped</th>
                             <th>Hab.</th>
                             <th>Método</th>
-                            <th>Monto Hosp.</th>
-                            <th>Extras</th>
+                            <th>Hospedaje</th>
+                            <th>Consumos/Extras</th>
                             <th>Total</th>
                         </tr>
                     </thead>
@@ -95,82 +92,143 @@
 
     <script type="module">
         import { db } from "./js/firebaseconfig.js";
-        import { collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        import { collection, onSnapshot, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
         const tbody = document.getElementById('tbody-pagos');
         const fInicio = document.getElementById('fechaInicio');
         const fFin = document.getElementById('fechaFin');
-        
         let todosLosPagos = [];
 
-        // 1. Escuchar datos en tiempo real
+        // Función para parsear fechas de cualquier formato
+        function obtenerFecha(fecha) {
+            if (!fecha) return null;
+            if (fecha.toDate) return fecha.toDate();
+            return new Date(fecha);
+        }
+
+        // 1. ESCUCHAR PAGOS
         onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
             todosLosPagos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            aplicarFiltros(); // Renderiza inicialmente
+            aplicarFiltros();
         });
 
         function aplicarFiltros() {
             const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
             const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
 
-            const filtrados = todosLosPagos.filter(pago => {
-                const fechaPago = pago.fechaPago?.toDate();
-                if (!fechaPago) return false;
-                if (inicio && fechaPago < inicio) return false;
-                if (fin && fechaPago > fin) return false;
+            const filtrados = todosLosPagos.filter(p => {
+                const fP = obtenerFecha(p.fechaPago);
+                if (!fP) return false;
+                if (inicio && fP < inicio) return false;
+                if (fin && fP > fin) return false;
                 return true;
             });
-
             renderTable(filtrados);
         }
 
         function renderTable(datos) {
             tbody.innerHTML = '';
             if(datos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay pagos en este rango de fechas.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay registros.</td></tr>';
                 return;
             }
 
-            datos.forEach(data => {
-                const fechaStr = data.fechaPago?.toDate().toLocaleDateString('es-PE') || '---';
+            datos.forEach((p, index) => {
+                const f = obtenerFecha(p.fechaPago);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${fechaStr}</td>
-                    <td><strong>${data.huesped}</strong></td>
-                    <td><span class="badge-hab">${data.habitacion}</span></td>
-                    <td><i class="fa-solid fa-wallet"></i> ${data.metodoPago || 'Efectivo'}</td>
-                    <td>S/ ${data.montoHospedaje}</td>
-                    <td>S/ ${data.montoExtras}</td>
-                    <td class="monto-celda">S/ ${data.montoTotal}</td>
+                    <td>${f.toLocaleDateString('es-PE')}<br><small style="color:#64748b;">${f.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small></td>
+                    <td><strong>${p.huesped}</strong></td>
+                    <td><span class="badge-hab">${p.habitacion}</span></td>
+                    <td><i class="fa-solid fa-wallet"></i> ${p.metodoPago || 'Efectivo'}</td>
+                    <td>S/ ${parseFloat(p.montoHospedaje || 0).toFixed(2)}</td>
+                    <td>
+                        <button class="btn-ver-extras" data-index="${index}">
+                            S/ ${parseFloat(p.montoExtras || 0).toFixed(2)} <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </td>
+                    <td class="monto-celda">S/ ${parseFloat(p.montoTotal || 0).toFixed(2)}</td>
                 `;
+                
+                // Evento para el botón de ver extras
+                tr.querySelector('.btn-ver-extras').addEventListener('click', () => verDetalle(p));
                 tbody.appendChild(tr);
             });
         }
 
-        // Eventos de Filtro
+        // 2. FUNCIÓN PARA EL MODAL DETALLADO
+        async function verDetalle(pago) {
+            Swal.fire({ title: 'Cargando detalle...', didOpen: () => Swal.showLoading() });
+
+            try {
+                // Buscamos consumos en la base de datos
+                const q = query(collection(db, "consumos"), where("idReserva", "==", pago.idReserva));
+                const snap = await getDocs(q);
+                
+                let filasHTML = "";
+                
+                // A. Agregar Early Check-in si existe
+                if(parseFloat(pago.early || 0) > 0) {
+                    filasHTML += `<tr><td>1</td><td><b>EARLY CHECK-IN</b></td><td align="right">S/ ${parseFloat(pago.early).toFixed(2)}</td></tr>`;
+                }
+                
+                // B. Agregar Late Check-out si existe
+                if(parseFloat(pago.late || 0) > 0) {
+                    filasHTML += `<tr><td>1</td><td><b>LATE CHECK-OUT</b></td><td align="right">S/ ${parseFloat(pago.late).toFixed(2)}</td></tr>`;
+                }
+
+                // C. Agregar consumos de productos
+                snap.forEach(doc => {
+                    const c = doc.data();
+                    filasHTML += `<tr><td>${c.cantidad}</td><td>${c.descripcion || c.producto}</td><td align="right">S/ ${parseFloat(c.precioTotal).toFixed(2)}</td></tr>`;
+                });
+
+                if(filasHTML === "") filasHTML = '<tr><td colspan="3" align="center" style="padding:15px; color:#94a3b8;">Sin consumos adicionales.</td></tr>';
+
+                Swal.fire({
+                    title: '<span style="color:#800020">Detalle de Cargos Extras</span>',
+                    html: `
+                        <div style="font-size:14px; text-align:left;">
+                            <p><b>Huésped:</b> ${pago.huesped}</p>
+                            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                                <tr style="border-bottom:2px solid #eee;"><th>Cant.</th><th align="left">Descripción</th><th align="right">Total</th></tr>
+                                ${filasHTML}
+                            </table>
+                            <div style="margin-top:15px; text-align:right; border-top:1px solid #800020; padding-top:10px;">
+                                <b style="color:#800020; font-size:16px;">TOTAL EXTRAS: S/ ${parseFloat(pago.montoExtras).toFixed(2)}</b>
+                            </div>
+                        </div>`,
+                    confirmButtonText: 'Cerrar',
+                    confirmButtonColor: '#800020',
+                    width: '500px'
+                });
+
+            } catch (e) {
+                console.error(e);
+                Swal.fire("Error", "No se pudo cargar el detalle", "error");
+            }
+        }
+
+        // Eventos de botones
         fInicio.addEventListener('change', aplicarFiltros);
         fFin.addEventListener('change', aplicarFiltros);
-        document.getElementById('btnLimpiar').addEventListener('click', () => {
-            fInicio.value = ''; fFin.value = ''; aplicarFiltros();
-        });
-
-        // Exportar a Excel (Solo lo que está filtrado en pantalla)
+        document.getElementById('btnLimpiar').addEventListener('click', () => { fInicio.value = ''; fFin.value = ''; aplicarFiltros(); });
+        
         document.getElementById('btnExportar').addEventListener('click', () => {
-            const ws = XLSX.utils.json_to_sheet(todosLosPagos.map(p => ({
-                Fecha: p.fechaPago?.toDate().toLocaleDateString('es-PE'),
+            const dataExcel = todosLosPagos.map(p => ({
+                Fecha: obtenerFecha(p.fechaPago).toLocaleDateString(),
                 Huesped: p.huesped,
                 Hab: p.habitacion,
-                Metodo: p.metodoPago || 'Efectivo',
+                Metodo: p.metodoPago,
                 Total: p.montoTotal
-            })));
+            }));
+            const ws = XLSX.utils.json_to_sheet(dataExcel);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Pagos");
-            XLSX.writeFile(wb, `Reporte_Pagos_${new Date().toISOString().split('T')[0]}.xlsx`);
+            XLSX.writeFile(wb, "Reporte_Pagos.xlsx");
         });
 
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { 
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
-        });
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     </script>
 </body>
 </html>
