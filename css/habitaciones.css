@@ -1,9 +1,9 @@
-/* --- CONFIGURACIÓN BASE --- */
+/* --- 1. CONFIGURACIÓN BASE CORREGIDA --- */
 body {
     background-color: var(--blanco-colonial);
     font-family: var(--font-main);
     margin: 0;
-    height: 100vh;
+    height: 100vh; /* Fijo para evitar scroll general del navegador */
     overflow: hidden; 
     display: flex;
     flex-direction: column;
@@ -13,11 +13,25 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    width: 100%; /* Asegura que ocupe todo el ancho */
-    max-width: 1400px; /* Opcional: para que no se estire infinito en pantallas ultra-wide */
-    margin: 0 auto; /* Centra todo el bloque */
-    height: 100vh;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    flex: 1; /* Ocupa el resto de la pantalla dinámicamente */
+    min-height: 0; /* Permite scroll en hijos flex */
     box-sizing: border-box;
+    animation: slideUpFade 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+/* --- 2. GRID DE HABITACIONES (Asegurando el scroll) --- */
+.hab-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+    gap: 25px;
+    width: 100%;
+    flex: 1; 
+    overflow-y: auto; /* El scroll SOLO ocurre aquí */
+    padding: 10px 5px 40px 5px;
+    min-height: 0; 
 }
 
 .header-flex {
@@ -121,16 +135,7 @@ body {
 }
 
 /* --- GRID Y TARJETAS --- */
-.hab-grid {
-    display: grid;
-    /* Esto creará columnas automáticas que se ajustan al ancho disponible */
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-    gap: 25px;
-    width: 100%;
-    flex: 1; /* Esto empuja todo hacia arriba y activa el scroll */
-    overflow-y: auto;
-    padding: 10px;
-}
+
 
 .hab-card {
     background: var(--blanco);
