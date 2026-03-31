@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historial de Pagos | Hotel Central</title>
+    <title>Registro de Pagos | Hotel Central</title>
     
     <link rel="icon" type="image/png" href="img/logo.png" />
     <link rel="stylesheet" href="css/colors.css">
@@ -46,7 +46,7 @@
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
                 <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
                 <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
-                <a href="pagos.html" class="nav-link active"><i class="fa-solid fa-file-invoice-dollar"></i> Historial Pagos</a>
+                <a href="pagos.html" class="nav-link active"><i class="fa-solid fa-file-invoice-dollar"></i> Registro Pagos</a>
             </nav>
         </aside>
 
@@ -125,63 +125,87 @@
         }
 
         function renderTable(datos) {
-            tbody.innerHTML = '';
-            if(datos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No se encontraron registros.</td></tr>';
-                return;
-            }
+    tbody.innerHTML = '';
+    if(datos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No se encontraron registros.</td></tr>';
+        return;
+    }
 
-            datos.forEach((p) => {
-                const f = convertirFecha(p.fechaPago);
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">${f ? f.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td>
-                    <td><strong>${p.huesped || 'S/N'}</strong></td>
-                    <td><span class="badge-hab">${p.habitacion || '--'}</span></td>
-                    <td><i class="fa-solid fa-wallet"></i> ${p.metodoPago || 'Efectivo'}</td>
-                    <td>
-                        <button class="btn-detalle" onclick="abrirDetalleHospedaje('${p.id}', '${p.checkIn}', '${p.checkOut}', ${p.precioNoche || 0}, ${p.early || 0}, ${p.late || 0}, ${p.montoHospedaje || 0})">
-                            S/ ${parseFloat(p.montoHospedaje || 0).toFixed(2)} <i class="fa-solid fa-eye"></i>
-                        </button>
-                    </td>
-                    <td>
-                        <button class="btn-detalle" onclick="abrirDetalleExtras('${p.idReserva}', ${p.montoExtras || 0})">
-                            S/ ${parseFloat(p.montoExtras || 0).toFixed(2)} <i class="fa-solid fa-eye"></i>
-                        </button>
-                    </td>
-                    <td class="monto-celda">S/ ${parseFloat(p.montoTotal || 0).toFixed(2)}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
+    datos.forEach((p) => {
+        const f = convertirFecha(p.fechaPago);
+        
+        // MAPEADO SEGÚN TUS DATOS DE FIREBASE:
+        const checkIn = p.checkIn || ""; 
+        const checkOut = p.checkOut || "";
+        const tarifaBase = parseFloat(p.tarifa || 0); // En tu Firebase es 'tarifa'
+        const montoHospedaje = parseFloat(p.montoHospedaje || 0);
+
+        // Si 'early' o 'late' contienen el MONTO en tu colección de PAGOS, úsalos.
+        // Si solo guardas la hora (ej. "18:00"), aquí deberíamos pasar el monto calculado.
+        const montoEarly = parseFloat(p.montoEarly || 0); 
+        const montoLate = parseFloat(p.montoLate || 0);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">${f ? f.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td>
+            <td><strong>${p.huesped || 'S/N'}</strong></td>
+            <td><span class="badge-hab">${p.habitacion || '--'}</span></td>
+            <td><i class="fa-solid fa-wallet"></i> ${p.metodoPago || 'Efectivo'}</td>
+            <td>
+                <button class="btn-detalle" onclick="abrirDetalleHospedaje('${p.id}', '${checkIn}', '${checkOut}', ${tarifaBase}, ${montoEarly}, ${montoLate}, ${montoHospedaje})">
+                    S/ ${montoHospedaje.toFixed(2)} <i class="fa-solid fa-eye"></i>
+                </button>
+            </td>
+            <td>
+                <button class="btn-detalle" onclick="abrirDetalleExtras('${p.idReserva}', ${parseFloat(p.montoExtras || 0)})">
+                    S/ ${parseFloat(p.montoExtras || 0).toFixed(2)} <i class="fa-solid fa-eye"></i>
+                </button>
+            </td>
+            <td class="monto-celda">S/ ${parseFloat(p.montoTotal || 0).toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
 
         // --- MODAL 1: DETALLE DE HOSPEDAJE ---
-        window.abrirDetalleHospedaje = function(id, inF, outF, precio, early, late, total) {
-            const f1 = new Date(inF);
-            const f2 = new Date(outF);
-            const noches = Math.max(1, Math.round((f2 - f1) / (1000 * 60 * 60 * 24)));
-            const subtotalBase = noches * precio;
+        window.abrirDetalleHospedaje = function(id, inF, outF, tarifa, early, late, total) {
+    // Formatear fechas para mostrar: de YYYY-MM-DD a DD/MM/YYYY
+    const fInTexto = inF ? inF.split('-').reverse().join('/') : "---";
+    const fOutTexto = outF ? outF.split('-').reverse().join('/') : "---";
 
-            let html = `
-                <div style="text-align:left; font-size:14px;">
-                    <p><b>Periodo:</b> ${inF.split('-').reverse().join('/')} al ${outF.split('-').reverse().join('/')}</p>
-                    <hr>
-                    <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-                        <tr><td>Base (${noches} noche/s x S/ ${precio.toFixed(2)}):</td><td align="right">S/ ${subtotalBase.toFixed(2)}</td></tr>
-                        ${early > 0 ? `<tr><td>(+) Early Check-in:</td><td align="right">S/ ${early.toFixed(2)}</td></tr>` : ''}
-                        ${late > 0 ? `<tr><td>(+) Late Check-out:</td><td align="right">S/ ${late.toFixed(2)}</td></tr>` : ''}
-                        <tr style="border-top:1px solid #eee;"><td style="padding-top:10px;"><b>TOTAL HOSPEDAJE:</b></td><td align="right" style="padding-top:10px;"><b>S/ ${total.toFixed(2)}</b></td></tr>
-                    </table>
-                </div>`;
+    // Calcular noches
+    const f1 = new Date(inF + "T12:00:00"); // Forzamos mediodía para evitar errores de zona horaria
+    const f2 = new Date(outF + "T12:00:00");
+    let noches = Math.round((f2 - f1) / (1000 * 60 * 60 * 24));
+    if (isNaN(noches) || noches <= 0) noches = 1;
 
-            Swal.fire({
-                title: '<span style="color:#800020; font-family:Playfair Display;">Desglose de Hospedaje</span>',
-                html: html,
-                confirmButtonText: 'Cerrar',
-                confirmButtonColor: '#800020'
-            });
-        };
+    const subtotalBase = noches * tarifa;
 
+    let html = `
+        <div style="text-align:left; font-size:14px; font-family:'Lato', sans-serif;">
+            <p style="margin-bottom:10px;"><b>Periodo:</b> ${fInTexto} al ${fOutTexto}</p>
+            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:8px 0;">Estadía (${noches} noches x S/ ${tarifa.toFixed(2)})</td>
+                    <td align="right">S/ ${subtotalBase.toFixed(2)}</td>
+                </tr>
+                ${early > 0 ? `<tr><td style="padding:8px 0;">(+) Early Check-in</td><td align="right">S/ ${early.toFixed(2)}</td></tr>` : ''}
+                ${late > 0 ? `<tr><td style="padding:8px 0;">(+) Late Check-out</td><td align="right">S/ ${late.toFixed(2)}</td></tr>` : ''}
+                <tr style="border-top:2px solid #800020;">
+                    <td style="padding-top:10px;"><b>TOTAL HOSPEDAJE:</b></td>
+                    <td align="right" style="padding-top:10px; color:#800020; font-size:16px;"><b>S/ ${total.toFixed(2)}</b></td>
+                </tr>
+            </table>
+        </div>`;
+
+    Swal.fire({
+        title: '<span style="color:#800020; font-family:Playfair Display;">Desglose de Hospedaje</span>',
+        html: html,
+        confirmButtonText: 'Cerrar',
+        confirmButtonColor: '#800020',
+        width: '450px'
+    });
+};
         // --- MODAL 2: DETALLE DE EXTRAS (Consumos) ---
         window.abrirDetalleExtras = async function(idReserva, totalExtras) {
             Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });

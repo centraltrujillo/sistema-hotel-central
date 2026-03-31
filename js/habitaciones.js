@@ -220,75 +220,77 @@ async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
 
 // --- 2. LÓGICA DE CÁLCULOS (Recargos, Moneda y Validación) ---
 const calcularMontos = () => {
-    // Referencias a inputs (Asegúrate que coincidan con tus IDs del HTML)
+    // DECLARACIÓN DE VARIABLES (Esto faltaba y causaba el error)
+    const inputCheckIn = document.getElementById('resCheckIn');
+    const inputCheckOut = document.getElementById('resCheckOut');
+    const inputTarifa = document.getElementById('resTarifa');
+    const inputTipoCambio = document.getElementById('resTipoCambio');
+    const selectMoneda = document.getElementById('resMoneda');
+    const inputTotal = document.getElementById('resTotal');
+    const inputDiferencia = document.getElementById('resDiferencia');
+    const inputAdelantoMonto = document.getElementById('resAdelantoMonto');
+
+    // Referencias a valores
     const fIn = new Date(inputCheckIn.value + 'T00:00:00');
     const fOut = new Date(inputCheckOut.value + 'T00:00:00');
     const tarifaBase = parseFloat(inputTarifa.value) || 0;
     const tc = parseFloat(inputTipoCambio.value) || 0;
     const moneda = selectMoneda.value;
 
-    // Capturar recargos por Early Check-in o Late Check-out
     const tieneEarly = document.getElementById("resEarly").value !== "";
     const tieneLate = document.getElementById("resLate").value !== "";
 
-    // 1. Resetear si las fechas son inválidas o incompletas
+    // 1. Resetear si las fechas son inválidas
     if (!inputCheckIn.value || !inputCheckOut.value || fOut <= fIn) {
         inputTotal.value = "0.00";
         inputDiferencia.value = "0.00";
         return;
     }
 
-    // 2. Cálculo de Noches (Uso de round para mayor precisión en fechas)
+    // 2. Cálculo de Noches
     const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
     
-    // 3. Subtotal base en la moneda de origen (Noches * Tarifa)
+    // 3. Subtotal
     let subtotal = noches * tarifaBase;
 
-    // 4. Aplicación de Recargos (50% de la tarifa base por cada concepto)
+    // 4. Recargos (50% de la tarifa base)
     if (tieneEarly) subtotal += (tarifaBase * 0.5);
     if (tieneLate) subtotal += (tarifaBase * 0.5);
 
-    // 5. Conversión Final a Soles (Si la tarifa viene en USD)
+    // 5. Conversión a Soles
     let totalFinal = subtotal;
     if (moneda === "USD") {
-        if (tc > 0) {
-            totalFinal = subtotal * tc; // Convertimos a Soles para caja
-        } else {
-            // Si elige USD pero olvida el T. Cambio, el total es 0 para alertar
-            totalFinal = 0; 
-        }
+        totalFinal = tc > 0 ? subtotal * tc : 0;
     }
 
     inputTotal.value = totalFinal.toFixed(2);
 
-    // 6. Diferencia y Validación de Adelanto
+    // 6. Diferencia y Adelanto
     let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
 
-    // Evitar que el recepcionista ingrese un adelanto mayor al total de la reserva
     if (adelanto > totalFinal && totalFinal > 0) {
         adelanto = totalFinal;
         inputAdelantoMonto.value = totalFinal.toFixed(2);
         
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
+        Toast.fire({
             icon: 'warning',
-            title: 'El adelanto no puede superar al total',
-            showConfirmButton: false,
-            timer: 2000
+            title: 'El adelanto no puede superar al total'
         });
     }
 
     inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
 };
 
-// --- LISTENERS PARA CÁLCULO EN TIEMPO REAL ---
-[
-    inputTarifa, inputCheckIn, inputCheckOut, 
-    inputAdelantoMonto, inputTipoCambio, selectMoneda,
-    document.getElementById("resEarly"),
-    document.getElementById("resLate")
-].forEach(el => {
+// --- LISTENERS ACTUALIZADOS ---
+// Obtenemos las referencias nuevamente para los listeners
+const inputsParaEscuchar = [
+    'resTarifa', 'resCheckIn', 'resCheckOut', 
+    'resAdelantoMonto', 'resTipoCambio', 'resMoneda',
+    'resEarly', 'resLate'
+];
+
+inputsParaEscuchar.forEach(id => {
+    const el = document.getElementById(id);
     if(el) {
         el.addEventListener("input", calcularMontos);
         el.addEventListener("change", calcularMontos);

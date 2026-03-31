@@ -17,6 +17,13 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
+// Función para evitar el error de .toDate()
+function formatearFechaJS(fecha) {
+    if (!fecha) return null;
+    if (typeof fecha.toDate === 'function') return fecha.toDate(); // Si es Timestamp
+    return new Date(fecha); // Si es String o ISO
+}
+
 // --- 2. INICIALIZACIÓN DE GRÁFICOS (ApexCharts) ---
 function inicializarGraficos() {
     // A. Gráfico Semanal (Líneas con degradado)
@@ -79,19 +86,25 @@ function inicializarDashboard() {
         snapshot.forEach(doc => {
             const data = doc.data();
             const monto = Number(data.montoTotal || 0);
-            const fecha = data.fechaPago?.toDate() || new Date();
-            const m = fecha.getMonth();
-            const y = fecha.getFullYear();
+        
+            // USAR EL OBJETO DE FECHA PARA LOS CÁLCULOS
+            const fechaObj = formatearFechaJS(data.fechaPago);
+            if (!fechaObj) return; // Saltar si no hay fecha
+        
+            const m = fechaObj.getMonth();    // CORRECTO: usar fechaObj
+            const y = fechaObj.getFullYear(); // CORRECTO: usar fechaObj
             
             // Lógica Semanal
-            const dia = fecha.getDay();
+            const dia = fechaObj.getDay();    // CORRECTO: usar fechaObj
             const index = (dia === 0) ? 6 : dia - 1;
+            
+            // Solo sumar a la semana actual (opcional, si quieres que el gráfico sea de la semana en curso)
             ingresosSemana[index] += monto;
-
+        
             // Agrupación Mensual
             const keyMes = `${m}-${y}`;
             ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
-
+        
             // Comparativa de Meses para KPI
             if (m === mesActual && y === anioActual) totalMesActual += monto;
             if (m === mesPasado && y === anioPasado) totalMesAnterior += monto;
@@ -162,31 +175,33 @@ function inicializarDashboard() {
                 <div class="activity-badge"></div>
                 <div class="activity-info">
                     <p>${data.huesped} - Hab. ${data.habitacion}</p>
-                    <small>${data.tipoTicket} | <strong>S/ ${data.montoTotal}</strong></small>
-                </div>
+                    
+                    <small>${data.tipoTicket || 'Pago'} | <strong>S/ ${data.montoTotal || 0}</strong></small>                </div>
             `;
             list.appendChild(item);
         });
     });
 }
 
-//  E. LÓGICA DE RESERVAS HOY ---
-const hoyInicio = new Date();
-hoyInicio.setHours(0, 0, 0, 0);
+// --- E. LÓGICA DE RESERVAS HOY ---
+const hoy = new Date();
+hoy.setHours(0, 0, 0, 0);
 
-const hoyFin = new Date();
-hoyFin.setHours(23, 59, 59, 999);
+const manana = new Date(hoy);
+manana.setDate(manana.getDate() + 1);
 
-// Consulta para reservas cuya fecha de creación o estadía sea HOY
 onSnapshot(collection(db, "reservas"), (snapshot) => {
     let reservasHoy = 0;
     
     snapshot.forEach(doc => {
         const data = doc.data();
-        const fechaReserva = data.checkIn?.toDate(); 
-        
-        if (fechaReserva >= hoyInicio && fechaReserva <= hoyFin) {
-            reservasHoy++;
+        const entrada = formatearFechaJS(data.checkIn);
+
+        if (entrada) {
+            // Comprobar si la fecha de entrada es hoy
+            if (entrada >= hoy && entrada < manana) {
+                reservasHoy++;
+            }
         }
     });
 
