@@ -1,16 +1,16 @@
 import { auth, db } from "./firebaseconfig.js";
 import { 
-    collection, onSnapshot, doc, updateDoc, query, where, getDocs, deleteDoc, addDoc, setDoc
+    collection, onSnapshot, doc, updateDoc, query, where, getDocs, deleteDoc, addDoc, setDoc, orderBy
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// --- REFERENCIAS AL DOM ---
+// --- 2. REFERENCIAS AL DOM ---
+// Contenedores principales
 const tablaBody = document.getElementById("tablaReservasBody");
 const form = document.getElementById("formNuevaReserva");
 const modal = document.getElementById("modalReserva");
-const btnAbrirModal = document.getElementById("btnAbrirModal");
-const closeModal = document.querySelector(".close-modal");
+const btnAbrirModal = document.getElementById("btnAbrirModal"); // El botón flotante "+" o "Nueva Reserva"
 
-// Inputs de cálculo
+// Inputs para cálculos (Formulario Principal)
 const inputTarifa = document.getElementById("resTarifa");
 const inputCheckIn = document.getElementById("resCheckIn");
 const inputCheckOut = document.getElementById("resCheckOut");
@@ -20,1258 +20,377 @@ const inputDiferencia = document.getElementById("resDiferencia");
 const selectMoneda = document.getElementById("resMoneda");
 const inputTipoCambio = document.getElementById("resTipoCambio");
 
-let editId = null;
+// Otros inputs necesarios para el guardado
+const inputHuesped = document.getElementById("resHuesped");
+const inputDoc = document.getElementById("resDoc");
+const selectHabitacion = document.getElementById("resHabitacion");
+const selectMedio = document.getElementById("resMedio");
+
+import { auth, db } from "./firebaseconfig.js";
+import { 
+    collection, onSnapshot, doc, updateDoc, query, where, getDocs, 
+    deleteDoc, addDoc, setDoc, orderBy 
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// --- 1. CONFIGURACIÓN Y CONSTANTES GLOBALES ---
+const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const coloresMedio = {
+    'booking': '#1e40af', 
+    'airbnb': '#ff5a5f', 
+    'directas': '#7c3aed',
+    'expedia': '#ffb400', 
+    'personal': '#059669', 
+    'dayuse': '#db2777',
+    'gmail': '#ea4335'
+};
+
+let editId = null; 
 let listaReservasGlobal = [];
+let habitaciones = [];
+let mesActual = new Date().getMonth();
+let anioActual = new Date().getFullYear();
 
-// --- 1. CARGAR HABITACIONES (Dentro de una función) ---
-const cargarHabitacionesSelect = () => {
-    const selectHab = document.getElementById("resHabitacion");
-    
-    // Al estar dentro, este listener solo nace cuando hay un usuario validado
+// Referencias al DOM
+const tablaBody = document.getElementById("tablaReservasBody");
+const form = document.getElementById("formNuevaReserva");
+const modal = document.getElementById("modalReserva");
+
+import { auth, db } from "./firebaseconfig.js";
+import { 
+    collection, onSnapshot, doc, updateDoc, query, where, getDocs, 
+    deleteDoc, addDoc, setDoc, orderBy 
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// --- 1. CONFIGURACIÓN Y CONSTANTES ---
+const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+let listaReservasGlobal = [];
+let habitaciones = [];
+let mesActual = new Date().getMonth();
+let anioActual = new Date().getFullYear();
+
+// --- 2. INICIALIZACIÓN ---
+document.addEventListener('DOMContentLoaded', async () => {
+    // Cargar habitaciones desde Firebase para llenar los SELECTS
     onSnapshot(collection(db, "habitaciones"), (snapshot) => {
-        if (!selectHab) return; 
-        selectHab.innerHTML = '<option value="">Seleccionar...</option>';
-        snapshot.docs.forEach(docSnap => {
-            const hab = docSnap.data();
-            const opt = document.createElement("option");
-            opt.value = hab.numero;
-            opt.textContent = `Hab. ${hab.numero} - ${hab.tipo}`;
-            selectHab.appendChild(opt);
-        });
+        habitaciones = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        cargarHabitacionesSelect(); // Llena el <select id="resHabitacion">
+        generarCalendarioGantt();
     });
-};
 
-// --- 2. LÓGICA DE CÁLCULOS (Recargos, Moneda y Validación) ---
-const calcularMontos = () => {
-    // Referencias a inputs (Asegúrate que coincidan con tus IDs del HTML)
-    const fIn = new Date(inputCheckIn.value + 'T00:00:00');
-    const fOut = new Date(inputCheckOut.value + 'T00:00:00');
-    const tarifaBase = parseFloat(inputTarifa.value) || 0;
-    const tc = parseFloat(inputTipoCambio.value) || 0;
-    const moneda = selectMoneda.value;
-
-    // Capturar recargos por Early Check-in o Late Check-out
-    const tieneEarly = document.getElementById("resEarly").value !== "";
-    const tieneLate = document.getElementById("resLate").value !== "";
-
-    // 1. Resetear si las fechas son inválidas o incompletas
-    if (!inputCheckIn.value || !inputCheckOut.value || fOut <= fIn) {
-        inputTotal.value = "0.00";
-        inputDiferencia.value = "0.00";
-        return;
-    }
-
-    // 2. Cálculo de Noches (Uso de round para mayor precisión en fechas)
-    const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
-    
-    // 3. Subtotal base en la moneda de origen (Noches * Tarifa)
-    let subtotal = noches * tarifaBase;
-
-    // 4. Aplicación de Recargos (50% de la tarifa base por cada concepto)
-    if (tieneEarly) subtotal += (tarifaBase * 0.5);
-    if (tieneLate) subtotal += (tarifaBase * 0.5);
-
-    // 5. Conversión Final a Soles (Si la tarifa viene en USD)
-    let totalFinal = subtotal;
-    if (moneda === "USD") {
-        if (tc > 0) {
-            totalFinal = subtotal * tc; // Convertimos a Soles para caja
-        } else {
-            // Si elige USD pero olvida el T. Cambio, el total es 0 para alertar
-            totalFinal = 0; 
-        }
-    }
-
-    inputTotal.value = totalFinal.toFixed(2);
-
-    // 6. Diferencia y Validación de Adelanto
-    let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
-
-    // Evitar que el recepcionista ingrese un adelanto mayor al total de la reserva
-    if (adelanto > totalFinal && totalFinal > 0) {
-        adelanto = totalFinal;
-        inputAdelantoMonto.value = totalFinal.toFixed(2);
-        
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'warning',
-            title: 'El adelanto no puede superar al total',
-            showConfirmButton: false,
-            timer: 2000
-        });
-    }
-
-    inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
-};
-
-// --- LISTENERS PARA CÁLCULO EN TIEMPO REAL ---
-[
-    inputTarifa, inputCheckIn, inputCheckOut, 
-    inputAdelantoMonto, inputTipoCambio, selectMoneda,
-    document.getElementById("resEarly"),
-    document.getElementById("resLate")
-].forEach(el => {
-    if(el) {
-        el.addEventListener("input", calcularMontos);
-        el.addEventListener("change", calcularMontos);
-    }
+    escucharReservasGlobal();
+    configurarListenersFormPrincipal();
 });
 
-
-
-// Configuración base para Toasts del Hotel
-const Toast = Swal.mixin({
-    toast: true,
-    position: 'top-end',
-    showConfirmButton: false,
-    timer: 2000,
-    timerProgressBar: true
-});
-
-
-
-// --- 3. AUTOCOMPLETADO POR DNI ---
-document.getElementById("resDoc").addEventListener("blur", async (e) => {
-    const dni = e.target.value.trim();
-    if (dni.length < 4) return;
-
-    const q = query(collection(db, "huespedes"), where("documento", "==", dni));
-    const snap = await getDocs(q);
-
-    if (!snap.empty) {
-        const h = snap.docs[0].data();
-        document.getElementById("resHuesped").value = h.nombre || "";
-        document.getElementById("resTelefono").value = h.telefono || "";
-        document.getElementById("resCorreo").value = h.correo || "";
-        document.getElementById("resNacionalidad").value = h.nacionalidad || "";
-        document.getElementById("resNacimiento").value = h.nacimiento || ""; 
-        
-        Toast.fire({
-            icon: 'success',
-            title: 'Huésped ingresado', // sistema lo reconoció
-            background: '#f0fdf4' 
-        });
-    }
-});
-
-// --- 4. GUARDAR / ACTUALIZAR ---
-form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const habSeleccionada = document.getElementById("resHabitacion").value;
-    const nuevoIn = document.getElementById("resCheckIn").value;
-    const nuevoOut = document.getElementById("resCheckOut").value;
-
-    try {
-        // a --- VALIDACIÓN DE DISPONIBILIDAD ---
-        const q = query(collection(db, "reservas"), where("habitacion", "==", habSeleccionada));
-        const querySnapshot = await getDocs(q);
-        let ocupado = false;
-
-        querySnapshot.forEach((docSnap) => {
-            if (editId && docSnap.id === editId) return;
-            const resExistente = docSnap.data();
-            if (nuevoIn < resExistente.checkOut && nuevoOut > resExistente.checkIn) ocupado = true;
-        });
-
-        if (ocupado) {
-            return Swal.fire({ title: 'Habitación Ocupada', text: 'Ya hay una reserva en estas fechas.', icon: 'error', confirmButtonColor: '#800020' });
-        }
-
-        // b --- PREPARACIÓN DE DATOS ---
-        const data = {
-            huesped: document.getElementById("resHuesped").value,
-            doc: document.getElementById("resDoc").value,
-            nacimiento: document.getElementById("resNacimiento").value,
-            nacionalidad: document.getElementById("resNacionalidad").value,
-            telefono: document.getElementById("resTelefono").value,
-            correo: document.getElementById("resCorreo").value,
-            habitacion: habSeleccionada,
-            medio: document.getElementById("resMedio").value,
-            checkIn: nuevoIn,
-            checkOut: nuevoOut,
-            personas: parseInt(document.getElementById("resPersonas").value) || 1,
-            tarifa: Number(inputTarifa.value) || 0,
-            tipoCambio: Number(inputTipoCambio.value) || 0,
-            total: Number(inputTotal.value) || 0,
-            adelantoMonto: Number(inputAdelantoMonto.value) || 0,
-            diferencia: Number(inputDiferencia.value) || 0,
-            early: document.getElementById("resEarly").value,
-            late: document.getElementById("resLate").value,
-            moneda: selectMoneda.value,
-            adelantoDetalle: document.getElementById("resAdelantoDetalle").value,
-            desayuno: document.getElementById("resInfo").value,
-            cochera: document.getElementById("resCochera").value,
-            traslado: document.getElementById("resTraslado").value,
-            observaciones: document.getElementById("resObservaciones").value,
-            recepcion: document.getElementById("resRecepcion").value,
-            recepcionconfi: document.getElementById("resRecepcionconfi").value,
-            estado: editId ? (listaReservasGlobal.find(r => r.id === editId)?.estado || "reservada") : "reservada",
-            fechaRegistro: editId ? (listaReservasGlobal.find(r => r.id === editId)?.fechaRegistro || new Date().toISOString()) : new Date().toISOString()
-        };
-
-        // c --- GUARDAR O ACTUALIZAR ---
-        if (editId) {
-            await updateDoc(doc(db, "reservas", editId), data);
-        } else {
-            await addDoc(collection(db, "reservas"), data);
-        }
-
-        // d --- SYNC HUÉSPED ---
-        const dniLimpio = data.doc ? data.doc.trim() : "";
-if (dniLimpio !== "") {
-    const hRef = doc(db, "huespedes", dniLimpio);
-    await setDoc(hRef, {
-        nombre: data.huesped.toUpperCase(),
-        documento: dniLimpio,
-        telefono: data.telefono,
-        correo: data.correo,
-        nacionalidad: data.nacionalidad,
-        nacimiento: data.nacimiento,
-        ultimaVisita: new Date().toISOString()
-    }, { merge: true });
-
-    Toast.fire({
-        icon: 'success',
-        title: 'Huésped guardado', // información nueva se envió a Firebase correctamente
-        background: '#fff',
-        iconColor: '#800020' 
-    });
+// Llena el select del modal de reserva
+function cargarHabitacionesSelect() {
+    const select = document.getElementById("resHabitacion");
+    if (!select) return;
+    select.innerHTML = '<option value="">Seleccionar...</option>' + 
+        habitaciones.map(h => `<option value="${h.numero}">${h.numero} - ${h.tipo}</option>`).join('');
 }
 
-        Swal.fire({ title: '¡Éxito!', text: 'Reserva guardada correctamente', icon: 'success', confirmButtonColor: '#800020' });
-        window.cerrarModal();
-
-    } catch (error) {
-        console.error("Error:", error);
-        Swal.fire('Error', 'No se pudo guardar la reserva', 'error');
-    }
-});
-
-// --- 5. RENDERIZADO ---
-const escucharReservas = () => { 
-onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), (snapshot) => {
-    tablaBody.innerHTML = "";
-    listaReservasGlobal = [];
-    const conteo = { booking: 0, airbnb: 0, directas: 0, expedia: 0, personal: 0, dayuse: 0, gmail: 0 };
-
-    snapshot.docs.forEach(docSnap => {
-        const res = docSnap.data();
-        const id = docSnap.id;
-        listaReservasGlobal.push({ id, ...res });
-
-        const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
-        if (conteo.hasOwnProperty(m)) conteo[m]++;
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
-            <td><span class="badge-hab">Hab. ${res.habitacion}</span></td>
-            <td>${res.checkIn}</td>
-            <td>${res.checkOut}</td>
-            <td style="text-align:center">${res.personas}</td>
-
-
-            <td><strong>S/ ${Number(res.total).toFixed(2)}</strong></td>
-        
-            <td><span class="badge-medio type-${m}">${res.medio}</span></td>
-            <td>
-                <div class="actions">
-                    <button class="btn-edit" onclick="prepararEdicion('${id}')"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-delete" onclick="eliminarReserva('${id}')"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </td>`;
-        tablaBody.appendChild(tr);
-    });
-
-    Object.keys(conteo).forEach(k => {
-        const el = document.getElementById(`stat-${k}`);
-        if (el) el.textContent = conteo[k];
-    });
-});
-};
-
-
-
-// --- FUNCIÓN DE VERIFICACIÓN EN TIEMPO REAL (MODIFICADA) ---
-const verificarDisponibilidadRealTime = async () => {
-    const hab = document.getElementById("resHabitacion").value;
-    const fIn = document.getElementById("resCheckIn").value;
-    const fOut = document.getElementById("resCheckOut").value;
-    const statusDiv = document.getElementById("statusDisponibilidad");
-    const btnGuardar = form.querySelector('button[type="submit"]');
-
-    // 1. Limpieza total si faltan datos (Esto activa el CSS :empty)
-    if (!hab || !fIn || !fOut) {
-        statusDiv.innerHTML = ""; // Al dejarlo vacío, el div desaparece del diseño
-        btnGuardar.disabled = false;
-        btnGuardar.style.opacity = "1";
-        btnGuardar.style.cursor = "pointer";
-        return;
-    }
-
-    // 2. Estado de carga: agregamos un fondo sutil para que se note la actividad
-    statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando disponibilidad...';
-    statusDiv.style.color = "#d4a017"; // Uso de tu variable --amarillo-ocre
-    statusDiv.style.backgroundColor = "#fffbeb"; // Fondo ámbar muy claro
-    statusDiv.style.border = "1px solid #fef3c7";
-
-    try {
-        const q = query(collection(db, "reservas"), where("habitacion", "==", hab));
-        const snap = await getDocs(q);
-        let ocupado = false;
-
-        snap.forEach(docSnap => {
-            const res = docSnap.data();
-            if (editId && docSnap.id === editId) return;
-
-            if (fIn < res.checkOut && fOut > res.checkIn) {
-                ocupado = true;
-            }
-        });
-
-        // 3. Resultado: Ajustamos colores y bordes para que parezca una notificación
-        if (ocupado) {
-            statusDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Habitación ocupada en estas fechas';
-            statusDiv.style.color = "#f43f5e"; // --danger-red
-            statusDiv.style.backgroundColor = "#fff1f2";
-            statusDiv.style.border = "1px solid #ffe4e6";
-            
-            btnGuardar.disabled = true;
-            btnGuardar.style.opacity = "0.5";
-            btnGuardar.style.cursor = "not-allowed";
-        } else {
-            statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> Habitación disponible';
-            statusDiv.style.color = "#10b981"; // --success-green
-            statusDiv.style.backgroundColor = "#f0fdf4";
-            statusDiv.style.border = "1px solid #dcfce7";
-            
-            btnGuardar.disabled = false;
-            btnGuardar.style.opacity = "1";
-            btnGuardar.style.cursor = "pointer";
-        }
-    } catch (error) {
-        console.error("Error al verificar:", error);
-        statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error de conexión';
-        statusDiv.style.color = "#475569";
-    }
-};
-
-// --- LISTENERS PARA DISPARAR LA VERIFICACIÓN ---
-[
-    document.getElementById("resHabitacion"),
-    document.getElementById("resCheckIn"),
-    document.getElementById("resCheckOut")
-].forEach(el => {
-    el.addEventListener("change", verificarDisponibilidadRealTime);
-});
-
-// --- FUNCIONES DE MODAL ---
-window.prepararEdicion = (id) => {
-    const res = listaReservasGlobal.find(r => r.id === id);
-    if (res) {
-        editId = id;
-        document.getElementById("modalTitle").textContent = "Editar Reserva";
-        
-        // Mapeo masivo de datos al formulario
-        document.getElementById("resHuesped").value = res.huesped || "";
-        document.getElementById("resDoc").value = res.doc || "";
-        document.getElementById("resNacimiento").value = res.nacimiento || "";
-        document.getElementById("resNacionalidad").value = res.nacionalidad || "";
-        document.getElementById("resTelefono").value = res.telefono || "";
-        document.getElementById("resCorreo").value = res.correo || "";
-        document.getElementById("resHabitacion").value = res.habitacion || "";
-        document.getElementById("resMedio").value = res.medio || "";
-        document.getElementById("resCheckIn").value = res.checkIn || "";
-        document.getElementById("resCheckOut").value = res.checkOut || "";
-        document.getElementById("resPersonas").value = res.personas || 1;
-        document.getElementById("resEarly").value = res.early || "";
-        document.getElementById("resLate").value = res.late || "";
-        document.getElementById("resTarifa").value = res.tarifa || "";
-        document.getElementById("resMoneda").value = res.moneda || "PEN";
-        document.getElementById("resTipoCambio").value = res.tipoCambio || "";
-        document.getElementById("resTotal").value = res.total || "0.00";
-        document.getElementById("resAdelantoMonto").value = res.adelantoMonto || "0.00";
-        document.getElementById("resAdelantoDetalle").value = res.adelantoDetalle || "";
-        document.getElementById("resDiferencia").value = res.diferencia || "0.00";
-        document.getElementById("resInfo").value = res.desayuno || "CON DESAYUNO";
-        document.getElementById("resCochera").value = res.cochera || "";
-        document.getElementById("resTraslado").value = res.traslado || "";
-        document.getElementById("resObservaciones").value = res.observaciones || "";
-        document.getElementById("resRecepcion").value = res.recepcion || "";
-        document.getElementById("resRecepcionconfi").value = res.recepcionconfi || "";
-
-        verificarDisponibilidadRealTime();
-        
-        modal.classList.add("active");
-    }
-};
-
-window.eliminarReserva = async (id) => {
-    const result = await Swal.fire({ 
-        title: '¿Eliminar reserva?', 
-        text: "Esta acción no se puede deshacer",
-        icon: 'warning', 
-        showCancelButton: true, 
-        confirmButtonColor: '#800020',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, borrar',
-        cancelButtonText: 'Cancelar'
-    });
-    if (result.isConfirmed) await deleteDoc(doc(db, "reservas", id));
-};
-
-
-btnAbrirModal.onclick = () => { 
-    editId = null; 
-    form.reset();
-    document.getElementById("modalTitle").textContent = "Nueva Reserva"; 
-    
-    inputTotal.value = "0.00";
-    inputDiferencia.value = "0.00";
-    inputTipoCambio.value = ""; 
-    
-    modal.classList.add("active"); 
-};
-
-// --- UNIFICACIÓN DE CERRAR MODAL (Reemplaza tus dos funciones anteriores con esta) ---
-window.cerrarModal = () => { 
-    modal.classList.remove("active"); 
-    form.reset(); 
-    editId = null; 
-    
-    // Limpieza de estados visuales
-    const statusDiv = document.getElementById("statusDisponibilidad");
-    const btnGuardar = form.querySelector('button[type="submit"]');
-    
-    if(statusDiv) statusDiv.textContent = "";
-    if(btnGuardar) {
-        btnGuardar.disabled = false;
-        btnGuardar.style.opacity = "1";
-        btnGuardar.style.cursor = "pointer";
-    }
-};
-
-
-document.addEventListener('DOMContentLoaded', function() {
-    
-    // --- 1. CONFIGURACIÓN GLOBAL Y VARIABLES DE ESTADO ---
-    const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    let mesActual = new Date().getMonth();
-    let anioActual = new Date().getFullYear();
-    let habitaciones = [];
-    let editId = null; // Variable global para edición 
-
-    const coloresMedio = {
-        'booking': '#1e40af', 
-        'airbnb': '#ff5a5f', 
-        'directas': '#7c3aed',
-        'expedia': '#ffb400', 
-        'personal': '#059669', 
-        'dayuse': '#db2777',
-        'gmail': '#ea4335'
-    };
-
-    // --- 2. INICIALIZACIÓN DE CONTROLES (HEADER) ---
-    function inicializarControles() {
-        const monthSelect = document.getElementById('select-month');
-        const yearSelect = document.getElementById('select-year');
-        const btnToday = document.getElementById('btn-go-today');
-        const btnNuevaReserva = document.getElementById('btn-nueva-reserva');
-
-        if(monthSelect) {
-            monthSelect.innerHTML = ""; // Limpiar antes de llenar
-            meses.forEach((m, i) => {
-                monthSelect.innerHTML += `<option value="${i}" ${i === mesActual ? 'selected' : ''}>${m}</option>`;
-            });
-            monthSelect.onchange = (e) => { mesActual = parseInt(e.target.value); generarCalendarioGantt(); };
-        }
-
-        if(yearSelect) {
-            yearSelect.innerHTML = "";
-            for (let i = 2025; i <= 2027; i++) {
-                yearSelect.innerHTML += `<option value="${i}" ${i === anioActual ? 'selected' : ''}>${i}</option>`;
-            }
-            yearSelect.onchange = (e) => { anioActual = parseInt(e.target.value); generarCalendarioGantt(); };
-        }
-        
-        if (btnToday) {
-            btnToday.onclick = () => {
-                const hoy = new Date();
-                mesActual = hoy.getMonth();
-                anioActual = hoy.getFullYear();
-                if(monthSelect) monthSelect.value = mesActual;
-                if(yearSelect) yearSelect.value = anioActual;
-                generarCalendarioGantt();
-            };
-        }
-
-        if (btnNuevaReserva) {
-            btnNuevaReserva.onclick = abrirModalNuevaReserva;
-        }
-    }
-
-    // --- 3. GENERAR ESTRUCTURA GANTT ---
-    function generarCalendarioGantt() {
-        const contenedor = document.getElementById('gantt-container');
-        const displayMes = document.getElementById('current-month-display');
-        if (!contenedor) return;
-
-        contenedor.innerHTML = ""; 
-        if(displayMes) displayMes.innerText = `${meses[mesActual]} ${anioActual}`;
-        
-        const diasEnMes = new Date(anioActual, mesActual + 1, 0).getDate();
-        const fechaHoy = new Date();
-        const esMismoMesYAno = (fechaHoy.getMonth() === mesActual && fechaHoy.getFullYear() === anioActual);
-
-        let html = `<table class="gantt-table">
-            <thead>
-                <tr>
-                    <th class="sticky-col">HABITACIONES</th>`;
-        
-        for (let i = 1; i <= diasEnMes; i++) {
-            const esHoy = (esMismoMesYAno && fechaHoy.getDate() === i);
-            const fechaObj = new Date(anioActual, mesActual, i);
-            const diaSemana = fechaObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
-            html += `<th class="${esHoy ? 'today-header' : ''}">${i}<br><span style="font-size:9px; opacity:0.7">${diaSemana}</span></th>`;
-        }
-        html += `</tr></thead><tbody>`;
-
-        habitaciones.forEach(hab => {
-            html += `<tr><td class="sticky-col hab-name">${hab.numero} - ${hab.tipo}</td>`;
-            for (let i = 1; i <= diasEnMes; i++) {
-                const esHoy = (esMismoMesYAno && fechaHoy.getDate() === i);
-                const fechaId = `${anioActual}-${String(mesActual + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                html += `<td id="cell-${hab.numero}-${fechaId}" class="calendar-cell ${esHoy ? 'today-column' : ''}"></td>`;
-            }
-            html += `</tr>`;
-        });
-
-        html += `</tbody></table>`;
-        contenedor.innerHTML = html;
-        escucharReservas();
-    }
-
- // --- 4. ESCUCHAR RESERVAS (TIEMPO REAL) ---
- function escucharReservas() {
-    onSnapshot(collection(db, "reservas"), (snap) => {
-        // 1. Limpiar celdas antes de repintar
-        document.querySelectorAll('.calendar-cell').forEach(c => {
-            c.innerHTML = '';
-            c.style.backgroundColor = 'transparent';
-            c.style.color = ''; // Resetear color de texto
-            c.style.border = '1px solid #e2e8f0'; // Resetear borde original
-            c.onclick = null;
-            c.classList.remove('has-reservation');
-        });
-
-        snap.docs.forEach(dSnap => {
-            const res = dSnap.data();
-            const resId = dSnap.id;
-            
-            // Forzamos hora 12:00 para evitar errores de zona horaria
-            const inicio = new Date(res.checkIn + "T12:00:00");
-            const fin = new Date(res.checkOut + "T12:00:00");
-            
-            // 2. Necesitamos el bucle para pintar cada día de la estancia
-            let actual = new Date(inicio);
-            
-            while (actual < fin) {
-                const fechaStr = actual.toISOString().split('T')[0];
-                const celda = document.getElementById(`cell-${res.habitacion}-${fechaStr}`);
-                
-                if (celda) {
-                    // --- LÓGICA DE COLOR POR ESTADO ---
-                    let colorFinal;
-                    
-                    // Verificamos si el estado es checkin o checkout (en minúsculas por seguridad)
-                    const estadoRes = res.estado?.toLowerCase().trim();
-
-                    if (estadoRes === "checkin" || estadoRes === "checkout") {
-                        colorFinal = "#FFFFFF"; // Blanco
-                        celda.style.color = "#334155"; // Texto oscuro
-                        celda.style.border = "none"; // Borde gris para que resalte el blanco
-                    } else {
-                        // Color según el canal (Booking, Airbnb, etc.)
-                        colorFinal = coloresMedio[res.medio?.toLowerCase().trim()] || '#800020';
-                        celda.style.color = "white"; 
-                    }
-
-                    celda.style.backgroundColor = colorFinal;
-                    celda.classList.add('has-reservation');
-                    celda.onclick = () => verDetalleReserva(res, resId);
-                    
-                    // --- CAMBIO AQUÍ: El nombre ahora se asigna en cada celda del bucle ---
-                    // Usamos el primer nombre para que no sature el espacio
-                    const primerNombre = res.huesped ? res.huesped.split(' ')[0] : 'Reserva';
-                    celda.innerHTML = `<span class="res-label" style="font-size: 11px; font-weight: bold; pointer-events: none;">${primerNombre}</span>`;
-                }
-                // 3. Avanzar al siguiente día
-                actual.setDate(actual.getDate() + 1);
-            }
-        });
-    });
-}
-
-
-    // --- 5. LÓGICA DE MODAL NUEVA RESERVA (HTML) ---
-    function abrirModalNuevaReserva() {
-    const modal = document.getElementById('modalReserva');
-    const selectHab = document.getElementById('resHabitacion');
-    const statusDiv = document.getElementById("statusDisponibilidad");
-    const btnGuardar = document.getElementById('formNuevaReserva').querySelector('button[type="submit"]');
-    
-    editId = null; // Reset de ID de edición
-    document.getElementById('formNuevaReserva').reset();
-    
-    // Limpiar alertas de disponibilidad previas
-    if(statusDiv) statusDiv.innerHTML = "";
-    if(btnGuardar) {
-        btnGuardar.disabled = false;
-        btnGuardar.style.opacity = "1";
-    }
-        
-        selectHab.innerHTML = '<option value="">Seleccionar...</option>';
-        habitaciones.forEach(hab => {
-            selectHab.innerHTML += `<option value="${hab.numero}">${hab.numero} - ${hab.tipo}</option>`;
-        });
-
-        modal.style.display = 'flex';
-    }
-
-    // Evento para cerrar modal HTML
-    window.cerrarModal = () => {
-        document.getElementById('modalReserva').style.display = 'none';
-    };
-
-    document.getElementById('formNuevaReserva').onsubmit = async (e) => {
-    e.preventDefault();
-
-    // Captura total basada en los IDs de tu calendario.html
-    const nuevaReserva = {
-        // DATOS DEL HUÉSPED
-        huesped: document.getElementById('resHuesped').value,
-        doc: document.getElementById('resDoc').value,
-        telefono: document.getElementById('resTelefono').value,
-        nacionalidad: document.getElementById('resNacionalidad').value,
-        nacimiento: document.getElementById('resNacimiento').value,
-        correo: document.getElementById('resCorreo').value,
-
-        // DETALLES DE LA ESTANCIA
-        habitacion: document.getElementById('resHabitacion').value,
-        checkIn: document.getElementById('resCheckIn').value,
-        checkOut: document.getElementById('resCheckOut').value,
-        medio: document.getElementById('resMedio').value,
-        personas: document.getElementById('resPersonas').value,
-        desayuno: document.getElementById('resInfo').value, // ID 'resInfo' en tu HTML
-        early: document.getElementById('resEarly').value,
-        late: document.getElementById('resLate').value,
-        cochera: document.getElementById('resCochera').value,
-        traslado: document.getElementById('resTraslado').value,
-
-        // TARIFA DE LA RESERVA
-        // Precios y Totales (Importante: usar Number para cálculos)
-    tipoCambio: Number(document.getElementById('resTipoCambio').value) || 0,
-    tarifa: Number(document.getElementById('resTarifa').value) || 0,
-    total: Number(document.getElementById('resTotal').value) || 0,
-    adelanto: Number(document.getElementById('resAdelantoMonto').value) || 0,
-    diferencia: Number(document.getElementById('resDiferencia').value) || 0,
-    estado: "reservada",
-        moneda: document.getElementById('resMoneda').value,
-        adelantoDetalle: document.getElementById('resAdelantoDetalle').value,
-
-        // SECCIÓN FINAL (Observaciones y Personal)
-        observaciones: document.getElementById('resObservaciones').value,
-        recepcion: document.getElementById('resRecepcion').value,
-        recepcionconfi: document.getElementById('resRecepcionconfi').value,
-
-        // METADATOS
-        estado: "reservada",
-        fechaRegistro: editId ? document.getElementById('resFechaRegistroHidden')?.value || new Date().toISOString() : new Date().toISOString()    };
-    try {
-        if (editId) {
-            // --- MODO EDICIÓN ---
-            // Usamos doc() y setDoc() para SOBREESCRIBIR el documento existente
-            const reservaRef = doc(db, "reservas", editId);
-            await setDoc(reservaRef, nuevaReserva, { merge: true });
-            
-            Swal.fire({
-                title: '¡Actualizado!',
-                text: 'La reserva se ha modificado correctamente.',
-                icon: 'success',
-                confirmButtonColor: '#800020'
-            });
-        } else {
-            // --- MODO NUEVA RESERVA ---
-            // Usamos addDoc para crear un documento con ID aleatorio nuevo
-            const docReserva = await addDoc(collection(db, "reservas"), nuevaReserva);
-            
-            // Lógica de guardado de huésped (la que ya tienes)
-            if (nuevaReserva.doc) {
-                const huespedRef = doc(db, "huespedes", nuevaReserva.doc);
-                await setDoc(huespedRef, {
-                    nombre: nuevaReserva.huesped,
-                    documento: nuevaReserva.doc,
-                    ultimaVisita: new Date().toISOString()
-                }, { merge: true });
-            }
-
-            Swal.fire({
-                title: '¡Registro Exitoso!',
-                text: 'Nueva reserva creada.',
-                icon: 'success',
-                confirmButtonColor: '#800020'
-            });
-        }
-
-        // --- LIMPIEZA FINAL ---
-        cerrarModal();
-        editId = null; // IMPORTANTE: Resetear el ID para la próxima reserva
-        document.getElementById('formNuevaReserva').reset(); // Limpiar campos
-
-    } catch (error) {
-        console.error("Error al procesar la reserva:", error);
-        Swal.fire('Error', 'No se pudo guardar la información.', 'error');
-    }
-};
-
-
-// 2. La función mejorada
-const verificarDisponibilidadRealTime = async () => {
-    const form = document.getElementById('formNuevaReserva');
-    const hab = document.getElementById("resHabitacion").value;
-    const fIn = document.getElementById("resCheckIn").value;
-    const fOut = document.getElementById("resCheckOut").value;
-    const statusDiv = document.getElementById("statusDisponibilidad");
-    const btnGuardar = form.querySelector('button[type="submit"]');
-
-    if (!hab || !fIn || !fOut) {
-        statusDiv.innerHTML = "";
-        return;
-    }
-
-    statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
-    statusDiv.style.color = "orange";
-
-    try {
-        const q = query(collection(db, "reservas"), where("habitacion", "==", hab));
-        const snap = await getDocs(q);
-        let ocupado = false;
-
-        snap.forEach(docSnap => {
-            const res = docSnap.data();
-            // Si estamos editando, ignoramos la reserva actual para que no se autobreokee
-            if (editId && docSnap.id === editId) return;
-
-            // Lógica de traslape
-            if (fIn < res.checkOut && fOut > res.checkIn) {
-                ocupado = true;
-            }
-        });
-
-        if (ocupado) {
-            statusDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Habitación ocupada en estas fechas';
-            statusDiv.style.color = "#e11d48";
-            btnGuardar.disabled = true;
-            btnGuardar.style.opacity = "0.5";
-            btnGuardar.style.cursor = "not-allowed";
-        } else {
-            statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> Habitación disponible';
-            statusDiv.style.color = "#10b981";
-            btnGuardar.disabled = false;
-            btnGuardar.style.opacity = "1";
-            btnGuardar.style.cursor = "pointer";
-        }
-    } catch (error) {
-        console.error(error);
-        statusDiv.textContent = "Error al verificar";
-    }
-};
-
-
+// --- 3. LÓGICA DE CÁLCULOS (Montos y Diferencia) ---
 function calcularMontos(prefix = "res") {
-    // 1. Captura de elementos (Prioriza el prefijo o el modal SweetAlert)
-    const inputIn = document.getElementById(`${prefix}CheckIn`) || document.getElementById(`sw-in`);
-    const inputOut = document.getElementById(`${prefix}CheckOut`) || document.getElementById(`sw-out`);
-    const inputTarifa = document.getElementById(`${prefix}Tarifa`) || document.getElementById(`sw-tarifa`); // Corregido ID
-    const inputTC = document.getElementById(`${prefix}TipoCambio`) || document.getElementById(`sw-tc`);
-    const selectMoneda = document.getElementById(`${prefix}Moneda`) || document.getElementById(`sw-moneda`);
-    const inputTotal = document.getElementById(`${prefix}Total`) || document.getElementById(`sw-total`);
-    const inputAdelanto = document.getElementById(`${prefix}AdelantoMonto`) || document.getElementById(`sw-adelanto`);
-    const inputDiferencia = document.getElementById(`${prefix}Diferencia`) || document.getElementById(`sw-diferencia`);
-
-    // Validar que existan fechas
-    if (!inputIn?.value || !inputOut?.value) return;
-
-    const fIn = new Date(inputIn.value + 'T12:00:00');
-    const fOut = new Date(inputOut.value + 'T12:00:00');
-    const tarifaBase = parseFloat(inputTarifa?.value) || 0;
+    // Referencias dinámicas según el prefijo (res o sw)
+    const fIn = document.getElementById(`${prefix}CheckIn`) || document.getElementById(`${prefix}in`);
+    const fOut = document.getElementById(`${prefix}CheckOut`) || document.getElementById(`${prefix}out`);
+    const inputTarifa = document.getElementById(`${prefix}Tarifa`) || document.getElementById(`${prefix}tarifa`);
+    const inputTC = document.getElementById(`${prefix}TipoCambio`) || document.getElementById(`${prefix}tc`);
+    const selectMoneda = document.getElementById(`${prefix}Moneda`) || document.getElementById(`${prefix}moneda`);
+    const inputAdelanto = document.getElementById(`${prefix}AdelantoMonto`) || document.getElementById(`${prefix}adelanto`);
     
-    // CORRECCIÓN: El Tipo de Cambio ahora es lo que ponga la recepcionista (por defecto 0 o vacío)
-    const tc = parseFloat(inputTC?.value) || 0; 
+    const inputTotal = document.getElementById(`${prefix}Total`) || document.getElementById(`${prefix}total`);
+    const inputDiferencia = document.getElementById(`${prefix}Diferencia`) || document.getElementById(`${prefix}diferencia`);
 
-    if (fOut > fIn) {
-        const noches = Math.ceil((fOut - fIn) / (1000 * 60 * 60 * 24));
-        let subtotal = noches * tarifaBase;
+    if (!fIn?.value || !fOut?.value) return;
 
-        // Cargos adicionales (50% de la tarifa base)
-        const early = document.getElementById(`${prefix}Early`) || document.getElementById(`sw-early`);
-        const late = document.getElementById(`${prefix}Late`) || document.getElementById(`sw-late`);
-        
-        if (early?.checked || early?.value === "true") subtotal += (tarifaBase * 0.5);
-        if (late?.checked || late?.value === "true") subtotal += (tarifaBase * 0.5);
+    const fechaInicio = new Date(fIn.value + "T12:00:00");
+    const fechaFin = new Date(fOut.value + "T12:00:00");
 
-        let totalFinal = subtotal;
+    if (fechaFin > fechaInicio) {
+        const noches = Math.ceil((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24));
+        const tarifaBase = parseFloat(inputTarifa?.value) || 0;
+        let totalFinal = noches * tarifaBase;
 
-        // CORRECCIÓN: Solo multiplicar si es Dólares y hay un TC válido
+        // Lógica de Tipo de Cambio si es USD
+        const tc = parseFloat(inputTC?.value) || 0;
         if (selectMoneda?.value === "USD" && tc > 0) {
-            totalFinal = subtotal * tc;
-        } else {
-            // Si es Soles (PEN), el total es simplemente el subtotal acumulado
-            totalFinal = subtotal;
+            totalFinal = totalFinal * tc;
         }
 
-        // Mostrar Total
         if (inputTotal) inputTotal.value = totalFinal.toFixed(2);
         
-        // CORRECCIÓN: Cálculo de diferencia (Total final en la moneda elegida - Adelanto)
         const adelanto = parseFloat(inputAdelanto?.value) || 0;
-        if (inputDiferencia) {
-            const dif = totalFinal - adelanto;
-            inputDiferencia.value = dif.toFixed(2);
-        }
+        if (inputDiferencia) inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
     }
 }
 
-    async function buscarHuesped(documento, campos) {
-        if (documento.length < 4) return;
-        const q = query(collection(db, "huespedes"), where("documento", "==", documento));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-            const h = snap.docs[0].data();
-            Object.keys(campos).forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = h[campos[id]] || "";
-            });
-            Swal.fire({ toast: true, position: 'top-end', title: 'Huésped encontrado', icon: 'success', showConfirmButton: false, timer: 1500 });
+// --- 4. CRUD: CREAR (Formulario Principal) ---
+const formNuevaReserva = document.getElementById("formNuevaReserva");
+if (formNuevaReserva) {
+    formNuevaReserva.onsubmit = async (e) => {
+        e.preventDefault();
+
+        // Mapeo exacto de tu HTML a Firebase
+        const data = {
+            huesped: document.getElementById('resHuesped').value,
+            doc: document.getElementById('resDoc').value,
+            telefono: document.getElementById('resTelefono').value,
+            nacionalidad: document.getElementById('resNacionalidad').value,
+            nacimiento: document.getElementById('resNacimiento').value,
+            correo: document.getElementById('resCorreo').value,
+            
+            habitacion: document.getElementById('resHabitacion').value,
+            checkIn: document.getElementById('resCheckIn').value,
+            checkOut: document.getElementById('resCheckOut').value,
+            medio: document.getElementById('resMedio').value,
+            personas: document.getElementById('resPersonas').value,
+            desayuno: document.getElementById('resInfo').value,
+            early: document.getElementById('resEarly').value,
+            late: document.getElementById('resLate').value,
+            cochera: document.getElementById('resCochera').value,
+            traslado: document.getElementById('resTraslado').value,
+            
+            tarifa: parseFloat(document.getElementById('resTarifa').value) || 0,
+            moneda: document.getElementById('resMoneda').value,
+            tipoCambio: parseFloat(document.getElementById('resTipoCambio').value) || 0,
+            total: parseFloat(document.getElementById('resTotal').value) || 0,
+            adelantoMonto: parseFloat(document.getElementById('resAdelantoMonto').value) || 0,
+            diferencia: parseFloat(document.getElementById('resDiferencia').value) || 0,
+            adelantoDetalle: document.getElementById('resAdelantoDetalle').value,
+            
+            observaciones: document.getElementById('resObservaciones').value,
+            recepcion: document.getElementById('resRecepcion').value,
+            recepcionconfi: document.getElementById('resRecepcionconfi').value,
+            
+            estado: "reservada",
+            fechaRegistro: new Date().toISOString()
+        };
+
+        try {
+            await addDoc(collection(db, "reservas"), data);
+            Swal.fire('¡Éxito!', 'Reserva guardada correctamente', 'success');
+            cerrarModal();
+            formNuevaReserva.reset();
+        } catch (error) {
+            console.error("Error al guardar:", error);
+            Swal.fire('Error', 'No se pudo guardar la reserva', 'error');
         }
+    };
+}
+
+// --- 5. LECTURA (Escuchar cambios en tiempo real) ---
+function escucharReservasGlobal() {
+    const q = query(collection(db, "reservas"), orderBy("fechaRegistro", "desc"));
+    onSnapshot(q, (snap) => {
+        listaReservasGlobal = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderizarReservasEnGantt(); // Tu función que dibuja en el calendario
+    });
+}
+
+// --- 6. LISTENERS PARA CÁLCULOS AUTOMÁTICOS ---
+function configurarListenersFormPrincipal() {
+    const ids = [
+        'resCheckIn', 'resCheckOut', 'resTarifa', 
+        'resAdelantoMonto', 'resMoneda', 'resTipoCambio'
+    ];
+    
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => calcularMontos("res"));
+        }
+    });
+}
+
+window.verDetalleReserva = (res, resId) => {
+    const mSymbol = res.moneda === 'USD' ? '$' : 'S/';
+    const estado = res.estado || "reservada"; // Estado por defecto
+    
+    // Configuración dinámica del botón de acción principal
+    let botonAccion = '';
+    if (estado === "reservada") {
+        botonAccion = `<button id="btnEstado" class="swal2-confirm swal2-styled" style="background:#10b981; flex:1;">🚀 PROCESAR CHECK-IN</button>`;
+    } else if (estado === "checkin") {
+        botonAccion = `<button id="btnEstado" class="swal2-confirm swal2-styled" style="background:#f59e0b; flex:1;">🔑 PROCESAR CHECK-OUT</button>`;
+    } else {
+        botonAccion = `<button id="btnEstado" class="swal2-confirm swal2-styled" style="background:#6b7280; flex:1;" disabled>✅ FINALIZADO</button>`;
     }
 
-    // --- 7. VISTA DETALLE ACTUALIZADA ---
-    function verDetalleReserva(res, resId) {
-        const mSymbol = res.moneda === 'USD' ? '$' : 'S/';
-        
-        // CORRECCIÓN: Aseguramos que el adelanto se lea correctamente de Firebase
-        // Usamos el operador || por si en algunos documentos se guardó como 'adelanto' y en otros como 'adelantoMonto'
-        const adelantoValor = parseFloat(res.adelantoMonto || res.adelanto || 0);
-        const totalValor = parseFloat(res.total || 0);
-        const diferenciaValor = parseFloat(res.diferencia || 0);
-        const tarifaValor = parseFloat(res.tarifa || 0);
-    
-        Swal.fire({
-            title: `<span style="font-family: 'Playfair Display'; color: #800020; font-size: 26px;">Detalle de la Reserva</span>`,
-            width: '1100px',
-            showCloseButton: true,
-            showConfirmButton: false,
-            customClass: {
-                htmlContainer: 'swal-grid-4' 
-            },
-            html: `
-                <div class="swal-section-title">👤 INFORMACIÓN DEL HUÉSPED</div>
-                <div class="span-2"><label>Nombre Completo</label><b>${res.huesped}</b></div>
-                <div class="span-1"><label>DNI/Pasaporte</label>${res.doc || '---'}</div>
-                <div class="span-1"><label>Teléfono</label>${res.telefono || '---'}</div>
-                
-                <div class="span-1"><label>Nacionalidad</label>${res.nacionalidad || '---'}</div>
-                <div class="span-1"><label>F. Nacimiento</label>${res.nacimiento || '---'}</div>
-                <div class="span-2"><label>Correo Electrónico</label>${res.correo || '---'}</div>
-    
-                <div class="swal-section-title">🏨 DETALLES DE ESTANCIA</div>
-                <div class="span-1"><label>Habitación</label><b>${res.habitacion}</b></div>
-                <div class="span-1">
-                    <label>Medio</label>
-                    <span class="badge-${res.medio}" style="padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white;">
-                        ${res.medio?.toUpperCase()}
-                    </span>
-                </div>
-                <div class="span-1"><label>Check-In</label>${res.checkIn}</div>
-                <div class="span-1"><label>Check-Out</label>${res.checkOut}</div>
-    
-                <div class="span-1"><label>Personas</label>${res.personas}</div>
-                <div class="span-1"><label>Desayuno</label>${res.desayuno || '---'}</div>
-                <div class="span-1"><label>Early C.I.</label>${res.early || '--:--'}</div>
-                <div class="span-1"><label>Late C.O.</label>${res.late || '--:--'}</div>
-                
-                <div class="span-1"><label>Cochera</label>${res.cochera || 'NO'}</div>
-                <div class="span-3"><label>Traslado</label>${res.traslado || 'Sin servicio de traslado'}</div>
-    
-                <div class="swal-section-title">💰 TARIFA Y PAGOS</div>
-                <div class="highlight-section span-4">
-                    <div class="span-1">
-                        <label>Tarifa Noche</label>
-                        <span style="font-size: 14px;">${mSymbol}${tarifaValor.toFixed(2)}</span>
-                    </div>
-                    <div class="span-1">
-                        <label>Total Estancia</label>
-                        <b class="input-total" style="padding:2px 8px; border-radius:4px; background:#f1f5f9;">
-                            ${mSymbol}${totalValor.toFixed(2)}
-                        </b>
-                    </div>
-                    <div class="span-1">
-                        <label>Adelanto</label>
-                        <b class="input-adelanto" style="padding:2px 8px; border-radius:4px; color:#10b981; background:#ecfdf5;">
-                            ${mSymbol}${adelantoValor.toFixed(2)}
-                        </b>
-                    </div>
-                    <div class="span-1">
-                        <label>Saldo Pendiente</label>
-                        <b class="input-diferencia" style="padding:2px 8px; border-radius:4px; color:#ef4444; background:#fef2f2;">
-                            ${mSymbol}${diferenciaValor.toFixed(2)}
-                        </b>
-                    </div>
-                    <div class="span-4" style="margin-top: 5px; font-size: 12px; color: #64748b;">
-                        <label>Detalle Adelanto:</label> ${res.adelantoDetalle || 'Ninguno'}
-                    </div>
-                </div>
-    
-                <div class="swal-section-title">📝NOTAS</div>
-                <div class="span-4"><label>Observaciones</label><p style="font-size:13px; background: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 3px solid #800020;">${res.observaciones || 'Sin observaciones adicionales.'}</p></div>
-    
-                <div class="span-4" style="font-size: 11px; color: #64748b; text-align: right; border-top: 1px solid #eee; padding-top: 10px;">
-                    <b>Recibido por:</b> ${res.recepcion || 'Sistema'} | <b>Confirmado por:</b> ${res.recepcionconfi || 'Pendiente'}<br>
-                    <b>Fecha de Registro:</b> ${res.fechaRegistro ? new Date(res.fechaRegistro).toLocaleString() : '---'}
-                </div>
-    
-                <div class="span-4" style="margin-top: 20px; display: flex; gap: 10px;">
-                    <button id="btnCheckIn" class="btn-save" style="background:#10b981; flex:1; border:none; padding:10px; cursor:pointer; color:white; border-radius:5px; font-weight:bold;">🚀 CHECK-IN</button>
-                    <button id="btnOpenEdit" class="btn-save" style="background:#3b82f6; flex:1; border:none; padding:10px; cursor:pointer; color:white; border-radius:5px; font-weight:bold;">📝 EDITAR</button>
-                    <button id="btnEliminarRes" class="btn-save" style="background:#ef4444; flex:1; border:none; padding:10px; cursor:pointer; color:white; border-radius:5px; font-weight:bold;">🗑️ ELIMINAR</button>
-                </div>
-            `,
+    Swal.fire({
+        title: `<span style="font-family: 'Playfair Display'; color: #800020; font-size: 26px;">Detalle de la Reserva</span>`,
+        width: '1100px',
+        showCloseButton: true,
         showConfirmButton: false,
+        customClass: { htmlContainer: 'swal-grid-4' },
+        html: `
+            <div class="swal-section-title">👤 DATOS DEL HUÉSPED</div>
+            <div class="span-2"><label>Nombres</label><b>${res.huesped}</b></div>
+            <div class="span-1"><label>DNI/Pasaporte</label>${res.doc || '---'}</div>
+            <div class="span-1"><label>Teléfono</label>${res.telefono || '---'}</div>
+            <div class="span-1"><label>Nacionalidad</label>${res.nacionalidad || '---'}</div>
+            <div class="span-1"><label>F. Nacimiento</label>${res.nacimiento || '---'}</div>
+            <div class="span-2"><label>Correo</label>${res.correo || '---'}</div>
+
+            <div class="swal-section-title">🏨 DETALLES DE LA ESTANCIA</div>
+            <div class="span-1"><label>Habitación</label><b>${res.habitacion}</b></div>
+            <div class="span-1"><label>Check-In</label>${res.checkIn}</div>
+            <div class="span-1"><label>Check-Out</label>${res.checkOut}</div>
+            <div class="span-1"><label>Estado Actual</label><b style="text-transform: uppercase; color: #800020;">${estado}</b></div>
+            
+            <div class="span-1"><label>Medio</label><span class="badge-${res.medio}">${res.medio?.toUpperCase()}</span></div>
+            <div class="span-1"><label>N° Pers.</label>${res.personas || '1'}</div>
+            <div class="span-1"><label>Desayuno</label>${res.desayuno || '---'}</div>
+            <div class="span-1"><label>Cochera</label>${res.cochera || 'NO'}</div>
+
+            <div class="swal-section-title">💰 TARIFA Y PAGOS</div>
+            <div class="highlight-section span-4">
+                <div class="span-1"><label>Total Estancia</label><b>${mSymbol}${res.total}</b></div>
+                <div class="span-1"><label>Adelanto</label><b style="color:#10b981;">${mSymbol}${res.adelantoMonto}</b></div>
+                <div class="span-1"><label>Pendiente</label><b style="color:#ef4444;">${mSymbol}${res.diferencia}</b></div>
+                <div class="span-1"><label>Moneda</label>${res.moneda}</div>
+            </div>
+
+            <div class="span-4" style="margin-top: 25px; display: flex; gap: 10px;">
+                ${botonAccion}
+                <button id="btnOpenEdit" class="swal2-confirm swal2-styled" style="background:#3b82f6; flex:1;">📝 EDITAR</button>
+                <button id="btnEliminarRes" class="swal2-confirm swal2-styled" style="background:#ef4444; flex:1;">🗑️ ELIMINAR</button>
+            </div>
+        `,
         didOpen: () => {
+            const btnEstado = document.getElementById('btnEstado');
+            
+            if (btnEstado && !btnEstado.disabled) {
+                btnEstado.onclick = async () => {
+                    let nuevoEstado = "";
+                    let mensajeExito = "";
+
+                    if (estado === "reservada") {
+                        nuevoEstado = "checkin";
+                        mensajeExito = "¡Check-In realizado! El huésped ya está en la habitación.";
+                    } else if (estado === "checkin") {
+                        nuevoEstado = "checkout";
+                        mensajeExito = "¡Check-Out realizado! La estancia ha finalizado.";
+                    }
+
+                    try {
+                        await updateDoc(doc(db, "reservas", resId), { estado: nuevoEstado });
+                        Swal.fire('¡Éxito!', mensajeExito, 'success');
+                    } catch (error) {
+                        Swal.fire('Error', 'No se pudo actualizar el estado', 'error');
+                    }
+                };
+            }
+
             document.getElementById('btnOpenEdit').onclick = () => abrirEdicionIntegral(res, resId);
+            
             document.getElementById('btnEliminarRes').onclick = async () => {
                 const result = await Swal.fire({ 
-                    title: '¿Eliminar reserva?', 
+                    title: '¿Eliminar?', 
                     text: "Esta acción no se puede deshacer",
                     icon: 'warning',
                     showCancelButton: true, 
                     confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#64748b',
-                    confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar'
+                    confirmButtonText: 'Sí, eliminar'
                 });
                 if(result.isConfirmed) {
                     await deleteDoc(doc(db, "reservas", resId));
                     Swal.fire('Eliminado', 'La reserva ha sido borrada.', 'success');
                 }
             };
-            document.getElementById('btnCheckIn').onclick = async () => {
-                await updateDoc(doc(db, "reservas", resId), { estado: "checkin" });
-                Swal.fire('Check-in exitoso', 'El huésped ahora está en estado Check-in', 'success');
-            };
         }
     });
-}
+};
 
-
-
-function abrirEdicionIntegral(res, resId) {
-    editId = resId; 
-
+window.abrirEdicionIntegral = async (res, resId) => {
     Swal.fire({
-        title: '<span style="font-family: \'Playfair Display\'; color: #800020; font-size: 26px;">Editar Reserva Integral</span>',
+        title: '<span style="color: #800020;">Editar Reserva Completa</span>',
         width: '1150px',
+        showCancelButton: true,
         confirmButtonText: 'Guardar Cambios',
         confirmButtonColor: '#800020',
-        showCancelButton: true,
-        cancelButtonText: 'Cancelar',
-        customClass: {
-            htmlContainer: 'swal-grid-4' 
-        },
         html: `
-            <div class="swal-section-title">👤 DATOS DEL HUÉSPED</div>
-            <div class="span-2">
-                <label>Nombres</label>
-                <input id="sw-huesped" class="swal2-input" value="${res.huesped}">
-            </div>
-            <div class="span-1">
-                <label>DNI/Pasaporte</label>
-                <input id="sw-doc" class="swal2-input" value="${res.doc || ''}">
-            </div>
-            <div class="span-1">
-                <label>Teléfono</label>
-                <input id="sw-telefono" class="swal2-input" value="${res.telefono || ''}">
-            </div>
-            <div class="span-1">
-                <label>Nacionalidad</label>
-                <input id="sw-nacionalidad" class="swal2-input" value="${res.nacionalidad || ''}">
-            </div>
-            <div class="span-1">
-                <label>Nacimiento</label>
-                <input type="date" id="sw-nacimiento" class="swal2-input" value="${res.nacimiento || ''}">
-            </div>
-            <div class="span-2">
-                <label>Correo</label>
-                <input type="email" id="sw-correo" class="swal2-input" value="${res.correo || ''}">
-            </div>
-
-            <div class="swal-section-title">🏨 DETALLES DE LA ESTANCIA</div>
-            <div class="span-1">
-                <label>Habitación</label>
-                <select id="sw-habitacion" class="swal2-select">
-                    ${habitaciones.map(h => `<option value="${h.numero}" ${h.numero == res.habitacion ? 'selected' : ''}>${h.numero} - ${h.tipo}</option>`).join('')}
-                </select>
-            </div>
-            <div class="span-1">
-                <label>Check In</label>
-                <input type="date" id="sw-in" class="swal2-input" value="${res.checkIn}">
-            </div>
-            <div class="span-1">
-                <label>Check Out</label>
-                <input type="date" id="sw-out" class="swal2-input" value="${res.checkOut}">
-            </div>
-            <div class="span-1">
-                <label>Medio</label>
-                <select id="sw-medio" class="swal2-select">
-                    <option value="booking" ${res.medio == 'booking' ? 'selected' : ''}>Booking</option>
-                    <option value="airbnb" ${res.medio == 'airbnb' ? 'selected' : ''}>Airbnb</option>
-                    <option value="directas" ${res.medio == 'directas' ? 'selected' : ''}>Directas</option>
-                    <option value="expedia" ${res.medio == 'expedia' ? 'selected' : ''}>Expedia</option>
-                    <option value="personal" ${res.medio == 'personal' ? 'selected' : ''}>Personal</option>
-                    <option value="dayuse" ${res.medio == 'dayuse' ? 'selected' : ''}>Day Use</option>
-                    <option value="gmail" ${res.medio == 'gmail' ? 'selected' : ''}>Gmail</option>
-                </select>
-            </div>
-
-            <div class="span-3" id="statusDisponibilidad" style="font-size:12px; font-weight:bold; padding-top:10px;"></div>
-            <div class="span-1">
-                <label>Estado</label>
-                <select id="sw-estado" class="swal2-select">
-                    <option value="reservada" ${res.estado == 'reservada' ? 'selected' : ''}>RESERVADA</option>
-                    <option value="checkin" ${res.estado == 'checkin' ? 'selected' : ''}>CHECK-IN</option>
-                    <option value="checkout" ${res.estado == 'checkout' ? 'selected' : ''}>CHECK-OUT</option>
-                </select>
-            </div>
-
-            <div class="span-1">
-                <label>N° Pers.</label>
-                <input type="number" id="sw-personas" class="swal2-input" value="${res.personas}">
-            </div>
-            <div class="span-1">
-                <label>Desayuno</label>
-                <select id="sw-info" class="swal2-select">
-                    <option value="CON DESAYUNO" ${res.desayuno == 'CON DESAYUNO' ? 'selected' : ''}>CON DESAYUNO</option>
-                    <option value="SIN DESAYUNO" ${res.desayuno == 'SIN DESAYUNO' ? 'selected' : ''}>SIN DESAYUNO</option>
-                </select>
-            </div>
-            <div class="span-1">
-                <label>Early C.I.</label>
-                <input type="time" id="sw-early" class="swal2-input" value="${res.early || ''}">
-            </div>
-            <div class="span-1">
-                <label>Late C.O.</label>
-                <input type="time" id="sw-late" class="swal2-input" value="${res.late || ''}">
-            </div>
-            <div class="span-1">
-                <label>Cochera</label>
-                <input type="text" id="sw-cochera" class="swal2-input" placeholder="SI/NO" value="${res.cochera || ''}">
-            </div>
-            <div class="span-3">
-                <label>Traslado</label>
-                <input type="text" id="sw-traslado" class="swal2-input" value="${res.traslado || ''}">
-            </div>
-
-            <div class="swal-section-title">💰 TARIFA DE LA RESERVA</div>
-            <div class="highlight-section span-4">
+            <div class="swal-grid-4">
+                <div class="span-2"><label>Nombres</label><input id="sw-huesped" class="swal2-input" value="${res.huesped}"></div>
+                <div class="span-1"><label>DNI</label><input id="sw-doc" class="swal2-input" value="${res.doc}"></div>
+                <div class="span-1"><label>Teléfono</label><input id="sw-tel" class="swal2-input" value="${res.telefono || ''}"></div>
+                
                 <div class="span-1">
-                    <label>Tarifa Noche</label>
-                    <input type="number" id="sw-tarifa" class="swal2-input" value="${res.tarifa}">
-                </div>
-                <div class="span-1">
-                    <label>Moneda</label>
-                    <select id="sw-moneda" class="swal2-select">
-                        <option value="PEN" ${res.moneda == 'PEN' ? 'selected' : ''}>Soles (S/)</option>
-                        <option value="USD" ${res.moneda == 'USD' ? 'selected' : ''}>Dólares ($)</option>
+                    <label>Habitación</label>
+                    <select id="sw-habitacion" class="swal2-select">
+                        ${habitaciones.map(h => `<option value="${h.numero}" ${h.numero == res.habitacion ? 'selected' : ''}>${h.numero}</option>`).join('')}
                     </select>
                 </div>
+                <div class="span-1"><label>Check In</label><input type="date" id="sw-in" class="swal2-input" value="${res.checkIn}"></div>
+                <div class="span-1"><label>Check Out</label><input type="date" id="sw-out" class="swal2-input" value="${res.checkOut}"></div>
                 <div class="span-1">
-                    <label>T. Cambio</label>
-                    <input type="number" id="sw-tc" class="swal2-input" step="0.01" value="${res.tipoCambio || ''}" placeholder="Manual">
+                    <label>Medio</label>
+                    <select id="sw-medio" class="swal2-select">
+                        <option value="booking" ${res.medio=='booking'?'selected':''}>Booking</option>
+                        <option value="airbnb" ${res.medio=='airbnb'?'selected':''}>Airbnb</option>
+                        <option value="directas" ${res.medio=='directas'?'selected':''}>Directas</option>
+                        <option value="personal" ${res.medio=='personal'?'selected':''}>Personal</option>
+                    </select>
                 </div>
-                <div class="span-1">
-                    <label>Total Estancia</label>
-                    <input id="sw-total" class="swal2-input input-total" value="${res.total}" readonly style="background:#f1f5f9; font-weight:bold;">
-                </div>
-                <div class="span-1">
-                    <label>Adelanto</label>
-                    <input type="number" id="sw-adelanto" class="swal2-input input-adelanto" value="${res.adelanto || res.adelantoMonto || 0}" style="color: #10b981; font-weight:bold;">
-                </div>
-                <div class="span-1">
-                    <label>Pendiente</label>
-                    <input id="sw-diferencia" class="swal2-input input-diferencia" value="${res.diferencia}" readonly style="background:#fef2f2; color:#ef4444; font-weight:bold;">
-                </div>
-                <div class="span-2">
-                    <label>Detalle Adelanto</label>
-                    <input type="text" id="sw-adelantoDetalle" class="swal2-input" value="${res.adelantoDetalle || ''}" placeholder="Ej: Efectivo, Yape, etc.">
-                </div>
-            </div>
 
-            <div class="swal-section-title">📝 NOTAS Y RECEPCIÓN</div>
-            <div class="span-2">
-                <label>Observaciones</label>
-                <input id="sw-observaciones" class="swal2-input" value="${res.observaciones || ''}">
-            </div>
-            <div class="span-1">
-                <label>Recibido por</label>
-                <input id="sw-recepcion" class="swal2-input" value="${res.recepcion || ''}">
-            </div>
-            <div class="span-1">
-                <label>Confirmado por</label>
-                <input id="sw-recepcionconfi" class="swal2-input" value="${res.recepcionconfi || ''}">
-            </div>
+                <div class="span-1"><label>N° Personas</label><input type="number" id="sw-pers" class="swal2-input" value="${res.personas || 1}"></div>
+                <div class="span-1"><label>Desayuno</label>
+                    <select id="sw-des" class="swal2-select">
+                        <option ${res.desayuno=='CON DESAYUNO'?'selected':''}>CON DESAYUNO</option>
+                        <option ${res.desayuno=='SIN DESAYUNO'?'selected':''}>SIN DESAYUNO</option>
+                    </select>
+                </div>
+                <div class="span-1"><label>Early C.I.</label><input type="time" id="sw-early" class="swal2-input" value="${res.early || ''}"></div>
+                <div class="span-1"><label>Late C.O.</label><input type="time" id="sw-late" class="swal2-input" value="${res.late || ''}"></div>
 
-            <input type="hidden" id="sw-fechaRegistro" value="${res.fechaRegistro}">
+                <div class="span-1"><label>Tarifa</label><input type="number" id="sw-tarifa" class="swal2-input" value="${res.tarifa}"></div>
+                <div class="span-1"><label>Adelanto</label><input type="number" id="sw-adelanto" class="swal2-input" value="${res.adelantoMonto}"></div>
+                <div class="span-1"><label>Total</label><input id="sw-total" class="swal2-input input-total" value="${res.total}" readonly></div>
+                <div class="span-1"><label>Pendiente</label><input id="sw-diferencia" class="swal2-input input-diferencia" value="${res.diferencia}" readonly></div>
+
+                <div class="span-2"><label>Observaciones</label><input id="sw-obs" class="swal2-input" value="${res.observaciones || ''}"></div>
+                <div class="span-1"><label>Recibido</label><input id="sw-rec" class="swal2-input" value="${res.recepcion}"></div>
+                <div class="span-1"><label>Confirmado</label><input id="sw-conf" class="swal2-input" value="${res.recepcionconfi}"></div>
+            </div>
         `,
         didOpen: () => {
-            // 1. Verificación inicial al abrir
-            verificarDisponibilidad("sw-");
-            
-            // 2. Listeners para recálculo automático (Ya incluye el adelanto aquí)
-            const idsCalculo = ['sw-in', 'sw-out', 'sw-tarifa', 'sw-adelanto', 'sw-moneda', 'sw-tc'];
-            idsCalculo.forEach(id => {
-                const el = document.getElementById(id);
-                // Usamos 'input' para que calcule mientras escriben, 'change' para los select
-                if(el) {
-                    const evento = el.tagName === 'SELECT' ? 'change' : 'input';
-                    el.addEventListener(evento, () => calcularMontos("sw-"));
-                }
+            ['sw-in', 'sw-out', 'sw-tarifa', 'sw-adelanto'].forEach(id => {
+                document.getElementById(id).addEventListener('input', () => calcularMontos("sw-"));
             });
-
-            // 3. Listener específico para disponibilidad si cambian habitación
-            document.getElementById('sw-habitacion').addEventListener('change', () => verificarDisponibilidad("sw-"));
-            
-            // 4. Búsqueda automática de huésped por DNI
-            const docInput = document.getElementById('sw-doc');
-            if(docInput) {
-                docInput.onblur = (e) => buscarHuesped(e.target.value, {
-                    'sw-huesped': 'nombre', 
-                    'sw-telefono': 'telefono', 
-                    'sw-nacionalidad': 'nacionalidad', 
-                    'sw-correo': 'correo'
-                });
-            }
         },
-
         preConfirm: () => {
-            const statusDiv = document.getElementById('statusDisponibilidad');
-            // Ajustamos la búsqueda de texto según lo que realmente escribe tu función de verificación
-            if (statusDiv.innerText.toUpperCase().includes("OCUPADA") || statusDiv.innerText.toUpperCase().includes("NO DISPONIBLE")) {
-                Swal.showValidationMessage("La habitación ya está ocupada en esas fechas");
-                return false;
-            }
-
-            // CORRECCIÓN: Aseguramos que los valores numéricos se guarden como tales
             return {
                 huesped: document.getElementById('sw-huesped').value,
                 doc: document.getElementById('sw-doc').value,
-                telefono: document.getElementById('sw-telefono').value,
-                nacionalidad: document.getElementById('sw-nacionalidad').value,
-                nacimiento: document.getElementById('sw-nacimiento').value,
-                correo: document.getElementById('sw-correo').value,
+                telefono: document.getElementById('sw-tel').value,
                 habitacion: document.getElementById('sw-habitacion').value,
                 checkIn: document.getElementById('sw-in').value,
                 checkOut: document.getElementById('sw-out').value,
                 medio: document.getElementById('sw-medio').value,
-                estado: document.getElementById('sw-estado').value,
-                personas: document.getElementById('sw-personas').value,
-                desayuno: document.getElementById('sw-info').value,
+                personas: document.getElementById('sw-pers').value,
+                desayuno: document.getElementById('sw-des').value,
                 early: document.getElementById('sw-early').value,
                 late: document.getElementById('sw-late').value,
-                cochera: document.getElementById('sw-cochera').value,
-                traslado: document.getElementById('sw-traslado').value,
-                tarifa: parseFloat(document.getElementById('sw-tarifa').value) || 0,
-                moneda: document.getElementById('sw-moneda').value,
-                tipoCambio: parseFloat(document.getElementById('sw-tc').value) || 0,
-                total: parseFloat(document.getElementById('sw-total').value) || 0,
-                adelanto: parseFloat(document.getElementById('sw-adelanto').value) || 0,
-                diferencia: parseFloat(document.getElementById('sw-diferencia').value) || 0,
-                adelantoDetalle: document.getElementById('sw-adelantoDetalle').value,
-                observaciones: document.getElementById('sw-observaciones').value,
-                recepcion: document.getElementById('sw-recepcion').value,
-                recepcionconfi: document.getElementById('sw-recepcionconfi').value,
-                fechaRegistro: document.getElementById('sw-fechaRegistro').value,
+                tarifa: parseFloat(document.getElementById('sw-tarifa').value),
+                adelantoMonto: parseFloat(document.getElementById('sw-adelanto').value),
+                total: parseFloat(document.getElementById('sw-total').value),
+                diferencia: parseFloat(document.getElementById('sw-diferencia').value),
+                observaciones: document.getElementById('sw-obs').value,
+                recepcion: document.getElementById('sw-rec').value,
+                recepcionconfi: document.getElementById('sw-conf').value,
                 ultimaEdicion: new Date().toISOString()
             };
         }
     }).then(async (result) => {
-        editId = null; 
-        
         if (result.isConfirmed) {
-            try {
-                await updateDoc(doc(db, "reservas", resId), result.value);
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Actualizado!',
-                    text: 'La reserva se actualizó correctamente.',
-                    confirmButtonColor: '#800020'
-                });
-            } catch (error) {
-                console.error("Error al actualizar:", error);
-                Swal.fire('Error', 'No se pudo actualizar la reserva', 'error');
-            }
+            await updateDoc(doc(db, "reservas", resId), result.value);
+            Swal.fire('¡Actualizado!', '', 'success');
         }
     });
-}
+};
 
-    // --- 8. INICIO ORQUESTADO ---
-    async function iniciarModulo() {
-        inicializarControles();
-        
-        // Cargar habitaciones en tiempo real
-onSnapshot(collection(db, "habitaciones"), (querySnapshot) => {
-    habitaciones = []; 
-    querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        // CAMBIO AQUÍ: Aseguramos que el número sea siempre un String
-        habitaciones.push({ 
-            numero: String(data.numero), 
-            tipo: data.tipo || "S/T" 
-        });
-    });
-    // El sort funciona igual, comparando los valores
-    habitaciones.sort((a, b) => a.numero - b.numero);
-    generarCalendarioGantt();
-});
-
-// UNIFICACIÓN DE LISTENERS
-    const idsMonitoreo = ["resHabitacion", "resCheckIn", "resCheckOut", "resTarifa", "resAdelantoMonto", "resEarly", "resLate", "resMoneda"];
-    
-    idsMonitoreo.forEach(id => {
-        const el = document.getElementById(id);
-        if(el) {
-            el.addEventListener("change", () => {
-                calcularMontos("res");
-                // Solo verificar disponibilidad si cambió habitación o fechas
-                if(["resHabitacion", "resCheckIn", "resCheckOut"].includes(id)) {
-                    verificarDisponibilidadRealTime();
-                }
-            });
-            // Para que la tarifa y adelanto calculen mientras escribes
-            if(["resTarifa", "resAdelantoMonto"].includes(id)) {
-                el.addEventListener("input", () => calcularMontos("res"));
-            }
-        }
-    });
-
-        const docInput = document.getElementById("resDoc");
-        if(docInput) {
-            docInput.onblur = (e) => buscarHuesped(e.target.value, {
-                'resHuesped': 'nombre', 'resTelefono': 'telefono', 'resNacionalidad': 'nacionalidad'
-            });
-        }
-    }
-
-    iniciarModulo();
-});
+// --- 7. MODAL HELPERS ---
+window.cerrarModal = () => {
+    const modal = document.getElementById("modalReserva");
+    if (modal) modal.style.display = 'none';
+};
