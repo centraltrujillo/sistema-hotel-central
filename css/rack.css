@@ -609,62 +609,6 @@ body {
 }
 .text-obs { font-style: italic; color: #5d4037; }
 
-/* SECCIÓN CONSUMOS */
-.consumos-section {
-    background: #ffffff;
-    border-radius: 15px;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.section-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    font-weight: 800;
-    font-size: 13px;
-    color: #800020;
-}
-
-.lista-consumos {
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid #eee;
-    border-radius: 10px;
-    margin-bottom: 15px;
-}
-
-.consumo-item-lista {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 20px;
-    border-bottom: 1px solid #f9f9f9;
-    align-items: center;
-}
-
-.c-qty { font-weight: 900; color: #800020; margin-right: 10px; }
-.c-name { flex-grow: 1; font-weight: 600; }
-.c-date { font-size: 11px; color: #999; margin-left: 10px; }
-.c-price { font-weight: 700; color: #3d2b1f; }
-
-/* Barra de Total Consumos */
-.total-bar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 20px;
-    padding-top: 10px;
-}
-
-.total-label span { display: block; font-weight: 800; font-size: 14px; }
-.total-monto {
-    font-size: 25px; /* Según regla KPI */
-    font-weight: 800;
-    color: #800020;
-    font-family: 'Playfair Display', serif;
-}
-
 /* Footer y Botones */
 .gestion-footer {
     margin-top: 25px;
