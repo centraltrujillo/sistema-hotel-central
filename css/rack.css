@@ -154,6 +154,10 @@ body {
     font-family: var(--font-main);
     --fc-border-color: #e2e8f0;
     --fc-today-bg-color: rgba(245, 158, 11, 0.05);
+    height: 55px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 
@@ -221,6 +225,13 @@ body {
     color: var(--marron-zocalo);
 }
 
+.fc .fc-timeline-slot-label-frame {
+    height: 55px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
 /* Color verde para las filas de Check Out Late / Day Use */
 .fc-timeline-lane[data-resource-id^="extra"] {
     background-color: #d9f99d !important; /* Un verde suave como el Excel */
@@ -260,6 +271,7 @@ body {
     border-radius: 4px;
     font-size: 14px;
 }
+
 
 /* --- 6. MODAL DE RESERVAS --- */
 .modal-reserva-overlay {

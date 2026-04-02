@@ -185,7 +185,7 @@ const extrasYTotal = [
     { id: 'extra3', title: 'CHECK OL 3', tipo: 'EXTRAS' },
     { id: 'extra4', title: 'CHECK OL 4', tipo: 'EXTRAS' },
     { id: 'extra5', title: 'CHECK OL 5', tipo: 'EXTRAS' },
-    { id: 'total-row', title: 'TOTAL OCUP', tipo: '' }
+    { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
 ];
 
 calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
