@@ -1,0 +1,138 @@
+/* --- 1. CONFIGURACIÓN BASE Y CONTENEDOR --- */
+body {
+    background-color: var(--blanco-colonial);
+    font-family: var(--font-main);
+    margin: 0;
+    height: 100vh;
+    overflow: hidden; 
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1800px; 
+    margin: 0 auto; 
+    flex: 1;
+    min-height: 0;
+    box-sizing: border-box;
+    animation: slideUpFade 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+/* --- 2. HEADER: IZQUIERDA (Títulos y Volver) --- */
+.header-flex {
+    display: flex;
+    justify-content: space-between; 
+    align-items: center;
+    width: 100%;
+    border-bottom: 2px solid var(--amarillo-ocre);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.main-title {
+    font-family: var(--font-titles);
+    font-size: 20px;
+    color: var(--marron-zocalo);
+    margin: 0;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.date-text {
+    font-size: 13px;
+    color: var(--gris-antracita);
+    margin: 4px 0 0 0;
+    opacity: 0.7;
+}
+
+.btn-back {
+    background: var(--marron-zocalo);
+    color: var(--blanco) !important;
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    text-decoration: none;
+    transition: 0.3s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.btn-back:hover { background: var(--vino-tinto); transform: scale(1.1); }
+
+/* --- 3. HEADER: DERECHA (Navegación) --- */
+.header-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.btn-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px;
+    background-color: var(--blanco);
+    color: var(--marron-zocalo);
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    border: 1px solid var(--amarillo-ocre);
+    transition: all 0.3s ease;
+}
+
+.btn-header:hover {
+    background-color: var(--vino-tinto);
+    color: var(--blanco) !important;
+    border-color: var(--vino-tinto);
+    transform: translateY(-2px);
+}
+
+/* --- 4. LEYENDA --- */
+.legend-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 10px 20px;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 10px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px; /* Consistente con tus etiquetas KPI */
+    font-weight: 500;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 6px;
+}
+
+/* Colores por medio */
+.booking { background-color: #003580; }
+.airbnb  { background-color: #FF5A5F; }
+.expedia { background-color: #00355f; }
+.directas{ background-color: #28a745; }
+.personal{ background-color: #6f42c1; }
+.gmail   { background-color: #db4437; }
+.dayuse  { background-color: #ffc107; }
+
+/* --- 5. RACK --- */
+.gantt-wrapper {
+    padding: 0 20px;
+    background: white;
+}
+
