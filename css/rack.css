@@ -424,3 +424,76 @@ body {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
 }
+
+/* --- 8. DETALLE DE RESERVA (POPUP) --- */
+.reserva-detalle-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    text-align: left;
+    margin-top: 15px;
+}
+
+.res-card {
+    background: white;
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.res-card h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.res-card p {
+    margin: 5px 0;
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.4;
+}
+
+.res-card b {
+    color: #1e293b;
+}
+
+/* --- 9. BOTONES DE ACCIÓN EN EL RACK --- */
+.res-actions-bar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-res {
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    text-transform: uppercase;
+}
+
+/* Colores funcionales */
+.btn-res.edit { background-color: #64748b; }    /* Gris azulado */
+.btn-res.checkin { background-color: #16a34a; } /* Verde éxito */
+.btn-res.checkout { background-color: var(--vino-tinto); } /* Tu color principal */
+.btn-res.print { background-color: #0284c7; }   /* Azul info */
+
+.btn-res:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
