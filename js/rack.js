@@ -100,6 +100,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cargarHabitaciones = async () => {
         try {
             const querySnapshot = await getDocs(collection(db, "habitaciones"));
+            let listaHabitaciones = [];
+
             let listaHabitaciones = querySnapshot.docs.map(doc => ({
                 id: doc.id,
                 title: doc.data().numero.toString(), 
@@ -114,9 +116,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
             ];
 
-            calendar.setOption('resources', [...listaHabitaciones, ...extras]);
-        } catch (e) { console.error(e); }
-    };
+            // FORMA SEGURA: Verificamos que ambos sean arrays antes de unirlos
+        const recursosFinales = Array.isArray(listaHabitaciones) ? [...listaHabitaciones, ...extras] : extras;
+
+        calendar.setOption('resources', recursosFinales);
+
+    } catch (error) {
+        console.error("Error detallado en cargarHabitaciones:", error);
+        // Si todo falla, al menos cargamos las filas extras para que el calendario no muera
+        calendar.setOption('resources', [
+            { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
+        ]);
+    }
+};
 
     // 2. ESCUCHAR RESERVAS (USANDO TUS CAMPOS EXACTOS)
     const escucharReservas = () => {
