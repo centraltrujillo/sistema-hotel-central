@@ -5,75 +5,144 @@ document.addEventListener('DOMContentLoaded', async () => {
     const calendarEl = document.getElementById('gantt_here');
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
-        // SE ELIMINÓ LA LÍNEA DE PLUGINS PARA EVITAR EL ERROR "NOT ITERABLE"
         initialView: 'resourceTimelineMonth',
-        locale: 'es',
+        locale: 'es', 
+    
+        buttonText: {
+            today: 'Hoy',
+            month: 'Mes',
+            day: 'Día',
+            resourceTimelineMonth: 'Mes',
+            resourceTimelineDay: 'Día'
+        },
+    
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
             right: 'resourceTimelineMonth,resourceTimelineDay'
         },
         resourceAreaWidth: '220px',
-        resourceAreaHeaderContent: 'HABITACIONES / TOTAL',
+        resourceAreaHeaderContent: 'HABITACIONES',
         
-        eventClick: function(info) {
-            const res = info.event.extendedProps;
-            const idReserva = info.event.id;
 
+        slotLabelContent: function(arg) {
+            // Solo calculamos para el nivel de días (donde aparece D1, L2, etc.)
+            if (arg.level > 0) { 
+                const fechaSlot = arg.date;
+                const eventos = calendar.getEvents();
+                let count = 0;
+
+                eventos.forEach(ev => {
+                    // Solo contamos si es una habitación real (evitamos contar extras o totales)
+                    const esHabitacionReal = ev.resourceId && !ev.resourceId.includes('extra') && ev.resourceId !== 'total-row';
+                    if (esHabitacionReal && fechaSlot >= ev.start && fechaSlot < ev.end) {
+                        count++;
+                    }
+                });
+
+                // Retorna el día y, abajo, el total de ocupación en color vino tinto
+                return { 
+                    html: `
+                        <div style="font-size: 11px;">${arg.text}</div>
+                        <div style="color: #6e0d25; font-weight: 800; font-size: 13px; margin-top: 2px;">
+                            ${count > 0 ? count : ''}
+                        </div>` 
+                };
+            }
+        },
+
+        // --- DETALLE AL HACER CLIC ---
+        eventClick: function(info) {
+            const r = info.event.extendedProps; // 'r' contiene todos los datos de Firebase
+            const idReserva = info.event.id;
+        
             Swal.fire({
-                title: `<i class="fas fa-concierge-bell"></i> Gestión de Reserva`,
-                width: '850px',
-                background: '#f1f5f9',
+                title: `
+                    <div class="modal-header-gestion" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0; border-bottom: 2px solid #D4AF37;">
+                        <div style="text-align: left;">
+                            <span style="background: #6e0d25; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 800;">HABITACIÓN ${r.habitacion}</span>
+                            <br><small style="color: #64748b; font-size: 12px; text-transform: uppercase;">${r.tipoHab || 'Estándar'}</small>
+                        </div>
+                        <div style="background: #16a34a; color: white; padding: 4px 15px; border-radius: 8px; font-size: 12px; font-weight: bold;">${(r.estado || 'RESERVADA').toUpperCase()}</div>
+                    </div>`,
+                width: '900px',
+                background: '#f8fafc',
                 html: `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left; margin-top: 15px;">
-                        <div style="background:white; padding:12px; border-radius:10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                            <h4 style="color:#6e0d25; border-bottom:2px solid #D4AF37; margin-bottom:10px;">Huésped</h4>
-                            <p style="font-size:13px;"><b>Nombre:</b> ${res.huesped}</p>
-                            <p style="font-size:13px;"><b>Documento:</b> ${res.doc} (${res.nacionalidad})</p>
-                            <p style="font-size:13px;"><b>Teléfono:</b> ${res.telefono}</p>
-                            <p style="font-size:13px;"><b>Observaciones:</b> <span style="color:red;">${res.observaciones || '-'}</span></p>
+                    <div style="padding: 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-user"></i> Huésped Titular</label>
+                                <p style="margin: 5px 0; font-size: 16px; font-weight: 700; color: #1e293b;">${r.huesped}</p>
+                                <p style="margin: 0; font-size: 12px; color: #64748b;">${r.doc} • ${r.nacionalidad || 'Peruana'}</p>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-phone"></i> Contacto</label>
+                                <p style="margin: 5px 0; font-size: 13px;">${r.telefono || '-'}</p>
+                                <p style="margin: 0; font-size: 11px; color: #64748b;">${r.correo || 'Sin correo'}</p>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-tag"></i> Origen</label>
+                                <p style="margin: 5px 0;"><span style="background: #e2e8f0; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; color: #475569;">${(r.medio || 'Directo').toUpperCase()}</span></p>
+                            </div>
                         </div>
-                        <div style="background:white; padding:12px; border-radius:10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                            <h4 style="color:#6e0d25; border-bottom:2px solid #D4AF37; margin-bottom:10px;">Estancia</h4>
-                            <p style="font-size:13px;"><b>Habitación:</b> ${res.habitacion}</p>
-                            <p style="font-size:13px;"><b>Check-In:</b> ${res.checkIn} (${res.early || 'Normal'})</p>
-                            <p style="font-size:13px;"><b>Check-Out:</b> ${res.checkOut} (${res.late || 'Normal'})</p>
-                            <p style="font-size:13px;"><b>Estado:</b> <span style="text-transform:uppercase; font-weight:bold;">${res.estado}</span></p>
+        
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-In</label>
+                                <p style="margin: 5px 0; font-weight: 700;">${r.checkIn}</p>
+                                <small style="color: #64748b;">Hora: ${r.early || 'Normal'}</small>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-Out</label>
+                                <p style="margin: 5px 0; font-weight: 700; color: #800020;">${r.checkOut}</p>
+                                <small style="color: #64748b;">Hora: ${r.late || 'Normal'}</small>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Pax & Cochera</label>
+                                <p style="margin: 5px 0; font-size: 13px;">${r.personas} Adultos</p>
+                                <small style="color: #64748b;">Cochera: <b>${r.cochera || 'No'}</b></small>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Servicios</label>
+                                <p style="margin: 5px 0; font-size: 13px;">${r.desayuno || 'S/D'}</p>
+                                <small style="color: #64748b;">Traslado: ${r.traslado || 'No'}</small>
+                            </div>
                         </div>
-                        <div style="background:white; padding:12px; border-radius:10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                            <h4 style="color:#6e0d25; border-bottom:2px solid #D4AF37; margin-bottom:10px;">Pagos</h4>
-                            <p style="font-size:13px;"><b>Total:</b> ${res.moneda} ${res.total}</p>
-                            <p style="font-size:13px;"><b>Adelanto:</b> ${res.moneda} ${res.adelantoMonto}</p>
-                            <p style="font-size:13px; color:red;"><b>Diferencia:</b> ${res.moneda} ${res.diferencia}</p>
+        
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; background: #fffbeb; border: 1px dashed #D4AF37; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #92400e;">TARIFA DÍA</label>
+                                <p style="margin: 5px 0; font-weight: 700;">${r.moneda} ${r.tarifa}</p>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #92400e;">TOTAL HOSPEDAJE</label>
+                                <p style="margin: 5px 0; font-weight: 800; font-size: 16px;">S/ ${parseFloat(r.total).toFixed(2)}</p>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #16a34a;">ADELANTOS</label>
+                                <p style="margin: 5px 0; font-weight: 700; color: #16a34a;">- S/ ${parseFloat(r.adelantoMonto || 0).toFixed(2)}</p>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: 800; color: #800020;">SALDO PENDIENTE</label>
+                                <p style="margin: 5px 0; font-weight: 800; font-size: 18px; color: #800020;">S/ ${parseFloat(r.diferencia || 0).toFixed(2)}</p>
+                            </div>
                         </div>
-                        <div style="background:white; padding:12px; border-radius:10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                            <h4 style="color:#6e0d25; border-bottom:2px solid #D4AF37; margin-bottom:10px;">Otros</h4>
-                            <p style="font-size:13px;"><b>Medio:</b> ${res.medio}</p>
-                            <p style="font-size:13px;"><b>Cochera:</b> ${res.cochera}</p>
-                            <p style="font-size:13px;"><b>Desayuno:</b> ${res.desayuno}</p>
+        
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; padding: 0 10px;">
+                            <span><b>Obs:</b> ${r.observaciones || 'Sin notas'}</span>
+                            <span><b>Registrado por:</b> ${r.recibidoPor || 'Sistema'}</span>
                         </div>
                     </div>
-                    <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
-                        <button onclick="window.editarReserva('${idReserva}')" style="background:#64748b; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;"><i class="fas fa-edit"></i> EDITAR</button>
-                        <button onclick="window.hacerCheckIn('${idReserva}')" style="background:#16a34a; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;"><i class="fas fa-sign-in-alt"></i> CHECK-IN</button>
-                        <button onclick="window.hacerCheckOut('${idReserva}')" style="background:#6e0d25; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;"><i class="fas fa-sign-out-alt"></i> CHECK-OUT</button>
+                    
+                    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                        <button onclick="window.editarReserva('${idReserva}')" style="background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-edit"></i> EDITAR</button>
+                        <button onclick="window.hacerCheckIn('${idReserva}')" style="background: #16a34a; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-key"></i> CHECK-IN</button>
+                        <button onclick="window.hacerCheckOut('${idReserva}')" style="background: #6e0d25; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-sign-out-alt"></i> CHECK-OUT</button>
                     </div>
                 `,
                 showConfirmButton: false,
                 showCloseButton: true
             });
-        },
-
-        resourceTimelineDayTick: function(arg) {
-            const events = calendar.getEvents();
-            let count = 0;
-            events.forEach(event => {
-                const isRealRoom = event.resourceId && !event.resourceId.includes('extra') && event.resourceId !== 'total-row';
-                if (isRealRoom && arg.date >= event.start && arg.date < event.end) {
-                    count++;
-                }
-            });
-            return { html: `<div style="font-weight:bold; color:#1e293b;">${count > 0 ? count : ''}</div>` };
         },
 
         resourceLabelContent: function(arg) {
@@ -94,7 +163,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     calendar.render();
-
     // 1. CARGAR HABITACIONES
     const cargarHabitaciones = async () => {
         try {
@@ -107,15 +175,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 tipo: doc.data().tipo 
             }));
 
-            listaHabitaciones.sort((a, b) => a.title.localeCompare(b.title, undefined, {numeric: true}));
+// Ordenamos habitaciones numéricamente
+listaHabitaciones.sort((a, b) => a.title.localeCompare(b.title, undefined, {numeric: true}));
 
-            const extras = [
-                { id: 'extra1', title: 'CHECK OL 1', tipo: 'EXTRAS' },
-                { id: 'extra2', title: 'CHECK OL 2', tipo: 'EXTRAS' },
-                { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
-            ];
+// Ponemos los extras y el total AL FINAL
+const extrasYTotal = [
+    { id: 'extra1', title: 'CHECK OL 1', tipo: 'EXTRAS' },
+    { id: 'extra2', title: 'CHECK OL 2', tipo: 'EXTRAS' },
+    { id: 'extra3', title: 'CHECK OL 3', tipo: 'EXTRAS' },
+    { id: 'extra4', title: 'CHECK OL 4', tipo: 'EXTRAS' },
+    { id: 'extra5', title: 'CHECK OL 5', tipo: 'EXTRAS' },
+    { id: 'total-row', title: 'TOTAL OCUP', tipo: '' }
+];
 
-            calendar.setOption('resources', [...listaHabitaciones, ...extras]);
+calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
 
         } catch (error) {
             console.error("Error en cargarHabitaciones:", error);
