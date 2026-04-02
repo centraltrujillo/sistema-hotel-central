@@ -186,6 +186,11 @@ body {
     border: 1px solid #e2e8f0;
 }
 
+/* Mejora la separación visual de las filas en el Rack */
+.fc-timeline-lane-frame {
+    height: 45px !important; /* Altura uniforme para cada fila de habitación */
+}
+
 /* Estilo de las barras de reserva */
 .fc-timeline-event {
     border-radius: 4px !important;

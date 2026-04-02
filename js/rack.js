@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const calendarEl = document.getElementById('gantt_here');
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
-        plugins: [ 'resourceTimeline' ],
+        // SE ELIMINÓ LA LÍNEA DE PLUGINS PARA EVITAR EL ERROR "NOT ITERABLE"
         initialView: 'resourceTimelineMonth',
         locale: 'es',
         headerToolbar: {
@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         resourceAreaWidth: '220px',
         resourceAreaHeaderContent: 'HABITACIONES / TOTAL',
         
-        // --- DETALLE AL HACER CLIC (CON TODA LA INFO Y BOTONES) ---
         eventClick: function(info) {
             const res = info.event.extendedProps;
             const idReserva = info.event.id;
@@ -96,14 +95,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     calendar.render();
 
-    // 1. CARGAR HABITACIONES + EXTRAS + TOTAL
+    // 1. CARGAR HABITACIONES
     const cargarHabitaciones = async () => {
         try {
             const querySnapshot = await getDocs(collection(db, "habitaciones"));
-            let listaHabitaciones = [];
-
+            
+            // CORRECCIÓN: Se eliminó la redeclaración de listaHabitaciones
             let listaHabitaciones = querySnapshot.docs.map(doc => ({
-                id: doc.id,
+                id: `hab${doc.data().numero}`, // ID consistente: hab201
                 title: doc.data().numero.toString(), 
                 tipo: doc.data().tipo 
             }));
@@ -116,21 +115,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
             ];
 
-            // FORMA SEGURA: Verificamos que ambos sean arrays antes de unirlos
-        const recursosFinales = Array.isArray(listaHabitaciones) ? [...listaHabitaciones, ...extras] : extras;
+            calendar.setOption('resources', [...listaHabitaciones, ...extras]);
 
-        calendar.setOption('resources', recursosFinales);
+        } catch (error) {
+            console.error("Error en cargarHabitaciones:", error);
+            calendar.setOption('resources', [{ id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }]);
+        }
+    };
 
-    } catch (error) {
-        console.error("Error detallado en cargarHabitaciones:", error);
-        // Si todo falla, al menos cargamos las filas extras para que el calendario no muera
-        calendar.setOption('resources', [
-            { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
-        ]);
-    }
-};
-
-    // 2. ESCUCHAR RESERVAS (USANDO TUS CAMPOS EXACTOS)
+    // 2. ESCUCHAR RESERVAS
     const escucharReservas = () => {
         onSnapshot(collection(db, "reservas"), (snapshot) => {
             const listaReservas = snapshot.docs.map(doc => {
@@ -142,14 +135,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 return {
                     id: doc.id,
-                    resourceId: `hab${data.habitacion}`, // Ajuste para que coincida con IDs del doc "hab201"
+                    resourceId: `hab${data.habitacion}`, // Debe coincidir con el ID del recurso
                     title: data.huesped || 'Sin nombre',
                     start: data.checkIn,
                     end: data.checkOut,
                     backgroundColor: colores[data.medio?.toLowerCase()] || '#555',
                     borderColor: 'transparent',
                     allDay: true,
-                    extendedProps: { ...data } // Guardar todo para el detalle
+                    extendedProps: { ...data }
                 };
             });
             calendar.setOption('events', listaReservas);
@@ -160,7 +153,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     escucharReservas();
 });
 
-// --- FUNCIONES GLOBALES PARA BOTONES DE ACCIÓN ---
+// --- FUNCIONES GLOBALES ---
+window.abrirModal = () => {
+    document.getElementById('modalReserva').classList.add('active');
+};
+
+window.cerrarModal = () => {
+    document.getElementById('modalReserva').classList.remove('active');
+};
+
 window.editarReserva = (id) => {
     Swal.fire('Editar', `Abriendo editor para reserva: ${id}`, 'info');
 };
@@ -176,7 +177,7 @@ window.hacerCheckIn = async (id) => {
     if (isConfirmed) {
         try {
             await updateDoc(doc(db, "reservas", id), { estado: "checkin" });
-            Swal.fire('Éxito', 'Estado actualizado a OCUPADA', 'success');
+            Swal.fire('¡Éxito!', 'Check-In registrado.', 'success');
         } catch (e) { Swal.fire('Error', 'No se pudo actualizar', 'error'); }
     }
 };
@@ -192,7 +193,7 @@ window.hacerCheckOut = async (id) => {
     if (isConfirmed) {
         try {
             await updateDoc(doc(db, "reservas", id), { estado: "checkout" });
-            Swal.fire('Éxito', 'Check-Out completado', 'success');
+            Swal.fire('¡Éxito!', 'Check-Out registrado.', 'success');
         } catch (e) { Swal.fire('Error', 'No se pudo completar', 'error'); }
     }
 };
