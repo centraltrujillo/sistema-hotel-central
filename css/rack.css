@@ -9,6 +9,12 @@ body {
     flex-direction: column;
 }
 
+/* Definición de la animación faltante */
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .main-content {
     padding: 20px;
     display: flex;
@@ -87,6 +93,7 @@ body {
     font-weight: 700;
     border: 1px solid var(--amarillo-ocre);
     transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .btn-header:hover {
@@ -105,12 +112,13 @@ body {
     background: #fff;
     border-bottom: 1px solid #ddd;
     margin-bottom: 10px;
+    border-radius: 8px 8px 0 0;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    font-size: 13px; /* Consistente con tus etiquetas KPI */
+    font-size: 13px;
     font-weight: 500;
 }
 
@@ -122,17 +130,204 @@ body {
 }
 
 /* Colores por medio */
-.booking { background-color: #003580; }
-.airbnb  { background-color: #FF5A5F; }
-.expedia { background-color: #00355f; }
-.directas{ background-color: #28a745; }
-.personal{ background-color: #6f42c1; }
-.gmail   { background-color: #db4437; }
-.dayuse  { background-color: #ffc107; }
+.booking { background-color: #1e40af; }
+.airbnb  { background-color: #ff5a5f; }
+.expedia { background-color: #ffb400; }
+.directas{ background-color: #7c3aed; }
+.personal{ background-color: #059669; }
+.gmail   { background-color: #ea4335; }
+.dayuse  { background-color: #db2777; }
 
-/* --- 5. RACK --- */
+/* --- 5. RACK Y GANTT (ESTILOS LIBRERÍA) --- */
 .gantt-wrapper {
-    padding: 0 20px;
+    padding: 20px;
     background: white;
+    flex: 1;
+    overflow: auto; /* Permite scroll horizontal y vertical */
+    border-radius: 0 0 8px 8px;
+    border: 1px solid #eee;
 }
 
+/* Estilos específicos para Frappe Gantt */
+.gantt .grid-header { fill: #ffffff; stroke: #e0e0e0; stroke-width: 1.4; }
+.gantt .grid-row { fill: #ffffff; }
+.gantt .grid-row:nth-child(even) { fill: #fcfcfc; }
+.gantt .row-line { stroke: #ebebeb; }
+.gantt .tick { stroke: #e0e0e0; stroke-width: 1.1; }
+.gantt .bar { fill: var(--vino-tinto); cursor: pointer; }
+.gantt .bar-label { fill: #fff; font-weight: bold; font-size: 11px; }
+
+/* --- 6. MODAL DE RESERVAS --- */
+.modal-reserva-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    align-items: center; 
+    justify-content: center;
+}
+
+.modal-reserva-overlay.active { display: flex; }
+
+.modal-reserva-content {
+    background: #f1f5f9; 
+    border-radius: 15px;
+    width: 98%;
+    max-width: 1150px; 
+    max-height: 98vh; 
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-reserva-header {
+    background: var(--vino-tinto);
+    color: white;
+    padding: 10px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.modal-reserva-header h3 {
+    font-size: 18px;
+    margin: 0;
+}
+
+.close-modal { font-size: 28px; cursor: pointer; line-height: 1; }
+.close-modal:hover { color: var(--amarillo-ocre); }
+
+/* 6. FORMULARIO COMPACTO (4 COLUMNAS) */
+.form-body-no-scroll {
+    padding: 10px 25px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; 
+}
+
+.form-grid-compact {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 8px 15px;
+}
+
+.form-section-title {
+    grid-column: span 4;
+    font-family: var(--font-titles);
+    color: var(--vino-tinto);
+    font-size: 14px !important;
+    font-weight: 700;
+    margin: 8px 0 5px 0 !important;
+    padding-bottom: 3px;
+    border-bottom: 2px solid var(--amarillo-ocre);
+}
+
+/* Utilidades de Grid */
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-4 { grid-column: span 4; }
+
+.form-group { display: flex; flex-direction: column; gap: 2px; }
+
+.form-group label {
+    font-size: 10px !important;
+    font-weight: 700;
+    color: var(--marron-zocalo);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.form-group input, 
+.form-group select {
+    padding: 6px 10px !important;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px !important;
+    background: white;
+    height: 32px; 
+    transition: all 0.2s;
+}
+
+/* SECCIÓN DE PAGOS (ULTRA COMPACTA) */
+.highlight-section {
+    background: #ffffff;
+    padding: 8px !important;
+    border-radius: 12px;
+    border: 1px dashed #94a3b8; /* slate-400 */
+    gap: 5px 12px !important;
+}
+
+.input-total { 
+    background: #f0fdf4 !important; 
+    border: 1px solid #22c55e !important; /* success-green */
+    color: #166534 !important; font-weight: 800;
+}
+
+.input-adelanto { 
+    background: #fffbeb !important; 
+    border: 1px solid var(--amarillo-ocre) !important; 
+    color: #92400e !important; font-weight: 700; 
+}
+
+.input-diferencia { 
+    background: #fff1f2 !important; 
+    border: 1px solid #ef4444 !important; /* danger-red */
+    color: #9f1239 !important; font-weight: 800;
+}
+
+/* 7. ACCIONES FINALES */
+.form-actions-res {
+    padding: 10px 25px;
+    background: #f8fafc;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.btn-save {
+    background: var(--vino-tinto);
+    color: white;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background: #e2e8f0;
+    color: #475569; /* slate-600 */
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#statusDisponibilidad {
+    grid-column: span 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    min-height: 0;
+}
+
+#statusDisponibilidad:not(:empty) {
+    padding: 8px;
+    margin: 5px 0 10px 0;
+    min-height: 35px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
