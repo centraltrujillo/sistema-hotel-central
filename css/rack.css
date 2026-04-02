@@ -138,24 +138,117 @@ body {
 .gmail   { background-color: #ea4335; }
 .dayuse  { background-color: #db2777; }
 
-/* --- 5. RACK Y GANTT (ESTILOS LIBRERÍA) --- */
+/* --- 5. RACK (ESTILO EXCEL) --- */
 .gantt-wrapper {
-    padding: 20px;
+    padding: 10px;
     background: white;
     flex: 1;
-    overflow: auto; /* Permite scroll horizontal y vertical */
+    overflow: hidden; /* FullCalendar maneja su propio scroll */
     border-radius: 0 0 8px 8px;
     border: 1px solid #eee;
 }
 
-/* Estilos específicos para Frappe Gantt */
-.gantt .grid-header { fill: #ffffff; stroke: #e0e0e0; stroke-width: 1.4; }
-.gantt .grid-row { fill: #ffffff; }
-.gantt .grid-row:nth-child(even) { fill: #fcfcfc; }
-.gantt .row-line { stroke: #ebebeb; }
-.gantt .tick { stroke: #e0e0e0; stroke-width: 1.1; }
-.gantt .bar { fill: var(--vino-tinto); cursor: pointer; }
-.gantt .bar-label { fill: #fff; font-weight: bold; font-size: 11px; }
+/* Ajustes para que FullCalendar se parezca a tu Excel */
+.fc {
+    font-family: var(--font-main);
+    --fc-border-color: #e2e8f0;
+    --fc-today-bg-color: rgba(245, 158, 11, 0.05);
+}
+
+/* Columna de Habitaciones (Izquierda) */
+.fc-resource-timeline-col {
+    background-color: #f8fafc;
+    border-right: 2px solid var(--amarillo-ocre) !important;
+}
+
+/* Estilo de los nombres de habitaciones */
+.hab-label-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 5px 10px;
+}
+
+.hab-number {
+    font-weight: 800;
+    color: var(--vino-tinto);
+    font-size: 14px;
+}
+
+.hab-type {
+    font-size: 10px;
+    color: var(--marron-zocalo);
+    text-transform: uppercase;
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Estilo de las barras de reserva */
+.fc-timeline-event {
+    border-radius: 4px !important;
+    padding: 2px 4px !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.fc-event-title {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+}
+
+/* Cuadrícula (Celdas del calendario) */
+.fc-timeline-slot-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fc-timeline-slot-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--marron-zocalo);
+}
+
+/* Color verde para las filas de Check Out Late / Day Use */
+.fc-timeline-lane[data-resource-id^="extra"] {
+    background-color: #d9f99d !important; /* Un verde suave como el Excel */
+}
+
+/* Estilo para que el nombre del huésped se vea bien en la barra */
+.fc-event-title-container {
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+}
+
+.fc-event-title {
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* --- ESTILO FILA TOTAL OCUP (ESTILO EXCEL) --- */
+.fc-timeline-slot-lane.total-ocup-row {
+    background-color: #fef9c3 !important; /* Amarillo suave */
+    font-weight: 800;
+    color: var(--marron-zocalo);
+    text-align: center;
+    border-top: 2px solid var(--amarillo-ocre) !important;
+}
+
+.total-count-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
 
 /* --- 6. MODAL DE RESERVAS --- */
 .modal-reserva-overlay {
@@ -202,7 +295,7 @@ body {
 .close-modal { font-size: 28px; cursor: pointer; line-height: 1; }
 .close-modal:hover { color: var(--amarillo-ocre); }
 
-/* 6. FORMULARIO COMPACTO (4 COLUMNAS) */
+/* FORMULARIO COMPACTO (4 COLUMNAS) */
 .form-body-no-scroll {
     padding: 10px 25px;
     display: flex;
