@@ -175,28 +175,28 @@ body {
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    padding: 5px 10px;
+    padding: 2px 8px;
 }
 
 .hab-number {
     font-weight: 800;
     color: var(--vino-tinto);
-    font-size: 14px;
+    font-size: 12px;
 }
 
 .hab-type {
-    font-size: 10px;
+    font-size: 9px;
     color: var(--marron-zocalo);
     text-transform: uppercase;
     background: #fff;
-    padding: 2px 6px;
+    padding: 1px 4px;
     border-radius: 4px;
     border: 1px solid #e2e8f0;
 }
 
 /* Mejora la separación visual de las filas en el Rack */
 .fc-timeline-lane-frame {
-    height: 35px !important; /* Altura uniforme para cada fila de habitación */
+    height: 28px !important; /* Altura uniforme para cada fila de habitación */
 }
 
 /* Ocultar mensaje de licencia de FullCalendar Scheduler */
@@ -206,7 +206,7 @@ body {
 
 /* Estilo de las barras de reserva */
 .fc-timeline-event {
-    height: 22px !important;
+    height: 18px !important;
     margin-top: 2px !important;
     border-radius: 4px !important;
     padding: 2px 4px !important;
@@ -215,8 +215,8 @@ body {
 }
 
 .fc-event-title {
-    font-size: 11px !important;
-    font-weight: 700 !important;
+    font-size: 10px !important;
+    font-weight: 18px !important;
     text-transform: uppercase;
 }
 
@@ -228,7 +228,7 @@ body {
 }
 
 .fc-timeline-slot-label {
-    font-size: 12px;
+    font-size: 11px !important;
     font-weight: 700;
     color: var(--marron-zocalo);
 }
@@ -238,19 +238,19 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 5px 0;
+    padding: 2px 0 !important;
 }
 
-/* Color verde para las filas de Check Out Late / Day Use */
-.fc-timeline-lane[data-resource-id^="extra"] {
-    background-color: #d9f99d !important; 
-    opacity: 0.8;
-}
-
-/* Fila de Total Ocupación (La última) */
+/* Fila de TOTAL OCUP (La de abajo) */
 .fc-timeline-lane[data-resource-id="total-row"] {
-    background-color: #fef9c3 !important; 
-    border-top: 2px solid #800020 !important; /* Línea vino tinto para separar el total */
+    background-color: #fef9c3 !important; /* Amarillo suave tipo Excel */
+    border-top: 2px solid #800020 !important; /* Línea divisoria vino tinto */
+    height: 35px !important;
+}
+
+/* Filas de EXTRAS (Las verdes) */
+.fc-timeline-lane[data-resource-id^="extra"] {
+    background-color: #f0fdf4 !important; /* Verde muy clarito para que no canse la vista */
 }
 
 /* Estilo para que el nombre del huésped se vea bien en la barra */
@@ -278,7 +278,7 @@ body {
     border-top: 2px solid var(--amarillo-ocre) !important;
 }
 .fc-timeline-header-row {
-    height: 65px !important; 
+    height: 45px !important; 
     background-color: #f8fafc !important;
 }
 

@@ -110,6 +110,7 @@ resourceAreaWidth: '220px',
 slotMinWidth: 28,            
 stickyHeaderDates: true,    // Mantiene los días (mie 1, jue 2...) siempre a la vista al hacer scroll lateral
 resourceOrder: false,       // Mantiene el orden: Habitaciones arriba, Extras y Totales al final
+aspectRatio: 2.5, 
 
 
 locale: 'es', 
@@ -136,29 +137,36 @@ locale: 'es',
 
         resourceAreaHeaderContent: 'HABITACIONES',
 
-// --- CONTADOR ACTUALIZADO: SUMA TODO (HAB + EXTRAS) ---
-slotLabelContent: function(arg) {
-    if (arg.level > 0) { 
+        slotLabelContent: function(arg) {
+            if (arg.level > 0) { // Nivel de días (mie 1, jue 2...)
+                return { 
+                    html: `<div style="font-size: 11px; font-weight: 700; color: #475569; padding: 5px 0;">${arg.text}</div>` 
+                };
+            }
+        },
+
+        // Agrega esto dentro de la configuración de FullCalendar (new FullCalendar.Calendar)
+resourceLaneContent: function(arg) {
+    if (arg.resource.id === 'total-row') {
         const fechaSlot = arg.date;
         const eventos = calendar.getEvents();
         let count = 0;
 
         eventos.forEach(ev => {
-            // Contamos si es una habitación o si es una fila de extras
-            const esContable = ev.resourceId && (ev.resourceId.startsWith('hab') || ev.resourceId.startsWith('extra'));
-
-            // Si el evento cae en esta fecha, sumamos al total
-            if (esContable && fechaSlot >= ev.start && fechaSlot < ev.end) {
+            // Contamos solo reservas en habitaciones (ID que empieza con 'hab')
+            const esHabitacion = ev.resourceId && ev.resourceId.startsWith('hab');
+            
+            // Si la reserva ocupa este día, sumamos
+            if (esHabitacion && fechaSlot >= ev.start && fechaSlot < ev.end) {
                 count++;
             }
         });
 
+        // Retornamos el número centrado en la celda
         return { 
-            html: `
-                <div style="font-size: 10px; color: #64748b; font-weight: 600;">${arg.text}</div>
-                <div style="background: #6e0d25; color: white; border-radius: 4px; padding: 1px 4px; display: inline-block; font-size: 11px; font-weight: 800; margin-top: 2px; min-width: 18px;">
-                    ${count > 0 ? count : '0'}
-                </div>` 
+            html: `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #6e0d25; font-size: 14px;">
+                    ${count > 0 ? count : '-'}
+                   </div>` 
         };
     }
 },
@@ -312,8 +320,10 @@ slotLabelContent: function(arg) {
                 { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
             ];
 
-            // Envía las habitaciones primero para que aparezcan arriba
-            calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
+
+// Usamos 'extrasYTotal' que es donde definiste los Check OL y el Total Ocup
+calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
+
 
         } catch (error) {
             console.error("Error en cargarHabitaciones:", error);
@@ -331,8 +341,8 @@ slotLabelContent: function(arg) {
     
     // Definir colores originales por medio
     const colores = { 
-        'booking': '#003580', 'airbnb': '#FF5A5F', 'expedia': '#f89c1c', 
-        'directas': '#28a745', 'personal': '#6f42c1', 'gmail': '#db4437', 'dayuse': '#ffc107' 
+        'booking': '#1e40af', 'airbnb': '#ff5a5f', 'expedia': '#ffb400', 
+        'directas': '#7c3aed', 'personal': '#059669', 'gmail': '#ea4335', 'dayuse': '#db2777' 
     };
 
     // Lógica de Color Dinámico y Checkmark
