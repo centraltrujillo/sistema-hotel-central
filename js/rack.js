@@ -6,6 +6,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'resourceTimelineMonth',
+        // --- NUEVOS AJUSTES DE VISTA COMPACTA ---
+        height: 'auto',              // Evita el scroll interno del calendario
+        resourceAreaWidth: '15%',    // Reduce el ancho de la columna de habitaciones
+        slotMinWidth: 28,            // Hace las columnas de los días más delgadas
+        eventHeight: 20,             // Reduce la altura de las barras de reserva
+        stickyHeaderDates: true,     // Mantiene los días visibles al bajar
+        // ---------------------------------------
         locale: 'es', 
     
         buttonText: {
@@ -162,7 +169,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    calendar.render();
     // 1. CARGAR HABITACIONES
     const cargarHabitaciones = async () => {
         try {
@@ -222,8 +228,12 @@ calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
         });
     };
 
-    await cargarHabitaciones();
-    escucharReservas();
+ // 1. Preparamos las funciones de carga pero NO renderizamos aún
+ await cargarHabitaciones(); // Esperamos a que Firebase traiga los recursos
+ escucharReservas();        // Iniciamos el escucha de eventos
+ 
+ // 2. Renderizamos al final con todo cargado
+ calendar.render();
 });
 
 // --- FUNCIONES GLOBALES ---

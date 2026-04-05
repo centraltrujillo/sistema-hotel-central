@@ -140,10 +140,11 @@ body {
 
 /* --- 5. RACK (ESTILO EXCEL) --- */
 .gantt-wrapper {
-    padding: 10px;
+    padding: 5px;
     background: white;
     flex: 1;
-    height: 600px; 
+    height: calc(100vh - 180px); 
+    min-height: 500px;
     overflow: hidden; /* FullCalendar maneja su propio scroll */
     border-radius: 0 0 8px 8px;
     border: 1px solid #eee;
@@ -154,7 +155,7 @@ body {
     font-family: var(--font-main);
     --fc-border-color: #e2e8f0;
     --fc-today-bg-color: rgba(245, 158, 11, 0.05);
-    height: 55px !important;
+    height: 100% !important;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -195,7 +196,12 @@ body {
 
 /* Mejora la separación visual de las filas en el Rack */
 .fc-timeline-lane-frame {
-    height: 45px !important; /* Altura uniforme para cada fila de habitación */
+    height: 35px !important; /* Altura uniforme para cada fila de habitación */
+}
+
+/* Ocultar mensaje de licencia de FullCalendar Scheduler */
+.fc-license-message {
+    display: none !important;
 }
 
 /* Estilo de las barras de reserva */
@@ -270,6 +276,8 @@ body {
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 14px;
+    color: var(--vino-tinto);
+    font-weight: 900;
 }
 
 
