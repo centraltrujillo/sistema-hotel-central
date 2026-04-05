@@ -309,6 +309,8 @@ resourceLaneContent: function(arg) {
                 };
             });
 
+
+            
             listaHabitaciones.sort((a, b) => a.title.localeCompare(b.title, undefined, {numeric: true}));
 
             const extrasYTotal = [

@@ -244,13 +244,13 @@ body {
 /* Fila de TOTAL OCUP (La de abajo) */
 .fc-timeline-lane[data-resource-id="total-row"] {
     background-color: #fef9c3 !important; /* Amarillo suave tipo Excel */
-    border-top: 2px solid #800020 !important; /* Línea divisoria vino tinto */
+    border-top: 2px solid #800020 !important;
     height: 35px !important;
 }
 
 /* Filas de EXTRAS (Las verdes) */
 .fc-timeline-lane[data-resource-id^="extra"] {
-    background-color: #f0fdf4 !important; /* Verde muy clarito para que no canse la vista */
+    background-color: #f0fdf4 !important; 
 }
 
 /* Estilo para que el nombre del huésped se vea bien en la barra */
@@ -278,7 +278,7 @@ body {
     border-top: 2px solid var(--amarillo-ocre) !important;
 }
 .fc-timeline-header-row {
-    height: 45px !important; 
+    height: 40px !important; 
     background-color: #f8fafc !important;
 }
 
