@@ -16,6 +16,90 @@ const inputAdelantoMonto = document.getElementById("resAdelantoMonto");
 const inputDiferencia = document.getElementById("resDiferencia");
 const inputDoc = document.getElementById("resDoc");
 
+// --- 2. LÓGICA DE CÁLCULOS ---
+const calcularMontos = () => {
+    if (!inputCheckIn.value || !inputCheckOut.value) return;
+
+    const fIn = new Date(inputCheckIn.value + 'T00:00:00');
+    const fOut = new Date(inputCheckOut.value + 'T00:00:00');
+    const tarifaBase = parseFloat(inputTarifa.value) || 0;
+    const tc = parseFloat(inputTipoCambio.value) || 1; // Default 1 para evitar division por 0
+    const moneda = selectMoneda.value;
+
+    const tieneEarly = document.getElementById("resEarly").value !== "";
+    const tieneLate = document.getElementById("resLate").value !== "";
+
+    if (fOut <= fIn) {
+        inputTotal.value = "0.00";
+        inputDiferencia.value = "0.00";
+        return;
+    }
+
+    const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
+    let subtotal = noches * tarifaBase;
+
+    // Recargos (50% de la tarifa por Early o Late)
+    if (tieneEarly) subtotal += (tarifaBase * 0.5);
+    if (tieneLate) subtotal += (tarifaBase * 0.5);
+
+    let totalFinal = moneda === "USD" ? subtotal * tc : subtotal;
+
+    inputTotal.value = totalFinal.toFixed(2);
+
+    let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
+
+    if (adelanto > totalFinal && totalFinal > 0) {
+        adelanto = totalFinal;
+        inputAdelantoMonto.value = totalFinal.toFixed(2);
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'warning',
+            title: 'El adelanto no puede superar al total',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
+
+    inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
+};
+
+// Listeners para cálculos en tiempo real
+[inputTarifa, inputCheckIn, inputCheckOut, inputAdelantoMonto, inputTipoCambio, selectMoneda, 
+ document.getElementById("resEarly"), document.getElementById("resLate")].forEach(el => {
+    if(el) el.addEventListener("input", calcularMontos);
+});
+
+// --- 3. AUTOCOMPLETADO POR DNI ---
+if (inputDoc) {
+    inputDoc.addEventListener("blur", async (e) => {
+        const dni = e.target.value.trim();
+        if (dni.length < 4) return;
+
+        const q = query(collection(db, "huespedes"), where("documento", "==", dni));
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+            const h = snap.docs[0].data();
+            document.getElementById("resHuesped").value = h.nombre || "";
+            document.getElementById("resTelefono").value = h.telefono || "";
+            document.getElementById("resCorreo").value = h.correo || "";
+            document.getElementById("resNacionalidad").value = h.nacionalidad || "";
+            document.getElementById("resNacimiento").value = h.nacimiento || ""; 
+
+            
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Huésped reconocido',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        }
+    });
+}
+
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'resourceTimelineMonth',
@@ -24,7 +108,6 @@ contentHeight: 'auto',
 expandRows: true,           
 resourceAreaWidth: '220px', 
 slotMinWidth: 28,            
-eventHeight: 22,            // Un poco más alto para que el nombre del huésped se lea mejor
 stickyHeaderDates: true,    // Mantiene los días (mie 1, jue 2...) siempre a la vista al hacer scroll lateral
 resourceOrder: false,       // Mantiene el orden: Habitaciones arriba, Extras y Totales al final
 
@@ -321,90 +404,6 @@ slotLabelContent: function(arg) {
     escucharReservas();        
     calendar.render();
 });
-
-// --- 2. LÓGICA DE CÁLCULOS ---
-const calcularMontos = () => {
-    if (!inputCheckIn.value || !inputCheckOut.value) return;
-
-    const fIn = new Date(inputCheckIn.value + 'T00:00:00');
-    const fOut = new Date(inputCheckOut.value + 'T00:00:00');
-    const tarifaBase = parseFloat(inputTarifa.value) || 0;
-    const tc = parseFloat(inputTipoCambio.value) || 1; // Default 1 para evitar division por 0
-    const moneda = selectMoneda.value;
-
-    const tieneEarly = document.getElementById("resEarly").value !== "";
-    const tieneLate = document.getElementById("resLate").value !== "";
-
-    if (fOut <= fIn) {
-        inputTotal.value = "0.00";
-        inputDiferencia.value = "0.00";
-        return;
-    }
-
-    const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
-    let subtotal = noches * tarifaBase;
-
-    // Recargos (50% de la tarifa por Early o Late)
-    if (tieneEarly) subtotal += (tarifaBase * 0.5);
-    if (tieneLate) subtotal += (tarifaBase * 0.5);
-
-    let totalFinal = moneda === "USD" ? subtotal * tc : subtotal;
-
-    inputTotal.value = totalFinal.toFixed(2);
-
-    let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
-
-    if (adelanto > totalFinal && totalFinal > 0) {
-        adelanto = totalFinal;
-        inputAdelantoMonto.value = totalFinal.toFixed(2);
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'warning',
-            title: 'El adelanto no puede superar al total',
-            showConfirmButton: false,
-            timer: 2000
-        });
-    }
-
-    inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
-};
-
-// Listeners para cálculos en tiempo real
-[inputTarifa, inputCheckIn, inputCheckOut, inputAdelantoMonto, inputTipoCambio, selectMoneda, 
- document.getElementById("resEarly"), document.getElementById("resLate")].forEach(el => {
-    if(el) el.addEventListener("input", calcularMontos);
-});
-
-// --- 3. AUTOCOMPLETADO POR DNI ---
-if (inputDoc) {
-    inputDoc.addEventListener("blur", async (e) => {
-        const dni = e.target.value.trim();
-        if (dni.length < 4) return;
-
-        const q = query(collection(db, "huespedes"), where("documento", "==", dni));
-        const snap = await getDocs(q);
-
-        if (!snap.empty) {
-            const h = snap.docs[0].data();
-            document.getElementById("resHuesped").value = h.nombre || "";
-            document.getElementById("resTelefono").value = h.telefono || "";
-            document.getElementById("resCorreo").value = h.correo || "";
-            document.getElementById("resNacionalidad").value = h.nacionalidad || "";
-            document.getElementById("resNacimiento").value = h.nacimiento || ""; 
-
-            
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Huésped reconocido',
-                showConfirmButton: false,
-                timer: 1500
-            });
-        }
-    });
-}
 
 // --- FUNCIONES GLOBALES ---
 window.abrirModal = () => { 
