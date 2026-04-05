@@ -172,33 +172,55 @@ function aplicarFiltros() {
     });
 }
 
-        // --- MODAL 1: DETALLE DE HOSPEDAJE ---
-        window.abrirDetalleHospedaje = function(id, inF, outF, tarifa, early, late, total) {
+// --- MODAL 1: DETALLE DE HOSPEDAJE ---
+window.abrirDetalleHospedaje = function(id, inF, outF, tarifa, early, late, total) {
+    
+    // --- BLOQUE DE DEPURACIÓN ---
+    console.group("Depuración Detalle Hospedaje");
+    console.log("ID Documento:", id);
+    console.log("Fecha Ingreso (inF):", inF, typeof inF);
+    console.log("Fecha Salida (outF):", outF, typeof outF);
+    console.log("Tarifa base:", tarifa);
+    console.log("Cargos extra:", { early, late });
+    console.log("Total recibido:", total);
+    console.groupEnd();
+
+    // Validar que los valores numéricos no sean NaN o undefined
+    const _tarifa = parseFloat(tarifa) || 0;
+    const _early = parseFloat(early) || 0;
+    const _late = parseFloat(late) || 0;
+    const _total = parseFloat(total) || 0;
+
     // Formatear fechas para mostrar: de YYYY-MM-DD a DD/MM/YYYY
-    const fInTexto = inF ? inF.split('-').reverse().join('/') : "---";
-    const fOutTexto = outF ? outF.split('-').reverse().join('/') : "---";
+    const fInTexto = (inF && typeof inF === 'string') ? inF.split('-').reverse().join('/') : "---";
+    const fOutTexto = (outF && typeof outF === 'string') ? outF.split('-').reverse().join('/') : "---";
 
     // Calcular noches
-    const f1 = new Date(inF + "T12:00:00"); // Forzamos mediodía para evitar errores de zona horaria
+    const f1 = new Date(inF + "T12:00:00");
     const f2 = new Date(outF + "T12:00:00");
+    
     let noches = Math.round((f2 - f1) / (1000 * 60 * 60 * 24));
+    
+    // Log adicional para el cálculo de fechas
+    if (isNaN(noches)) console.warn("Aviso: El cálculo de noches resultó en NaN. Revisa el formato de inF y outF.");
+
     if (isNaN(noches) || noches <= 0) noches = 1;
 
-    const subtotalBase = noches * tarifa;
+    const subtotalBase = noches * _tarifa;
 
     let html = `
         <div style="text-align:left; font-size:14px; font-family:'Lato', sans-serif;">
             <p style="margin-bottom:10px;"><b>Periodo:</b> ${fInTexto} al ${fOutTexto}</p>
             <table style="width:100%; border-collapse:collapse; margin-top:10px;">
                 <tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:8px 0;">Estadía (${noches} noches x S/ ${tarifa.toFixed(2)})</td>
+                    <td style="padding:8px 0;">Estadía (${noches} noches x S/ ${_tarifa.toFixed(2)})</td>
                     <td align="right">S/ ${subtotalBase.toFixed(2)}</td>
                 </tr>
-                ${early > 0 ? `<tr><td style="padding:8px 0;">(+) Early Check-in</td><td align="right">S/ ${early.toFixed(2)}</td></tr>` : ''}
-                ${late > 0 ? `<tr><td style="padding:8px 0;">(+) Late Check-out</td><td align="right">S/ ${late.toFixed(2)}</td></tr>` : ''}
+                ${_early > 0 ? `<tr><td style="padding:8px 0;">(+) Early Check-in</td><td align="right">S/ ${_early.toFixed(2)}</td></tr>` : ''}
+                ${_late > 0 ? `<tr><td style="padding:8px 0;">(+) Late Check-out</td><td align="right">S/ ${_late.toFixed(2)}</td></tr>` : ''}
                 <tr style="border-top:2px solid #800020;">
                     <td style="padding-top:10px;"><b>TOTAL HOSPEDAJE:</b></td>
-                    <td align="right" style="padding-top:10px; color:#800020; font-size:16px;"><b>S/ ${total.toFixed(2)}</b></td>
+                    <td align="right" style="padding-top:10px; color:#800020; font-size:16px;"><b>S/ ${_total.toFixed(2)}</b></td>
                 </tr>
             </table>
         </div>`;

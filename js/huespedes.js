@@ -31,7 +31,7 @@ function cargarHuespedes() {
     });
 }
 
-// --- RENDERIZADO DE TARJETAS ---
+// --- MODIFICACIÓN EN RENDERIZAR HUÉSPEDES ---
 function renderizarHuespedes() {
     container.innerHTML = '';
     const inicio = (paginaActual - 1) * huespedesPorPagina;
@@ -39,40 +39,52 @@ function renderizarHuespedes() {
     const itemsParaMostrar = listaFiltrada.slice(inicio, fin);
 
     if (itemsParaMostrar.length === 0) {
-        container.innerHTML = `<p style="text-align:center; color: #64748b; grid-column: 1/-1; padding: 40px;">No se encontraron huéspedes registrados.</p>`;
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fa-solid fa-users-slash"></i>
+                <p>No se encontraron huéspedes registrados.</p>
+            </div>`;
         actualizarControlesPagina(0);
         return;
     }
 
     itemsParaMostrar.forEach((h) => {
-        const nombre = h.huesped || h.nombre || "SIN NOMBRE";
+        const nombre = (h.huesped || h.nombre || "SIN NOMBRE").toUpperCase();
         const documento = h.doc || h.documento || "---";
         const celular = h.telefono || h.celular || "---";
-        const categoria = h.categoria || "Regular";
+        const categoria = (h.categoria || "Regular").toLowerCase(); // Normalizamos para el CSS
+
+        // Lógica de iniciales mejorada (toma primera letra de nombre y apellido si existe)
+        const iniciales = nombre.split(' ').map(n => n[0]).join('').substring(0, 2);
 
         let esCumpleaños = false;
         if (h.nacimiento) {
             const hoy = new Date();
             const cumple = new Date(h.nacimiento);
-            if (hoy.getUTCDate() === cumple.getUTCDate() && hoy.getUTCMonth() === cumple.getUTCMonth()) {
+            // Ajuste para evitar problemas de zona horaria en la comparación
+            if (hoy.getDate() === cumple.getUTCDate() && hoy.getMonth() === cumple.getUTCMonth()) {
                 esCumpleaños = true;
             }
         }
 
         const card = document.createElement('div');
-        card.className = `huesped-card animated-fade ${esCumpleaños ? 'birthday-highlight' : ''}`;
+        card.className = `huesped-card ${esCumpleaños ? 'birthday-highlight' : ''}`;
         card.innerHTML = `
-            ${esCumpleaños ? '<div class="birthday-ribbon"><i class="fa-solid fa-cake-candles"></i> ¡Cumpleaños!</div>' : ''}
-            <div class="h-avatar">${nombre.charAt(0).toUpperCase()}</div>
+            ${esCumpleaños ? '<div class="birthday-ribbon"><i class="fa-solid fa-cake-candles"></i> ¡Hoy cumple años!</div>' : ''}
+            <div class="h-avatar">${iniciales}</div>
             <div class="h-info">
-                <h4>${nombre} ${esCumpleaños ? '🎂' : ''}</h4>
-                <p><i class="fa-solid fa-id-card"></i> ${h.tipoDoc || 'DOC'}: ${documento}</p>
-                <p><i class="fa-solid fa-phone"></i> ${celular}</p>
-                <span class="badge ${categoria.toLowerCase()}">${categoria}</span>
+                <div class="h-title-row">
+                    <h4>${nombre}</h4>
+                    <span class="badge ${categoria}">${categoria}</span>
+                </div>
+                <div class="h-details">
+                    <p><i class="fa-solid fa-fingerprint"></i> <span>${h.tipoDoc || 'DOC'}:</span> ${documento}</p>
+                    <p><i class="fa-solid fa-mobile-screen-button"></i> <span>WhatsApp:</span> ${celular}</p>
+                </div>
             </div>
             <div class="h-actions">
-                <button onclick="verDetalles('${h.id}')" title="Ver Ficha"><i class="fa-solid fa-eye"></i></button>
-                <button onclick="editarHuesped('${h.id}')" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button class="btn-view" onclick="verDetalles('${h.id}')"><i class="fa-solid fa-eye"></i></button>
+                <button class="btn-edit" onclick="editarHuesped('${h.id}')"><i class="fa-solid fa-pen"></i></button>
             </div>
         `;
         container.appendChild(card);

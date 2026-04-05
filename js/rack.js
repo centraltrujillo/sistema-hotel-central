@@ -64,11 +64,10 @@ const calcularMontos = () => {
     inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
 };
 
-// Listeners para cálculos en tiempo real
 [inputTarifa, inputCheckIn, inputCheckOut, inputAdelantoMonto, inputTipoCambio, selectMoneda, 
- document.getElementById("resEarly"), document.getElementById("resLate")].forEach(el => {
-    if(el) el.addEventListener("input", calcularMontos);
-});
+    document.getElementById("resEarly"), document.getElementById("resLate")].forEach(el => {
+       if(el) el.addEventListener("input", calcularMontos);
+   });
 
 // --- 3. AUTOCOMPLETADO POR DNI ---
 if (inputDoc) {
@@ -96,6 +95,80 @@ if (inputDoc) {
                 showConfirmButton: false,
                 timer: 1500
             });
+        }
+    });
+}
+
+const formulario = document.getElementById('formNuevaReserva');
+
+if (formulario) {
+    formulario.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const editId = formulario.dataset.editId; // Revisamos si hay un ID guardado
+
+        // CAPTURAMOS CADA DATO DEL FORMULARIO
+        const datosReserva = {
+            // Datos del Huésped
+            huesped: document.getElementById("resHuesped").value,
+            doc: document.getElementById("resDoc").value,
+            telefono: document.getElementById("resTelefono").value,
+            nacionalidad: document.getElementById("resNacionalidad").value,
+            nacimiento: document.getElementById("resNacimiento").value,
+            correo: document.getElementById("resCorreo").value,
+
+            // Detalles de la Estancia
+            habitacion: document.getElementById("resHabitacion").value,
+            checkIn: document.getElementById("resCheckIn").value,
+            checkOut: document.getElementById("resCheckOut").value,
+            medio: document.getElementById("resMedio").value,
+            personas: document.getElementById("resPersonas").value,
+            desayuno: document.getElementById("resInfo").value,
+            earlyCheckIn: document.getElementById("resEarly").value, // Se guarda en el extra 3 si es necesario
+            lateCheckOut: document.getElementById("resLate").value,  // Se guarda en el extra 1
+            cochera: document.getElementById("resCochera").value,
+            traslado: document.getElementById("resTraslado").value,
+
+            // Tarifas y Montos
+            tarifa: document.getElementById("resTarifa").value,
+            moneda: document.getElementById("resMoneda").value,
+            tipoCambio: document.getElementById("resTipoCambio").value,
+            total: document.getElementById("resTotal").value,
+            adelantoMonto: document.getElementById("resAdelantoMonto").value || 0,
+            adelantoDetalle: document.getElementById("resAdelantoDetalle").value,
+            diferencia: document.getElementById("resDiferencia").value,
+
+            // Notas y Recepción
+            observaciones: document.getElementById("resObservaciones").value,
+            recibidoPor: document.getElementById("resRecepcion").value,
+            confirmadoPor: document.getElementById("resRecepcionconfi").value,
+
+            // Metadatos para control
+            estado: "confirmada", // Estado inicial
+            fechaRegistro: new Date().toISOString()
+        };
+
+        try {
+            if (editId) {
+                // SI HAY ID: ACTUALIZAMOS (Update)
+                const docRef = doc(db, "reservas", editId);
+                await updateDoc(docRef, datosReserva);
+                Swal.fire('Actualizado', 'La reserva se modificó correctamente', 'success');
+            } else {
+                // SI NO HAY ID: CREAMOS (Add)
+                await addDoc(collection(db, "reservas"), datosReserva);
+                Swal.fire('Guardado', 'Nueva reserva creada', 'success');
+            }
+    
+            // Limpieza final
+            delete formulario.dataset.editId; // Borramos el ID de edición
+            document.getElementById('modalTitle').innerText = "Nueva Reserva";
+            cerrarModal();
+            formulario.reset();
+    
+        } catch (error) {
+            console.error("Error:", error);
+            Swal.fire('Error', 'Ocurrió un problema al procesar los datos', 'error');
         }
     });
 }
@@ -307,25 +380,20 @@ resourceLaneContent: function(arg) {
                     tipo: data.tipo 
                 };
             });
-
-
             
             listaHabitaciones.sort((a, b) => a.title.localeCompare(b.title, undefined, {numeric: true}));
 
             const extrasYTotal = [
-                { id: 'extra1', title: 'CHECK OL 1', tipo: 'EXTRAS' },
-                { id: 'extra2', title: 'CHECK OL 2', tipo: 'EXTRAS' },
-                { id: 'extra3', title: 'CHECK OL 3', tipo: 'EXTRAS' },
-                { id: 'extra4', title: 'CHECK OL 4', tipo: 'EXTRAS' },
-                { id: 'extra5', title: 'CHECK OL 5', tipo: 'EXTRAS' },
-                { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
+                { id: 'extra1', title: 'CHECK OL 1'},
+                { id: 'extra2', title: 'CHECK OL 2'},
+                { id: 'extra3', title: 'CHECK OL 3'},
+                { id: 'extra4', title: 'CHECK OL 4'},
+                { id: 'extra5', title: 'CHECK OL 5'},
+                { id: 'total-row', title: 'TOTAL OCUP' }
             ];
-
-
-// Usamos 'extrasYTotal' que es donde definiste los Check OL y el Total Ocup
+            
+            // Usamos 'extrasYTotal' que es donde definiste los Check OL y el Total Ocup
 calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
-
-
         } catch (error) {
             console.error("Error en cargarHabitaciones:", error);
             calendar.setOption('resources', [{ id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }]);
@@ -418,16 +486,66 @@ calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
 
 // --- FUNCIONES GLOBALES ---
 window.abrirModal = () => { 
-    // Opcional: Limpiar el formulario al abrir
-    const form = document.getElementById('formReserva'); // Asegúrate que tu <form> tenga este ID
-    if(form) form.reset(); 
-    
+    const form = document.getElementById('formNuevaReserva');
+    form.reset(); 
+    delete form.dataset.editId; // IMPORTANTE
+    document.getElementById('modalTitle').innerText = "Nueva Reserva";
     document.getElementById('modalReserva').classList.add('active'); 
 };
 
 window.cerrarModal = () => { document.getElementById('modalReserva').classList.remove('active'); };
-window.editarReserva = (id) => { Swal.fire('Editar', `Abriendo editor para reserva: ${id}`, 'info'); };
 
+window.editarReserva = async (id) => {
+    try {
+        // 1. Obtener los datos actuales de la reserva desde Firebase
+        const docRef = doc(db, "reservas", id);
+        const docSnap = await getDocs(query(collection(db, "reservas"))); // O usa el ID directo si tienes la ref
+        
+        // Buscamos en los eventos cargados en el calendario para no volver a consultar a Firebase
+        const reserva = calendar.getEventById(id);
+        const r = reserva.extendedProps;
+
+        // 2. Cambiar el título y estado del modal
+        document.getElementById('modalTitle').innerText = "Editar Reserva";
+        document.getElementById('formNuevaReserva').dataset.editId = id; // Guardamos el ID para saber que es edición
+
+        // 3. Llenar el formulario con los datos existentes
+        document.getElementById("resHuesped").value = r.huesped || "";
+        document.getElementById("resDoc").value = r.doc || "";
+        document.getElementById("resTelefono").value = r.telefono || "";
+        document.getElementById("resNacionalidad").value = r.nacionalidad || "";
+        document.getElementById("resNacimiento").value = r.nacimiento || "";
+        document.getElementById("resCorreo").value = r.correo || "";
+        document.getElementById("resHabitacion").value = r.habitacion || "";
+        document.getElementById("resCheckIn").value = r.checkIn || "";
+        document.getElementById("resCheckOut").value = r.checkOut || "";
+        document.getElementById("resMedio").value = r.medio || "";
+        document.getElementById("resPersonas").value = r.personas || 1;
+        document.getElementById("resInfo").value = r.desayuno || "SIN DESAYUNO";
+        document.getElementById("resEarly").value = r.earlyCheckIn || "";
+        document.getElementById("resLate").value = r.lateCheckOut || "";
+        document.getElementById("resCochera").value = r.cochera || "";
+        document.getElementById("resTraslado").value = r.traslado || "";
+        document.getElementById("resTarifa").value = r.tarifa || 0;
+        document.getElementById("resMoneda").value = r.moneda || "PEN";
+        document.getElementById("resTipoCambio").value = r.tipoCambio || 1;
+        document.getElementById("resTotal").value = r.total || 0;
+        document.getElementById("resAdelantoMonto").value = r.adelantoMonto || 0;
+        document.getElementById("resAdelantoDetalle").value = r.adelantoDetalle || "";
+        document.getElementById("resDiferencia").value = r.diferencia || 0;
+        document.getElementById("resObservaciones").value = r.observaciones || "";
+        document.getElementById("resRecepcion").value = r.recibidoPor || "";
+        document.getElementById("resRecepcionconfi").value = r.confirmadoPor || "";
+
+        // 4. Abrir el modal
+        Swal.close(); // Cerramos el SweetAlert de gestión antes de abrir el modal
+        document.getElementById('modalReserva').classList.add('active');
+
+    } catch (error) {
+        console.error("Error al cargar datos para editar:", error);
+        Swal.fire('Error', 'No se pudieron cargar los datos de la reserva', 'error');
+    }
+};
 window.hacerCheckIn = async (id) => {
     const { isConfirmed } = await Swal.fire({
         title: '¿Confirmar Check-In?',
