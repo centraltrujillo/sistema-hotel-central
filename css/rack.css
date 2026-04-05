@@ -194,9 +194,37 @@ body {
     border: 1px solid #e2e8f0;
 }
 
-/* Mejora la separación visual de las filas en el Rack */
-.fc-timeline-lane-frame {
-    height: 28px !important; /* Altura uniforme para cada fila de habitación */
+/* Forzar que todas las celdas, tanto de ID como de Fecha, midan lo mismo */
+.fc-timeline-header-row, 
+.fc-timeline-lane-frame, 
+.fc-datagrid-cell-frame {
+    height: 30px !important; /* Altura fija para todo */
+    min-height: 30px !important;
+}
+
+/* Alineación de la columna lateral con la cuadrícula */
+.fc-datagrid-cell-cushion, 
+.fc-timeline-slot-cushion {
+    padding: 0 8px !important;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+/* Eliminar espacios fantasma que descuadran las fechas arriba */
+.fc-timeline-header-row:first-child {
+    height: 25px !important; /* Mes (abril 2026) */
+}
+.fc-timeline-header-row:last-child {
+    height: 45px !important; /* Días (mie 1, jue 2...) */
+}
+
+/* Evitar que el texto de la habitación se desborde y empuje la fila */
+.fc-datagrid-cell-main {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px !important;
 }
 
 /* Ocultar mensaje de licencia de FullCalendar Scheduler */
@@ -278,7 +306,6 @@ body {
     border-top: 2px solid var(--amarillo-ocre) !important;
 }
 .fc-timeline-header-row {
-    height: 40px !important; 
     background-color: #f8fafc !important;
 }
 

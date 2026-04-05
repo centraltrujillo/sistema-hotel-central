@@ -103,13 +103,12 @@ if (inputDoc) {
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'resourceTimelineMonth',
-height: '100%',           
-contentHeight: 'auto',      
-expandRows: true,           
-resourceAreaWidth: '220px', 
-slotMinWidth: 28,            
-stickyHeaderDates: true,    // Mantiene los días (mie 1, jue 2...) siempre a la vista al hacer scroll lateral
-resourceOrder: false,       // Mantiene el orden: Habitaciones arriba, Extras y Totales al final
+height: 'parent',            // Se adapta al contenedor sin crear scroll propio
+contentHeight: 'auto',       
+expandRows: true,            
+resourceAreaWidth: '220px',  
+stickyHeaderDates: true,     
+handleWindowResize: true,    // Recalcula si cambias el tamaño de la ventana
 aspectRatio: 2.5, 
 
 
