@@ -6,12 +6,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'resourceTimelineMonth',
-        // --- NUEVOS AJUSTES DE VISTA COMPACTA ---
-        height: 'auto',              // Evita el scroll interno del calendario
-        resourceAreaWidth: '15%',    // Reduce el ancho de la columna de habitaciones
-        slotMinWidth: 28,            // Hace las columnas de los días más delgadas
-        eventHeight: 20,             // Reduce la altura de las barras de reserva
-        stickyHeaderDates: true,     // Mantiene los días visibles al bajar
+        // --- CONFIGURACIÓN DE VISTA COMPACTA Y ORDEN ---
+        height: 'auto',              
+        resourceAreaWidth: '220px',    
+        slotMinWidth: 28,            
+        eventHeight: 20,             
+        stickyHeaderDates: true,
+        resourceOrder: false,       // IMPORTANTE: Mantiene el orden manual (Habitaciones -> Extras)
         // ---------------------------------------
         locale: 'es', 
     
@@ -28,26 +29,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             center: 'title',
             right: 'resourceTimelineMonth,resourceTimelineDay'
         },
-        resourceAreaWidth: '220px',
-        resourceAreaHeaderContent: 'HABITACIONES',
-        
+
+        // --- CORRECCIÓN DE FECHAS DESAPARECIDAS ---
+        slotLabelFormat: [
+            { month: 'long', year: 'numeric' }, // Línea 1: abril de 2026
+            { weekday: 'short', day: 'numeric' } // Línea 2: L 1, M 2...
+        ],
+
+        resourceAreaHeaderContent: 'HABITACIONES / TOTAL',
 
         slotLabelContent: function(arg) {
-            // Solo calculamos para el nivel de días (donde aparece D1, L2, etc.)
             if (arg.level > 0) { 
                 const fechaSlot = arg.date;
                 const eventos = calendar.getEvents();
                 let count = 0;
 
                 eventos.forEach(ev => {
-                    // Solo contamos si es una habitación real (evitamos contar extras o totales)
                     const esHabitacionReal = ev.resourceId && !ev.resourceId.includes('extra') && ev.resourceId !== 'total-row';
                     if (esHabitacionReal && fechaSlot >= ev.start && fechaSlot < ev.end) {
                         count++;
                     }
                 });
 
-                // Retorna el día y, abajo, el total de ocupación en color vino tinto
                 return { 
                     html: `
                         <div style="font-size: 11px;">${arg.text}</div>
@@ -58,9 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         },
 
-        // --- DETALLE AL HACER CLIC ---
         eventClick: function(info) {
-            const r = info.event.extendedProps; // 'r' contiene todos los datos de Firebase
+            const r = info.event.extendedProps; 
             const idReserva = info.event.id;
         
             Swal.fire({
@@ -169,32 +171,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // 1. CARGAR HABITACIONES
     const cargarHabitaciones = async () => {
         try {
             const querySnapshot = await getDocs(collection(db, "habitaciones"));
             
-            // CORRECCIÓN: Se eliminó la redeclaración de listaHabitaciones
             let listaHabitaciones = querySnapshot.docs.map(doc => ({
-                id: `hab${doc.data().numero}`, // ID consistente: hab201
+                id: `hab${doc.data().numero}`, 
                 title: doc.data().numero.toString(), 
                 tipo: doc.data().tipo 
             }));
 
-// Ordenamos habitaciones numéricamente
-listaHabitaciones.sort((a, b) => a.title.localeCompare(b.title, undefined, {numeric: true}));
+            listaHabitaciones.sort((a, b) => a.title.localeCompare(b.title, undefined, {numeric: true}));
 
-// Ponemos los extras y el total AL FINAL
-const extrasYTotal = [
-    { id: 'extra1', title: 'CHECK OL 1', tipo: 'EXTRAS' },
-    { id: 'extra2', title: 'CHECK OL 2', tipo: 'EXTRAS' },
-    { id: 'extra3', title: 'CHECK OL 3', tipo: 'EXTRAS' },
-    { id: 'extra4', title: 'CHECK OL 4', tipo: 'EXTRAS' },
-    { id: 'extra5', title: 'CHECK OL 5', tipo: 'EXTRAS' },
-    { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
-];
+            const extrasYTotal = [
+                { id: 'extra1', title: 'CHECK OL 1', tipo: 'EXTRAS' },
+                { id: 'extra2', title: 'CHECK OL 2', tipo: 'EXTRAS' },
+                { id: 'extra3', title: 'CHECK OL 3', tipo: 'EXTRAS' },
+                { id: 'extra4', title: 'CHECK OL 4', tipo: 'EXTRAS' },
+                { id: 'extra5', title: 'CHECK OL 5', tipo: 'EXTRAS' },
+                { id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }
+            ];
 
-calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
+            // Envía las habitaciones primero para que aparezcan arriba
+            calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
 
         } catch (error) {
             console.error("Error en cargarHabitaciones:", error);
@@ -202,7 +201,6 @@ calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
         }
     };
 
-    // 2. ESCUCHAR RESERVAS
     const escucharReservas = () => {
         onSnapshot(collection(db, "reservas"), (snapshot) => {
             const listaReservas = snapshot.docs.map(doc => {
@@ -214,7 +212,7 @@ calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
 
                 return {
                     id: doc.id,
-                    resourceId: `hab${data.habitacion}`, // Debe coincidir con el ID del recurso
+                    resourceId: `hab${data.habitacion}`, 
                     title: data.huesped || 'Sin nombre',
                     start: data.checkIn,
                     end: data.checkOut,
@@ -228,26 +226,16 @@ calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
         });
     };
 
- // 1. Preparamos las funciones de carga pero NO renderizamos aún
- await cargarHabitaciones(); // Esperamos a que Firebase traiga los recursos
- escucharReservas();        // Iniciamos el escucha de eventos
- 
- // 2. Renderizamos al final con todo cargado
- calendar.render();
+    // Orden de ejecución final para evitar pantallas vacías
+    await cargarHabitaciones(); 
+    escucharReservas();        
+    calendar.render();
 });
 
 // --- FUNCIONES GLOBALES ---
-window.abrirModal = () => {
-    document.getElementById('modalReserva').classList.add('active');
-};
-
-window.cerrarModal = () => {
-    document.getElementById('modalReserva').classList.remove('active');
-};
-
-window.editarReserva = (id) => {
-    Swal.fire('Editar', `Abriendo editor para reserva: ${id}`, 'info');
-};
+window.abrirModal = () => { document.getElementById('modalReserva').classList.add('active'); };
+window.cerrarModal = () => { document.getElementById('modalReserva').classList.remove('active'); };
+window.editarReserva = (id) => { Swal.fire('Editar', `Abriendo editor para reserva: ${id}`, 'info'); };
 
 window.hacerCheckIn = async (id) => {
     const { isConfirmed } = await Swal.fire({
