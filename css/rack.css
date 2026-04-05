@@ -16,7 +16,7 @@ body {
 }
 
 .main-content {
-    padding: 20px;
+    padding: 10px 20px;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -140,14 +140,14 @@ body {
 
 /* --- 5. RACK (ESTILO EXCEL) --- */
 .gantt-wrapper {
-    padding: 5px;
+    padding: 0; /* Quita el padding para ganar espacio */
     background: white;
-    flex: 1;
-    height: calc(100vh - 180px); 
-    min-height: 500px;
-    overflow: hidden; /* FullCalendar maneja su propio scroll */
-    border-radius: 0 0 8px 8px;
-    border: 1px solid #eee;
+    flex: 1; 
+    min-height: 0; /* Permite que el contenedor se encoja si es necesario */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* El scroll lo maneja el calendario, no el div */
+    border: 1px solid #e2e8f0;
 }
 
 /* Ajustes para que FullCalendar se parezca a tu Excel */
@@ -243,7 +243,14 @@ body {
 
 /* Color verde para las filas de Check Out Late / Day Use */
 .fc-timeline-lane[data-resource-id^="extra"] {
-    background-color: #d9f99d !important; /* Un verde suave como el Excel */
+    background-color: #d9f99d !important; 
+    opacity: 0.8;
+}
+
+/* Fila de Total Ocupación (La última) */
+.fc-timeline-lane[data-resource-id="total-row"] {
+    background-color: #fef9c3 !important; 
+    border-top: 2px solid #800020 !important; /* Línea vino tinto para separar el total */
 }
 
 /* Estilo para que el nombre del huésped se vea bien en la barra */
