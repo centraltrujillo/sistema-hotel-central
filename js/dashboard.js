@@ -183,23 +183,25 @@ function inicializarDashboard() {
     });
 }
 
-// --- E. LÓGICA DE RESERVAS HOY ---
-const hoy = new Date();
-hoy.setHours(0, 0, 0, 0);
-
-const manana = new Date(hoy);
-manana.setDate(manana.getDate() + 1);
-
 onSnapshot(collection(db, "reservas"), (snapshot) => {
+    const ahora = new Date();
+    
+    // Formateamos la fecha de hoy como string YYYY-MM-DD para comparar sin horas
+    const hoyString = ahora.toISOString().split('T')[0]; 
+
     let reservasHoy = 0;
     
     snapshot.forEach(doc => {
         const data = doc.data();
-        const entrada = formatearFechaJS(data.checkIn);
+        const fechaEntrada = formatearFechaJS(data.checkIn);
 
-        if (entrada) {
-            // Comprobar si la fecha de entrada es hoy
-            if (entrada >= hoy && entrada < manana) {
+        if (fechaEntrada) {
+            // 1. Obtenemos solo la parte de la fecha (YYYY-MM-DD) de la reserva
+            const reservaString = fechaEntrada.toISOString().split('T')[0];
+
+            // 2. FILTRO DOBLE: Que la fecha sea hoy Y que el estado sea "Reservada"
+            // (Ajusta "Reservada" según como lo guardes en tu base de datos)
+            if (reservaString === hoyString && data.estado === "Reservada") {
                 reservasHoy++;
             }
         }
@@ -208,13 +210,6 @@ onSnapshot(collection(db, "reservas"), (snapshot) => {
     const kpiReservas = document.getElementById('kpi-reservas-hoy');
     if (kpiReservas) {
         kpiReservas.innerText = reservasHoy;
-    }
-    
-    // Opcional: Actualizar tendencia de reservas (comparado con un número estático por ahora)
-    const trendRes = document.getElementById('trend-reservas');
-    if (trendRes) {
-        trendRes.innerText = "Sincronizado";
-        trendRes.className = "trend-value trend-neutral";
     }
 });
 
@@ -237,10 +232,39 @@ function actualizarTendencia(actual, anterior, elementoId) {
     elemento.className = porcentaje >= 0 ? "trend-value trend-positive" : "trend-value trend-negative";
 }
 
-// --- 5. LOGOUT ---
-document.getElementById('btnLogout')?.addEventListener('click', async () => {
-    if (confirm("¿Cerrar sesión en Hotel Central?")) {
-        await signOut(auth);
-        window.location.href = "index.html";
-    }
+// --- 5. LOGOUT CON SWEETALERT2 ---
+document.getElementById('btnLogout')?.addEventListener('click', () => {
+    Swal.fire({
+        title: '¿Cerrar sesión?',
+        text: "Regresa pronto a Hotel Central",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#800020', // Tu color Vino Tinto
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, salir',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true, // Pone el botón de confirmar a la derecha
+        background: '#fff',
+        backdrop: `rgba(128, 0, 32, 0.1)` // Un ligero fondo vino transparente
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                await signOut(auth);
+                // Pequeña alerta de éxito antes de redirigir
+                Swal.fire({
+                    title: '¡Sesión cerrada!',
+                    icon: 'success',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    colors: '#cc9900' // Color Oro
+                });
+                
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1500);
+            } catch (error) {
+                Swal.fire('Error', 'No se pudo cerrar la sesión', 'error');
+            }
+        }
+    });
 });

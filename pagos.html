@@ -92,7 +92,7 @@
 
     <script type="module">
         import { db } from "./js/firebaseconfig.js";
-        import { collection, onSnapshot, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        import { collection, onSnapshot, query, orderBy, getDocs, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
         const tbody = document.getElementById('tbody-pagos');
         const fInicio = document.getElementById('fechaInicio');
@@ -136,10 +136,6 @@
 
             datos.forEach((p) => {
                 const f = convertirFecha(p.fechaPago);
-                
-                // Mapeo corregido según tu estructura de Firebase
-                const checkIn = p.checkIn || ""; 
-                const checkOut = p.checkOut || "";
                 const tarifaBase = parseFloat(p.tarifa || 0);
                 const montoHospedaje = parseFloat(p.montoHospedaje || 0);
                 const montoEarly = parseFloat(p.montoEarly || 0); 
@@ -155,7 +151,7 @@
                     <td><span class="badge-hab">${p.habitacion || '--'}</span></td>
                     <td><i class="fa-solid fa-wallet"></i> ${p.metodoPago || 'Efectivo'}</td>
                     <td>
-                        <button class="btn-detalle" onclick="abrirDetalleHospedaje('${p.id}', '${checkIn}', '${checkOut}', ${tarifaBase}, ${montoEarly}, ${montoLate}, ${montoHospedaje}, '${moneda}', ${tc})">
+                        <button class="btn-detalle" onclick="prepararDetalleHospedaje('${p.id}', '${p.idReserva}', ${tarifaBase}, ${montoEarly}, ${montoLate}, ${montoHospedaje}, '${moneda}', ${tc})">
                             ${simbolo} ${montoHospedaje.toFixed(2)} <i class="fa-solid fa-eye"></i>
                         </button>
                     </td>
@@ -170,16 +166,40 @@
             });
         }
 
-        // --- MODAL 1: DETALLE DE HOSPEDAJE (MULTIMONEDA) ---
+        // --- FUNCIÓN PUENTE: BUSCA DATOS EN RESERVAS ---
+        window.prepararDetalleHospedaje = async function(idPago, idReserva, tarifa, early, late, total, moneda, tc) {
+            if (!idReserva) {
+                Swal.fire("Aviso", "No hay un ID de reserva vinculado a este pago.", "warning");
+                return;
+            }
+
+            Swal.fire({ title: 'Consultando reserva...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+            try {
+                const resSnap = await getDoc(doc(db, "reservas", idReserva));
+                let checkIn = "";
+                let checkOut = "";
+
+                if (resSnap.exists()) {
+                    const data = resSnap.data();
+                    // Extraer fechas (pueden ser strings o Timestamps)
+                    checkIn = data.fecha_entrada || "";
+                    checkOut = data.fecha_salida || "";
+                }
+
+                // Llamamos al modal final con los datos obtenidos
+                abrirDetalleHospedaje(idPago, checkIn, checkOut, tarifa, early, late, total, moneda, tc);
+                
+            } catch (error) {
+                console.error("Error al obtener reserva:", error);
+                Swal.fire("Error", "No se pudo cargar la información de la reserva.", "error");
+            }
+        };
+
+        // --- MODAL 1: DETALLE DE HOSPEDAJE ---
         window.abrirDetalleHospedaje = function(id, inF, outF, tarifa, early, late, total, moneda = "PEN", tc = 0) {
             const simbolo = moneda === "USD" ? "$" : "S/";
             
-            // Bloque de depuración en consola
-            console.group("Desglose de Pago");
-            console.log("Moneda:", moneda, "| T.C.:", tc);
-            console.log("Fechas:", inF, "al", outF);
-            console.groupEnd();
-
             const _tarifa = parseFloat(tarifa) || 0;
             const _early = parseFloat(early) || 0;
             const _late = parseFloat(late) || 0;
@@ -215,7 +235,7 @@
                     </table>
                     ${moneda === "USD" && tc > 0 ? `
                     <div style="margin-top:15px; padding:10px; background:#fff9e6; border-radius:8px; font-size:12px; color:#856404; border:1px solid #ffeeba;">
-                        <i class="fa-solid fa-circle-info"></i> <b>Tipo de Cambio:</b> S/ ${tc.toFixed(3)}
+                        <i class="fa-solid fa-circle-info"></i> <b>T. Cambio Aplicado:</b> S/ ${tc.toFixed(3)}
                     </div>` : ''}
                 </div>`;
 
@@ -261,30 +281,10 @@
             }
         };
 
-        // Eventos
         fInicio.addEventListener('change', aplicarFiltros);
         fFin.addEventListener('change', aplicarFiltros);
         document.getElementById('btnLimpiar').addEventListener('click', () => { fInicio.value = ''; fFin.value = ''; aplicarFiltros(); });
         
-        document.getElementById('btnExportar').addEventListener('click', () => {
-            const datosAExportar = (fInicio.value || fFin.value) ? pagosFiltrados : todosLosPagos;
-            if (datosAExportar.length === 0) {
-                Swal.fire("Atención", "No hay datos para exportar.", "warning");
-                return;
-            }
-            const ws = XLSX.utils.json_to_sheet(datosAExportar.map(p => ({
-                "Fecha": convertirFecha(p.fechaPago)?.toLocaleDateString('es-PE'),
-                "Huésped": p.huesped,
-                "Hab": p.habitacion,
-                "Método": p.metodoPago,
-                "Moneda": p.moneda || "PEN",
-                "Total": p.montoTotal
-            })));
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Pagos");
-            XLSX.writeFile(wb, "Reporte_Pagos_Hotel_Central.xlsx");
-        });
-
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     </script>
 </body>
