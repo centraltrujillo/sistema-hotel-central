@@ -55,7 +55,7 @@ const calcularMontos = () => {
     const tieneLate = document.getElementById("resLate").value !== "";
 
     // 1. Resetear si las fechas son inválidas o incompletas
-    if (!inputCheckIn.value || !inputCheckOut.value || fOut <= fIn) {
+    if (!inputCheckIn.value || !inputCheckOut.value || fOut < fIn) {
         inputTotal.value = "0.00";
         inputDiferencia.value = "0.00";
         return;
@@ -64,16 +64,16 @@ const calcularMontos = () => {
     // 2. Cálculo de Noches (Uso de round para mayor precisión en fechas)
     const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
     
-    // 3. Subtotal base en la moneda de origen (Noches * Tarifa)
-    let subtotal = noches * tarifaBase;
+    // 3. Subtotal base
+let subtotal = 0;
 
-    if (noches === 0) {
-        // ES DAY USE: El subtotal es directamente lo que la recepcionista ponga en Tarifa
-        subtotal = tarifaBase; 
-    } else {
-        // ES RESERVA NORMAL: Noches por Tarifa
-        subtotal = noches * tarifaBase;
-    }
+if (noches === 0) {
+    // ES DAY USE: El subtotal es el monto manual que pongas en el input Tarifa
+    subtotal = tarifaBase; 
+} else {
+    // RESERVA NORMAL: Multiplica noches por la tarifa base
+    subtotal = noches * tarifaBase;
+}
 
     // 4. Aplicación de Recargos (50% de la tarifa base por cada concepto)
     if (tieneEarly) subtotal += (tarifaBase * 0.5);
@@ -186,6 +186,11 @@ form.addEventListener("submit", async (e) => {
             return Swal.fire({ title: 'Habitación Ocupada', text: 'Ya hay una reserva en estas fechas.', icon: 'error', confirmButtonColor: '#800020' });
         }
 
+        // --- VALORES PARA EL PAGO ---
+        const montoAdelanto = Number(inputAdelantoMonto.value) || 0;
+        const detalleAdelanto = document.getElementById("resAdelantoDetalle").value;
+        const quienRecibe = document.getElementById("resRecepcion").value;
+
         // b --- PREPARACIÓN DE DATOS ---
         const data = {
             huesped: document.getElementById("resHuesped").value,
@@ -202,17 +207,17 @@ form.addEventListener("submit", async (e) => {
             tarifa: Number(inputTarifa.value) || 0,
             tipoCambio: Number(inputTipoCambio.value) || 0,
             total: Number(inputTotal.value) || 0,
-            adelantoMonto: Number(inputAdelantoMonto.value) || 0,
+            adelantoMonto: montoAdelanto,
             diferencia: Number(inputDiferencia.value) || 0,
             early: document.getElementById("resEarly").value,
             late: document.getElementById("resLate").value,
             moneda: selectMoneda.value,
-            adelantoDetalle: document.getElementById("resAdelantoDetalle").value,
+            adelantoDetalle: detalleAdelanto,
             desayuno: document.getElementById("resInfo").value,
             cochera: document.getElementById("resCochera").value,
             traslado: document.getElementById("resTraslado").value,
             observaciones: document.getElementById("resObservaciones").value,
-            recepcion: document.getElementById("resRecepcion").value,
+            recepcion: quienRecibe,
             recepcionconfi: document.getElementById("resRecepcionconfi").value,
             estado: editId ? (listaReservasGlobal.find(r => r.id === editId)?.estado || "reservada") : "reservada",
             fechaRegistro: editId ? (listaReservasGlobal.find(r => r.id === editId)?.fechaRegistro || new Date().toISOString()) : new Date().toISOString()
@@ -220,32 +225,43 @@ form.addEventListener("submit", async (e) => {
 
         // c --- GUARDAR O ACTUALIZAR ---
         if (editId) {
+            // Si editamos, actualizamos los datos generales sin tocar el array de pagos previo
             await updateDoc(doc(db, "reservas", editId), data);
         } else {
+            // SI ES NUEVA: Agregamos el array de pagos con el historial inicial
+            data.pagos = [
+                {
+                    fecha: new Date().toISOString(),
+                    concepto: "Adelanto de Reserva",
+                    monto: montoAdelanto,
+                    metodo: detalleAdelanto,
+                    recibidoBy: quienRecibe
+                }
+            ];
             await addDoc(collection(db, "reservas"), data);
         }
 
         // d --- SYNC HUÉSPED ---
         const dniLimpio = data.doc ? data.doc.trim() : "";
-if (dniLimpio !== "") {
-    const hRef = doc(db, "huespedes", dniLimpio);
-    await setDoc(hRef, {
-        nombre: data.huesped.toUpperCase(),
-        documento: dniLimpio,
-        telefono: data.telefono,
-        correo: data.correo,
-        nacionalidad: data.nacionalidad,
-        nacimiento: data.nacimiento,
-        ultimaVisita: new Date().toISOString()
-    }, { merge: true });
+        if (dniLimpio !== "") {
+            const hRef = doc(db, "huespedes", dniLimpio);
+            await setDoc(hRef, {
+                nombre: data.huesped.toUpperCase(),
+                documento: dniLimpio,
+                telefono: data.telefono,
+                correo: data.correo,
+                nacionalidad: data.nacionalidad,
+                nacimiento: data.nacimiento,
+                ultimaVisita: new Date().toISOString()
+            }, { merge: true });
 
-    Toast.fire({
-        icon: 'success',
-        title: 'Huésped guardado', // información nueva se envió a Firebase correctamente
-        background: '#fff',
-        iconColor: '#800020' 
-    });
-}
+            Toast.fire({
+                icon: 'success',
+                title: 'Huésped guardado',
+                background: '#fff',
+                iconColor: '#800020' 
+            });
+        }
 
         Swal.fire({ title: '¡Éxito!', text: 'Reserva guardada correctamente', icon: 'success', confirmButtonColor: '#800020' });
         window.cerrarModal();
