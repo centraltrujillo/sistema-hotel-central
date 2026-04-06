@@ -401,6 +401,7 @@ const Toast = Swal.mixin({
                 telefono: reservaData.telefono,
                 correo: reservaData.correo,
                 nacionalidad: reservaData.nacionalidad,
+                nacimiento: reservaData.nacimiento, 
                 ultimaVisita: hoy
             }, { merge: true });
 
@@ -933,6 +934,7 @@ window.addEventListener('click', (e) => {
                 <span class="bold" style="font-size: 15px;">HOTEL CENTRAL</span><br>
                 <span style="font-size: 9px;">RUC: 20601852153</span><br>
                 <span style="font-size: 9px;">Jr. Simón Bolívar 355 - Trujillo</span>
+                <span style="font-size: 9px;">+51 (44) 701178</span>
             </div>
             
             <div class="divider"></div>
@@ -944,21 +946,21 @@ window.addEventListener('click', (e) => {
             </div>
             
             <div class="divider"></div>
-            
-            <table>
+
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px; line-height: 1.2;">
                 <thead>
                     <tr style="border-bottom: 1px solid #000;">
-                        <th align="left">DESCRIPCIÓN</th>
-                        <th align="right">TOTAL</th>
+                        <th align="left" style="width: 70%; padding-bottom: 3px;">DESCRIPCIÓN</th>
+                        <th align="right" style="width: 30%; padding-bottom: 3px;">TOTAL</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 5px 0;">
+                        <td style="padding: 3px 0;">
                             SERVICIO DE ALOJAMIENTO<br>
-                            DEL ${formatF(rData.checkIn)} AL ${formatF(rData.checkOut)}
+                            <span style="font-size: 9px;">DEL ${formatF(rData.checkIn)} AL ${formatF(rData.checkOut)}</span>
                         </td>
-                        <td class="text-right" style="vertical-align: bottom;">
+                        <td align="right" style="vertical-align: top; padding: 3px 0; white-space: nowrap;">
                             S/ ${parseFloat(rData.total).toFixed(2)}
                         </td>
                     </tr>
@@ -969,16 +971,16 @@ window.addEventListener('click', (e) => {
             
             <div class="divider"></div>
             
-            <table>
-                <tr class="total-row">
-                    <td>TOTAL COBRADO</td>
-                    <td class="text-right">S/ ${granTotal.toFixed(2)}</td>
+            <table style="width: 100%; font-size: 12px;">
+                <tr class="total-row" style="font-weight: bold;">
+                    <td style="width: 60%;">TOTAL COBRADO</td>
+                    <td align="right" style="width: 40%; white-space: nowrap;">S/ ${granTotal.toFixed(2)}</td>
                 </tr>
             </table>
 
             <div style="margin-top: 10px;">
                 <span>MEDIO DE PAGO: <b>${metodoPago?.toUpperCase() || 'EFECTIVO'}</b></span><br>
-                <span style="font-size: 9px; font-style: italic;">Atendido por: ${nombreAtendido.toUpperCase()}</span>
+                <span style="font-size: 9px; font-style: italic;">Emitido por: ${nombreAtendido.toUpperCase()}</span>
             </div>
             
             <div class="divider"></div>
