@@ -186,8 +186,14 @@ function inicializarDashboard() {
 onSnapshot(collection(db, "reservas"), (snapshot) => {
     const ahora = new Date();
     
-    // Formateamos la fecha de hoy como string YYYY-MM-DD para comparar sin horas
-    const hoyString = ahora.toISOString().split('T')[0]; 
+    // Obtenemos año, mes y día LOCAL (Perú)
+    const anio = ahora.getFullYear();
+    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+    const dia = String(ahora.getDate()).padStart(2, '0');
+    const hoyString = `${anio}-${mes}-${dia}`; 
+
+    console.log("--- Verificando Reservas ---");
+    console.log("Fecha de hoy (Local):", hoyString);
 
     let reservasHoy = 0;
     
@@ -196,16 +202,25 @@ onSnapshot(collection(db, "reservas"), (snapshot) => {
         const fechaEntrada = formatearFechaJS(data.checkIn);
 
         if (fechaEntrada) {
-            // 1. Obtenemos solo la parte de la fecha (YYYY-MM-DD) de la reserva
-            const reservaString = fechaEntrada.toISOString().split('T')[0];
+            // Obtenemos año, mes y día LOCAL de la reserva
+            const resAnio = fechaEntrada.getFullYear();
+            const resMes = String(fechaEntrada.getMonth() + 1).padStart(2, '0');
+            const resDia = String(fechaEntrada.getDate()).padStart(2, '0');
+            const reservaString = `${resAnio}-${resMes}-${resDia}`;
 
-            // 2. FILTRO DOBLE: Que la fecha sea hoy Y que el estado sea "Reservada"
-            // (Ajusta "Reservada" según como lo guardes en tu base de datos)
-            if (reservaString === hoyString && data.estado === "Reservada") {
+            console.log(`Reserva ID: ${doc.id} | Fecha: ${reservaString} | Estado: ${data.estado}`);
+
+            // FILTRO: Fecha coincide Y el estado es Reservada
+            if (reservaString === hoyString && data.estado === "reservada") {
                 reservasHoy++;
             }
+        } else {
+            console.warn(`Reserva ID: ${doc.id} no tiene una fecha válida.`);
         }
     });
+
+    console.log("Total reservas encontradas para hoy:", reservasHoy);
+    console.log("----------------------------");
 
     const kpiReservas = document.getElementById('kpi-reservas-hoy');
     if (kpiReservas) {
@@ -236,7 +251,7 @@ function actualizarTendencia(actual, anterior, elementoId) {
 document.getElementById('btnLogout')?.addEventListener('click', () => {
     Swal.fire({
         title: '¿Cerrar sesión?',
-        text: "Regresa pronto a Hotel Central",
+        text: "Cerrarás sesion del Sistema Hotel Central",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#800020', // Tu color Vino Tinto

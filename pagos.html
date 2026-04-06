@@ -79,7 +79,7 @@
                             <th>Método</th>
                             <th>Hospedaje Total</th>
                             <th>Extras</th>
-                            <th>Gran Total</th>
+                            <th>Total</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-pagos">
@@ -136,7 +136,6 @@
 
             datos.forEach((p) => {
                 const f = convertirFecha(p.fechaPago);
-                const tarifaBase = parseFloat(p.tarifa || 0);
                 const montoHospedaje = parseFloat(p.montoHospedaje || 0);
                 const montoEarly = parseFloat(p.montoEarly || 0); 
                 const montoLate = parseFloat(p.montoLate || 0);
@@ -151,7 +150,7 @@
                     <td><span class="badge-hab">${p.habitacion || '--'}</span></td>
                     <td><i class="fa-solid fa-wallet"></i> ${p.metodoPago || 'Efectivo'}</td>
                     <td>
-                        <button class="btn-detalle" onclick="prepararDetalleHospedaje('${p.id}', '${p.idReserva}', ${tarifaBase}, ${montoEarly}, ${montoLate}, ${montoHospedaje}, '${moneda}', ${tc})">
+                        <button class="btn-detalle" onclick="prepararDetalleHospedaje('${p.idReserva}', ${montoEarly}, ${montoLate}, ${montoHospedaje}, '${moneda}', ${tc})">
                             ${simbolo} ${montoHospedaje.toFixed(2)} <i class="fa-solid fa-eye"></i>
                         </button>
                     </td>
@@ -166,45 +165,40 @@
             });
         }
 
-        // --- FUNCIÓN PUENTE: BUSCA DATOS EN RESERVAS ---
-        window.prepararDetalleHospedaje = async function(idPago, idReserva, tarifa, early, late, total, moneda, tc) {
+        // --- FUNCIÓN PUENTE CORREGIDA CON TUS CAMPOS DE RESERVA ---
+        window.prepararDetalleHospedaje = async function(idReserva, early, late, total, moneda, tc) {
             if (!idReserva) {
-                Swal.fire("Aviso", "No hay un ID de reserva vinculado a este pago.", "warning");
+                Swal.fire("Aviso", "No hay un ID de reserva vinculado.", "warning");
                 return;
             }
 
-            Swal.fire({ title: 'Consultando reserva...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+            Swal.fire({ title: 'Cargando detalle...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
 
             try {
                 const resSnap = await getDoc(doc(db, "reservas", idReserva));
-                let checkIn = "";
-                let checkOut = "";
-
                 if (resSnap.exists()) {
-                    const data = resSnap.data();
-                    // Extraer fechas (pueden ser strings o Timestamps)
-                    checkIn = data.fecha_entrada || "";
-                    checkOut = data.fecha_salida || "";
-                }
+                    const d = resSnap.data();
+                    
+                    // Mapeo dinámico: Busca 'resCheckIn' o 'fecha_entrada'
+                    const fIn = d.resCheckIn || d.fecha_entrada || "";
+                    const fOut = d.resCheckOut || d.fecha_salida || "";
+                    const tarifa = parseFloat(d.resTarifa || d.tarifa || 0);
 
-                // Llamamos al modal final con los datos obtenidos
-                abrirDetalleHospedaje(idPago, checkIn, checkOut, tarifa, early, late, total, moneda, tc);
-                
+                    abrirDetalleHospedaje(fIn, fOut, tarifa, early, late, total, moneda, tc);
+                } else {
+                    Swal.fire("Error", "No se encontró la reserva en la base de datos.", "error");
+                }
             } catch (error) {
-                console.error("Error al obtener reserva:", error);
-                Swal.fire("Error", "No se pudo cargar la información de la reserva.", "error");
+                console.error(error);
+                Swal.fire("Error", "No se pudo obtener la información.", "error");
             }
         };
 
         // --- MODAL 1: DETALLE DE HOSPEDAJE ---
-        window.abrirDetalleHospedaje = function(id, inF, outF, tarifa, early, late, total, moneda = "PEN", tc = 0) {
+        window.abrirDetalleHospedaje = function(inF, outF, tarifa, early, late, total, moneda, tc) {
             const simbolo = moneda === "USD" ? "$" : "S/";
             
-            const _tarifa = parseFloat(tarifa) || 0;
-            const _early = parseFloat(early) || 0;
-            const _late = parseFloat(late) || 0;
-            const _total = parseFloat(total) || 0;
-
+            // Invertir fechas para mostrar (YYYY-MM-DD -> DD/MM/YYYY)
             const fInTexto = (inF && inF.includes('-')) ? inF.split('-').reverse().join('/') : "---";
             const fOutTexto = (outF && outF.includes('-')) ? outF.split('-').reverse().join('/') : "---";
 
@@ -213,29 +207,29 @@
             let noches = Math.round((f2 - f1) / (1000 * 60 * 60 * 24));
             if (isNaN(noches) || noches <= 0) noches = 1;
 
-            const subtotalBase = noches * _tarifa;
+            const subtotalBase = noches * tarifa;
 
             let html = `
                 <div style="text-align:left; font-size:14px; font-family:'Lato', sans-serif;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                        <span><b>Periodo:</b> ${fInTexto} al ${fOutTexto}</span>
-                        <span style="color:#64748b; font-size:11px; font-weight:bold;">${moneda}</span>
+                    <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:15px; border-left:4px solid #800020;">
+                        <p style="margin:0; font-size:12px; color:#64748b; font-weight:bold;">ESTANCIA</p>
+                        <p style="margin:0; font-size:14px; color:#1e293b;">${fInTexto} al ${fOutTexto}</p>
                     </div>
-                    <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                    <table style="width:100%; border-collapse:collapse;">
                         <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:8px 0;">Estadía (${noches} n. x ${simbolo} ${_tarifa.toFixed(2)})</td>
-                            <td align="right">${simbolo} ${subtotalBase.toFixed(2)}</td>
+                            <td style="padding:8px 0;">Hospedaje (${noches} n. x ${simbolo}${tarifa.toFixed(2)})</td>
+                            <td align="right">${simbolo}${subtotalBase.toFixed(2)}</td>
                         </tr>
-                        ${_early > 0 ? `<tr><td style="padding:8px 0;">(+) Early Check-in</td><td align="right">${simbolo} ${_early.toFixed(2)}</td></tr>` : ''}
-                        ${_late > 0 ? `<tr><td style="padding:8px 0;">(+) Late Check-out</td><td align="right">${simbolo} ${_late.toFixed(2)}</td></tr>` : ''}
+                        ${early > 0 ? `<tr><td style="padding:8px 0;">(+) Early Check-in</td><td align="right">${simbolo}${early.toFixed(2)}</td></tr>` : ''}
+                        ${late > 0 ? `<tr><td style="padding:8px 0;">(+) Late Check-out</td><td align="right">${simbolo}${late.toFixed(2)}</td></tr>` : ''}
                         <tr style="border-top:2px solid #800020;">
                             <td style="padding-top:10px;"><b>TOTAL HOSPEDAJE:</b></td>
-                            <td align="right" style="padding-top:10px; color:#800020; font-size:17px;"><b>${simbolo} ${_total.toFixed(2)}</b></td>
+                            <td align="right" style="padding-top:10px; color:#800020; font-size:18px;"><b>${simbolo}${total.toFixed(2)}</b></td>
                         </tr>
                     </table>
                     ${moneda === "USD" && tc > 0 ? `
-                    <div style="margin-top:15px; padding:10px; background:#fff9e6; border-radius:8px; font-size:12px; color:#856404; border:1px solid #ffeeba;">
-                        <i class="fa-solid fa-circle-info"></i> <b>T. Cambio Aplicado:</b> S/ ${tc.toFixed(3)}
+                    <div style="margin-top:15px; padding:8px; background:#fff9e6; border-radius:6px; font-size:11px; color:#856404; border:1px solid #ffeeba;">
+                        <i class="fa-solid fa-circle-info"></i> T. Cambio: S/ ${tc.toFixed(3)}
                     </div>` : ''}
                 </div>`;
 
@@ -244,7 +238,7 @@
                 html: html,
                 confirmButtonText: 'Cerrar',
                 confirmButtonColor: '#800020',
-                width: '450px'
+                width: '400px'
             });
         };
 
@@ -284,7 +278,6 @@
         fInicio.addEventListener('change', aplicarFiltros);
         fFin.addEventListener('change', aplicarFiltros);
         document.getElementById('btnLimpiar').addEventListener('click', () => { fInicio.value = ''; fFin.value = ''; aplicarFiltros(); });
-        
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     </script>
 </body>

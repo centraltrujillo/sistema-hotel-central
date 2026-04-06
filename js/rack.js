@@ -1,225 +1,133 @@
 import { db } from './firebaseconfig.js';
-import { collection, getDocs, onSnapshot, doc, updateDoc, query, where, addDoc, increment
- } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { 
+    collection, getDocs, onSnapshot, doc, updateDoc, query, where, addDoc, increment, setDoc 
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const calendarEl = document.getElementById('gantt_here');
+    
+    // --- 1. DECLARACIONES INICIALES (EVITA ERRORES DE REFERENCIA) ---
+    const formulario = document.getElementById('formNuevaReserva');
+    const inputCheckIn = document.getElementById("resCheckIn");
+    const inputCheckOut = document.getElementById("resCheckOut");
+    const inputTarifa = document.getElementById("resTarifa");
+    const inputTipoCambio = document.getElementById("resTipoCambio");
+    const selectMoneda = document.getElementById("resMoneda");
+    const inputTotal = document.getElementById("resTotal");
+    const inputAdelantoMonto = document.getElementById("resAdelantoMonto");
+    const inputDiferencia = document.getElementById("resDiferencia");
+    const inputDoc = document.getElementById("resDoc");
 
-        // --- REFERENCIAS A INPUTS DEL FORMULARIO ---
-const inputCheckIn = document.getElementById("resCheckIn");
-const inputCheckOut = document.getElementById("resCheckOut");
-const inputTarifa = document.getElementById("resTarifa");
-const inputTipoCambio = document.getElementById("resTipoCambio");
-const selectMoneda = document.getElementById("resMoneda");
-const inputTotal = document.getElementById("resTotal");
-const inputAdelantoMonto = document.getElementById("resAdelantoMonto");
-const inputDiferencia = document.getElementById("resDiferencia");
-const inputDoc = document.getElementById("resDoc");
+    // --- 2. LÓGICA DE CÁLCULOS ---
+    const calcularMontos = () => {
+        if (!inputCheckIn.value || !inputCheckOut.value) return;
 
-// --- 2. LÓGICA DE CÁLCULOS ---
-const calcularMontos = () => {
-    if (!inputCheckIn.value || !inputCheckOut.value) return;
+        const fIn = new Date(inputCheckIn.value + 'T00:00:00');
+        const fOut = new Date(inputCheckOut.value + 'T00:00:00');
+        const tarifaBase = parseFloat(inputTarifa.value) || 0;
+        const tc = parseFloat(inputTipoCambio.value) || 1;
+        const moneda = selectMoneda.value;
 
-    const fIn = new Date(inputCheckIn.value + 'T00:00:00');
-    const fOut = new Date(inputCheckOut.value + 'T00:00:00');
-    const tarifaBase = parseFloat(inputTarifa.value) || 0;
-    const tc = parseFloat(inputTipoCambio.value) || 1; // Default 1 para evitar division por 0
-    const moneda = selectMoneda.value;
+        const tieneEarly = document.getElementById("resEarly").value !== "";
+        const tieneLate = document.getElementById("resLate").value !== "";
 
-    const tieneEarly = document.getElementById("resEarly").value !== "";
-    const tieneLate = document.getElementById("resLate").value !== "";
+        if (fOut <= fIn) {
+            inputTotal.value = "0.00";
+            inputDiferencia.value = "0.00";
+            return;
+        }
 
-    if (fOut <= fIn) {
-        inputTotal.value = "0.00";
-        inputDiferencia.value = "0.00";
-        return;
-    }
+        const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
+        let subtotal = (noches === 0) ? tarifaBase : noches * tarifaBase;
 
-    const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
-    let subtotal = noches * tarifaBase;
+        if (tieneEarly) subtotal += (tarifaBase * 0.5);
+        if (tieneLate) subtotal += (tarifaBase * 0.5);
 
-    if (noches === 0) {
-        // ES DAY USE: El subtotal es directamente lo que la recepcionista ponga en Tarifa
-        subtotal = tarifaBase; 
-    } else {
-        // ES RESERVA NORMAL: Noches por Tarifa
-        subtotal = noches * tarifaBase;
-    }
+        let totalFinal = moneda === "USD" ? subtotal * tc : subtotal;
+        inputTotal.value = totalFinal.toFixed(2);
 
-    // Recargos (50% de la tarifa por Early o Late)
-    if (tieneEarly) subtotal += (tarifaBase * 0.5);
-    if (tieneLate) subtotal += (tarifaBase * 0.5);
+        let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
+        if (adelanto > totalFinal && totalFinal > 0) {
+            adelanto = totalFinal;
+            inputAdelantoMonto.value = totalFinal.toFixed(2);
+        }
+        inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
+    };
 
-    let totalFinal = moneda === "USD" ? subtotal * tc : subtotal;
+    // --- 3. VERIFICACIÓN DE DISPONIBILIDAD (REAL TIME) ---
+    const verificarDisponibilidadRealTime = async () => {
+        const hab = document.getElementById("resHabitacion").value;
+        const fIn = inputCheckIn.value;
+        const fOut = inputCheckOut.value;
+        const statusDiv = document.getElementById("statusDisponibilidad");
+        const btnGuardar = formulario.querySelector('button[type="submit"]');
+        const editId = formulario.dataset.editId;
 
-    inputTotal.value = totalFinal.toFixed(2);
+        if (!hab || !fIn || !fOut) {
+            if (statusDiv) statusDiv.innerHTML = "";
+            if (btnGuardar) btnGuardar.disabled = false;
+            return;
+        }
 
-    let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
+        try {
+            const q = query(collection(db, "reservas"), where("habitacion", "==", hab));
+            const snap = await getDocs(q);
+            let ocupado = false;
 
-    if (adelanto > totalFinal && totalFinal > 0) {
-        adelanto = totalFinal;
-        inputAdelantoMonto.value = totalFinal.toFixed(2);
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'warning',
-            title: 'El adelanto no puede superar al total',
-            showConfirmButton: false,
-            timer: 2000
+            snap.forEach(docSnap => {
+                const res = docSnap.data();
+                if (editId && docSnap.id === editId) return;
+                if (fIn < res.checkOut && fOut > res.checkIn) ocupado = true;
+            });
+
+            if (statusDiv) {
+                if (ocupado) {
+                    statusDiv.innerHTML = "✖ Habitación ocupada";
+                    statusDiv.style.color = "#f43f5e";
+                    btnGuardar.disabled = true;
+                } else {
+                    statusDiv.innerHTML = "✔ Disponible";
+                    statusDiv.style.color = "#10b981";
+                    btnGuardar.disabled = false;
+                }
+            }
+        } catch (e) { console.error("Error disponibilidad:", e); }
+    };
+
+    // --- 4. AUTOCOMPLETADO POR DNI ---
+    if (inputDoc) {
+        inputDoc.addEventListener("blur", async (e) => {
+            const dni = e.target.value.trim();
+            if (dni.length < 4) return;
+            const q = query(collection(db, "huespedes"), where("documento", "==", dni));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const h = snap.docs[0].data();
+                document.getElementById("resHuesped").value = h.nombre || "";
+                document.getElementById("resTelefono").value = h.telefono || "";
+                document.getElementById("resCorreo").value = h.correo || "";
+                document.getElementById("resNacionalidad").value = h.nacionalidad || "";
+                document.getElementById("resNacimiento").value = h.nacimiento || "";
+            }
         });
     }
 
-    inputDiferencia.value = (totalFinal - adelanto).toFixed(2);
-};
-
-[inputTarifa, inputCheckIn, inputCheckOut, inputAdelantoMonto, inputTipoCambio, selectMoneda, 
-    document.getElementById("resEarly"), document.getElementById("resLate")].forEach(el => {
-       if(el) el.addEventListener("input", calcularMontos);
-   });
-
-// --- 3. AUTOCOMPLETADO POR DNI ---
-if (inputDoc) {
-    inputDoc.addEventListener("blur", async (e) => {
-        const dni = e.target.value.trim();
-        if (dni.length < 4) return;
-
-        const q = query(collection(db, "huespedes"), where("documento", "==", dni));
-        const snap = await getDocs(q);
-
-        if (!snap.empty) {
-            const h = snap.docs[0].data();
-            document.getElementById("resHuesped").value = h.nombre || "";
-            document.getElementById("resTelefono").value = h.telefono || "";
-            document.getElementById("resCorreo").value = h.correo || "";
-            document.getElementById("resNacionalidad").value = h.nacionalidad || "";
-            document.getElementById("resNacimiento").value = h.nacimiento || ""; 
-
+    // --- 5. GUARDAR / ACTUALIZAR (FUNCIÓN ÚNICA) ---
+    if (formulario) {
+        formulario.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const editId = formulario.dataset.editId;
             
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Huésped reconocido',
-                showConfirmButton: false,
-                timer: 1500
-            });
-        }
-    });
-}
-
-const formulario = document.getElementById('formNuevaReserva');
-
-if (formulario) {
-    formulario.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const editId = formulario.dataset.editId; // Revisamos si hay un ID guardado
-
-        // CAPTURAMOS CADA DATO DEL FORMULARIO
-        const datosReserva = {
-            // Datos del Huésped
-            huesped: document.getElementById("resHuesped").value,
-            doc: document.getElementById("resDoc").value,
-            telefono: document.getElementById("resTelefono").value,
-            nacionalidad: document.getElementById("resNacionalidad").value,
-            nacimiento: document.getElementById("resNacimiento").value,
-            correo: document.getElementById("resCorreo").value,
-
-            // Detalles de la Estancia
-            habitacion: document.getElementById("resHabitacion").value,
-            checkIn: document.getElementById("resCheckIn").value,
-            checkOut: document.getElementById("resCheckOut").value,
-            medio: document.getElementById("resMedio").value,
-            personas: document.getElementById("resPersonas").value,
-            desayuno: document.getElementById("resInfo").value,
-            earlyCheckIn: document.getElementById("resEarly").value, // Se guarda en el extra 3 si es necesario
-            lateCheckOut: document.getElementById("resLate").value,  // Se guarda en el extra 1
-            cochera: document.getElementById("resCochera").value,
-            traslado: document.getElementById("resTraslado").value,
-
-            // Tarifas y Montos
-            tarifa: document.getElementById("resTarifa").value,
-            moneda: document.getElementById("resMoneda").value,
-            tipoCambio: document.getElementById("resTipoCambio").value,
-            total: document.getElementById("resTotal").value,
-            adelantoMonto: document.getElementById("resAdelantoMonto").value || 0,
-            adelantoDetalle: document.getElementById("resAdelantoDetalle").value,
-            diferencia: document.getElementById("resDiferencia").value,
-
-            // Notas y Recepción
-            observaciones: document.getElementById("resObservaciones").value,
-            recibidoPor: document.getElementById("resRecepcion").value,
-            confirmadoPor: document.getElementById("resRecepcionconfi").value,
-
-            // Metadatos para control
-            estado: "confirmada", // Estado inicial
-            fechaRegistro: new Date().toISOString()
-        };
-
-        try {
-            if (editId) {
-                // SI HAY ID: ACTUALIZAMOS (Update)
-                const docRef = doc(db, "reservas", editId);
-                await updateDoc(docRef, datosReserva);
-                Swal.fire('Actualizado', 'La reserva se modificó correctamente', 'success');
-            } else {
-                // SI NO HAY ID: CREAMOS (Add)
-                await addDoc(collection(db, "reservas"), datosReserva);
-                Swal.fire('Guardado', 'Nueva reserva creada', 'success');
-            }
-    
-            // Limpieza final
-            delete formulario.dataset.editId; // Borramos el ID de edición
-            document.getElementById('modalTitle').innerText = "Nueva Reserva";
-            cerrarModal();
-            formulario.reset();
-    
-        } catch (error) {
-            console.error("Error:", error);
-            Swal.fire('Error', 'Ocurrió un problema al procesar los datos', 'error');
-        }
-    });
-
-
-// --- 4. GESTIÓN DE RESERVAS Y HUÉSPEDES ---
-const formulario = document.getElementById('formNuevaReserva');
-
-if (formulario) {
-    formulario.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const editId = formulario.dataset.editId; // ID si es edición
-        const habSeleccionada = document.getElementById("resHabitacion").value;
-        const nuevoIn = document.getElementById("resCheckIn").value;
-        const nuevoOut = document.getElementById("resCheckOut").value;
-
-        try {
-            // A. VALIDACIÓN FINAL DE DISPONIBILIDAD (Seguridad extra)
-            const qDisp = query(collection(db, "reservas"), where("habitacion", "==", habSeleccionada));
-            const snapDisp = await getDocs(qDisp);
-            let ocupado = false;
-
-            snapDisp.forEach((docSnap) => {
-                if (editId && docSnap.id === editId) return;
-                const resExistente = docSnap.data();
-                if (nuevoIn < resExistente.checkOut && nuevoOut > resExistente.checkIn) ocupado = true;
-            });
-
-            if (ocupado) {
-                return Swal.fire({ title: 'Habitación Ocupada', text: 'No se puede guardar: las fechas se cruzaron.', icon: 'error', confirmButtonColor: '#800020' });
-            }
-
-            // B. PREPARACIÓN DE DATOS
             const datosReserva = {
                 huesped: document.getElementById("resHuesped").value,
-                doc: document.getElementById("resDoc").value.trim(),
+                doc: inputDoc.value.trim(),
                 telefono: document.getElementById("resTelefono").value,
                 nacionalidad: document.getElementById("resNacionalidad").value,
                 nacimiento: document.getElementById("resNacimiento").value,
                 correo: document.getElementById("resCorreo").value,
-                habitacion: habSeleccionada,
-                checkIn: nuevoIn,
-                checkOut: nuevoOut,
+                habitacion: document.getElementById("resHabitacion").value,
+                checkIn: inputCheckIn.value,
+                checkOut: inputCheckOut.value,
                 medio: document.getElementById("resMedio").value,
                 personas: parseInt(document.getElementById("resPersonas").value) || 1,
                 desayuno: document.getElementById("resInfo").value,
@@ -227,13 +135,13 @@ if (formulario) {
                 lateCheckOut: document.getElementById("resLate").value,
                 cochera: document.getElementById("resCochera").value,
                 traslado: document.getElementById("resTraslado").value,
-                tarifa: Number(document.getElementById("resTarifa").value) || 0,
-                moneda: document.getElementById("resMoneda").value,
-                tipoCambio: Number(document.getElementById("resTipoCambio").value) || 1,
-                total: Number(document.getElementById("resTotal").value) || 0,
-                adelantoMonto: Number(document.getElementById("resAdelantoMonto").value) || 0,
+                tarifa: Number(inputTarifa.value) || 0,
+                moneda: selectMoneda.value,
+                tipoCambio: Number(inputTipoCambio.value) || 1,
+                total: Number(inputTotal.value) || 0,
+                adelantoMonto: Number(inputAdelantoMonto.value) || 0,
                 adelantoDetalle: document.getElementById("resAdelantoDetalle").value,
-                diferencia: Number(document.getElementById("resDiferencia").value) || 0,
+                diferencia: Number(inputDiferencia.value) || 0,
                 observaciones: document.getElementById("resObservaciones").value,
                 recibidoPor: document.getElementById("resRecepcion").value,
                 confirmadoPor: document.getElementById("resRecepcionconfi").value,
@@ -241,98 +149,48 @@ if (formulario) {
                 fechaRegistro: editId ? (formulario.dataset.fechaReg || new Date().toISOString()) : new Date().toISOString()
             };
 
-            // C. GUARDAR O ACTUALIZAR EN FIREBASE
-            if (editId) {
-                await updateDoc(doc(db, "reservas", editId), datosReserva);
-            } else {
-                await addDoc(collection(db, "reservas"), datosReserva);
+            try {
+                if (editId) {
+                    await updateDoc(doc(db, "reservas", editId), datosReserva);
+                } else {
+                    await addDoc(collection(db, "reservas"), datosReserva);
+                }
+
+                // Sync Huésped
+                if (datosReserva.doc !== "") {
+                    const hRef = doc(db, "huespedes", datosReserva.doc);
+                    await setDoc(hRef, {
+                        nombre: datosReserva.huesped.toUpperCase(),
+                        documento: datosReserva.doc,
+                        telefono: datosReserva.telefono,
+                        correo: datosReserva.correo,
+                        nacionalidad: datosReserva.nacionalidad,
+                        nacimiento: datosReserva.nacimiento,
+                        ultimaVisita: new Date().toISOString()
+                    }, { merge: true });
+                }
+
+                Swal.fire('¡Éxito!', 'Operación completada', 'success');
+                formulario.reset();
+                delete formulario.dataset.editId;
+                window.cerrarModal();
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                Swal.fire('Error', 'No se pudo guardar la reserva', 'error');
             }
-
-            // D. SYNC HUÉSPED (Si hay DNI)
-            if (datosReserva.doc !== "") {
-                const hRef = doc(db, "huespedes", datosReserva.doc);
-                await setDoc(hRef, {
-                    nombre: datosReserva.huesped.toUpperCase(),
-                    documento: datosReserva.doc,
-                    telefono: datosReserva.telefono,
-                    correo: datosReserva.correo,
-                    nacionalidad: datosReserva.nacionalidad,
-                    nacimiento: datosReserva.nacimiento,
-                    ultimaVisita: new Date().toISOString()
-                }, { merge: true });
-            }
-
-            Swal.fire({ title: '¡Éxito!', text: 'Reserva y Huésped guardados.', icon: 'success', confirmButtonColor: '#800020' });
-            
-            // Limpieza y cierre
-            delete formulario.dataset.editId;
-            delete formulario.dataset.fechaReg;
-            document.getElementById('modalTitle').innerText = "Nueva Reserva";
-            formulario.reset();
-            window.cerrarModal();
-
-        } catch (error) {
-            console.error("Error al procesar reserva:", error);
-            Swal.fire('Error', 'No se pudo guardar la información.', 'error');
-        }
-    });
-}
-
-// --- 5. FUNCIÓN DE VERIFICACIÓN DE DISPONIBILIDAD (REAL TIME) ---
-const verificarDisponibilidadRealTime = async () => {
-    const hab = document.getElementById("resHabitacion").value;
-    const fIn = document.getElementById("resCheckIn").value;
-    const fOut = document.getElementById("resCheckOut").value;
-    const statusDiv = document.getElementById("statusDisponibilidad");
-    
-    const btnGuardar = formulario.querySelector('button[type="submit"]');
-    const editId = formulario.dataset.editId; 
-
-    if (!hab || !fIn || !fOut) {
-        statusDiv.innerHTML = ""; 
-        statusDiv.style.border = "none";
-        if(btnGuardar) btnGuardar.disabled = false;
-        return;
-    }
-
-    statusDiv.innerHTML = "Verificando...";
-    statusDiv.style.color = "#d4a017"; 
-
-    try {
-        const q = query(collection(db, "reservas"), where("habitacion", "==", hab));
-        const snap = await getDocs(q);
-        let ocupado = false;
-
-        snap.forEach(docSnap => {
-            const res = docSnap.data();
-            if (editId && docSnap.id === editId) return;
-            if (fIn < res.checkOut && fOut > res.checkIn) ocupado = true;
         });
-
-        if (ocupado) {
-            statusDiv.innerHTML = "✖ Habitación ocupada";
-            statusDiv.style.color = "#f43f5e"; 
-            statusDiv.style.backgroundColor = "#fff1f2";
-            statusDiv.style.border = "1px solid #ffe4e6";
-            btnGuardar.disabled = true;
-        } else {
-            statusDiv.innerHTML = "✔ Disponible";
-            statusDiv.style.color = "#10b981"; 
-            statusDiv.style.backgroundColor = "#f0fdf4";
-            statusDiv.style.border = "1px solid #dcfce7";
-            btnGuardar.disabled = false;
-        }
-    } catch (error) {
-        console.error("Error disponibilidad:", error);
     }
-};
 
-// Listener para disparar la verificación
-[document.getElementById("resHabitacion"), document.getElementById("resCheckIn"), document.getElementById("resCheckOut")].forEach(el => {
-    if(el) el.addEventListener("change", verificarDisponibilidadRealTime);
-});
+    // --- 6. LISTENERS PARA CÁLCULOS Y DISPONIBILIDAD ---
+    [inputTarifa, inputCheckIn, inputCheckOut, inputAdelantoMonto, inputTipoCambio, selectMoneda, 
+     document.getElementById("resEarly"), document.getElementById("resLate")].forEach(el => {
+        if(el) el.addEventListener("input", () => {
+            calcularMontos();
+            verificarDisponibilidadRealTime(); // Verifica mientras cambian fechas
+        });
+    });
 
-}
+    document.getElementById("resHabitacion").addEventListener("change", verificarDisponibilidadRealTime);
 
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
