@@ -1,5 +1,5 @@
 import { db } from './firebaseconfig.js';
-import { collection, getDocs, onSnapshot, doc, updateDoc, query, where, addDoc
+import { collection, getDocs, onSnapshot, doc, updateDoc, query, where, addDoc, increment
  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -37,6 +37,14 @@ const calcularMontos = () => {
 
     const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
     let subtotal = noches * tarifaBase;
+
+    if (noches === 0) {
+        // ES DAY USE: El subtotal es directamente lo que la recepcionista ponga en Tarifa
+        subtotal = tarifaBase; 
+    } else {
+        // ES RESERVA NORMAL: Noches por Tarifa
+        subtotal = noches * tarifaBase;
+    }
 
     // Recargos (50% de la tarifa por Early o Late)
     if (tieneEarly) subtotal += (tarifaBase * 0.5);
@@ -171,6 +179,170 @@ if (formulario) {
             Swal.fire('Error', 'Ocurrió un problema al procesar los datos', 'error');
         }
     });
+
+
+    // --- 4. GUARDAR / ACTUALIZAR ---
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const habSeleccionada = document.getElementById("resHabitacion").value;
+    const nuevoIn = document.getElementById("resCheckIn").value;
+    const nuevoOut = document.getElementById("resCheckOut").value;
+
+    try {
+        // a --- VALIDACIÓN DE DISPONIBILIDAD ---
+        const q = query(collection(db, "reservas"), where("habitacion", "==", habSeleccionada));
+        const querySnapshot = await getDocs(q);
+        let ocupado = false;
+
+        querySnapshot.forEach((docSnap) => {
+            if (editId && docSnap.id === editId) return;
+            const resExistente = docSnap.data();
+            if (nuevoIn < resExistente.checkOut && nuevoOut > resExistente.checkIn) ocupado = true;
+        });
+
+        if (ocupado) {
+            return Swal.fire({ title: 'Habitación Ocupada', text: 'Ya hay una reserva en estas fechas.', icon: 'error', confirmButtonColor: '#800020' });
+        }
+
+        // b --- PREPARACIÓN DE DATOS ---
+        const data = {
+            huesped: document.getElementById("resHuesped").value,
+            doc: document.getElementById("resDoc").value,
+            nacimiento: document.getElementById("resNacimiento").value,
+            nacionalidad: document.getElementById("resNacionalidad").value,
+            telefono: document.getElementById("resTelefono").value,
+            correo: document.getElementById("resCorreo").value,
+            habitacion: habSeleccionada,
+            medio: document.getElementById("resMedio").value,
+            checkIn: nuevoIn,
+            checkOut: nuevoOut,
+            personas: parseInt(document.getElementById("resPersonas").value) || 1,
+            tarifa: Number(inputTarifa.value) || 0,
+            tipoCambio: Number(inputTipoCambio.value) || 0,
+            total: Number(inputTotal.value) || 0,
+            adelantoMonto: Number(inputAdelantoMonto.value) || 0,
+            diferencia: Number(inputDiferencia.value) || 0,
+            early: document.getElementById("resEarly").value,
+            late: document.getElementById("resLate").value,
+            moneda: selectMoneda.value,
+            adelantoDetalle: document.getElementById("resAdelantoDetalle").value,
+            desayuno: document.getElementById("resInfo").value,
+            cochera: document.getElementById("resCochera").value,
+            traslado: document.getElementById("resTraslado").value,
+            observaciones: document.getElementById("resObservaciones").value,
+            recepcion: document.getElementById("resRecepcion").value,
+            recepcionconfi: document.getElementById("resRecepcionconfi").value,
+            estado: editId ? (listaReservasGlobal.find(r => r.id === editId)?.estado || "reservada") : "reservada",
+            fechaRegistro: editId ? (listaReservasGlobal.find(r => r.id === editId)?.fechaRegistro || new Date().toISOString()) : new Date().toISOString()
+        };
+
+        // c --- GUARDAR O ACTUALIZAR ---
+        if (editId) {
+            await updateDoc(doc(db, "reservas", editId), data);
+        } else {
+            await addDoc(collection(db, "reservas"), data);
+        }
+
+        // d --- SYNC HUÉSPED ---
+        const dniLimpio = data.doc ? data.doc.trim() : "";
+if (dniLimpio !== "") {
+    const hRef = doc(db, "huespedes", dniLimpio);
+    await setDoc(hRef, {
+        nombre: data.huesped.toUpperCase(),
+        documento: dniLimpio,
+        telefono: data.telefono,
+        correo: data.correo,
+        nacionalidad: data.nacionalidad,
+        nacimiento: data.nacimiento,
+        ultimaVisita: new Date().toISOString(),
+        totalVisitas: increment(1)
+    }, { merge: true });
+
+    Toast.fire({
+        icon: 'success',
+        title: 'Huésped guardado', // información nueva se envió a Firebase correctamente
+        background: '#fff',
+        iconColor: '#800020' 
+    });
+}
+
+        Swal.fire({ title: '¡Éxito!', text: 'Reserva guardada correctamente', icon: 'success', confirmButtonColor: '#800020' });
+        window.cerrarModal();
+
+    } catch (error) {
+        console.error("Error:", error);
+        Swal.fire('Error', 'No se pudo guardar la reserva', 'error');
+    }
+});
+
+// --- FUNCIÓN DE VERIFICACIÓN DE DISPONIBILIDAD ---
+const verificarDisponibilidadRealTime = async () => {
+    const hab = document.getElementById("resHabitacion").value;
+    const fIn = document.getElementById("resCheckIn").value;
+    const fOut = document.getElementById("resCheckOut").value;
+    const statusDiv = document.getElementById("statusDisponibilidad");
+    
+    // Obtenemos el formulario y el ID de edición (si existe)
+    const formulario = document.getElementById('formNuevaReserva');
+    const btnGuardar = formulario.querySelector('button[type="submit"]');
+    const editId = formulario.dataset.editId; 
+
+    if (!hab || !fIn || !fOut) {
+        statusDiv.innerHTML = ""; 
+        statusDiv.style.border = "none";
+        btnGuardar.disabled = false;
+        btnGuardar.style.opacity = "1";
+        return;
+    }
+
+    statusDiv.innerHTML = "Verificando disponibilidad...";
+    statusDiv.style.color = "#d4a017"; 
+    statusDiv.style.padding = "8px";
+    statusDiv.style.borderRadius = "5px";
+
+    try {
+        // Buscamos reservas para esa habitación específica
+        const q = query(collection(db, "reservas"), where("habitacion", "==", hab));
+        const snap = await getDocs(q);
+        let ocupado = false;
+
+        snap.forEach(docSnap => {
+            const res = docSnap.data();
+            
+            // Si estamos editando, ignoramos el documento de la propia reserva
+            if (editId && docSnap.id === editId) return;
+
+            // Lógica de choque de fechas
+            if (fIn < res.checkOut && fOut > res.checkIn) {
+                ocupado = true;
+            }
+        });
+
+        if (ocupado) {
+            statusDiv.innerHTML = "✖ Habitación ocupada en estas fechas";
+            statusDiv.style.color = "#f43f5e"; 
+            statusDiv.style.backgroundColor = "#fff1f2";
+            statusDiv.style.border = "1px solid #ffe4e6";
+            
+            btnGuardar.disabled = true;
+            btnGuardar.style.opacity = "0.5";
+            btnGuardar.style.cursor = "not-allowed";
+        } else {
+            statusDiv.innerHTML = "✔ Habitación disponible";
+            statusDiv.style.color = "#10b981"; 
+            statusDiv.style.backgroundColor = "#f0fdf4";
+            statusDiv.style.border = "1px solid #dcfce7";
+            
+            btnGuardar.disabled = false;
+            btnGuardar.style.opacity = "1";
+            btnGuardar.style.cursor = "pointer";
+        }
+    } catch (error) {
+        console.error("Error al verificar:", error);
+        statusDiv.innerHTML = "⚠ Error al verificar disponibilidad";
+    }
+};
+
 }
 
 

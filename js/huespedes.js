@@ -70,23 +70,19 @@ function renderizarHuespedes() {
         const card = document.createElement('div');
         card.className = `huesped-card ${esCumpleaños ? 'birthday-highlight' : ''}`;
         card.innerHTML = `
-            ${esCumpleaños ? '<div class="birthday-ribbon"><i class="fa-solid fa-cake-candles"></i> ¡Hoy cumple años!</div>' : ''}
-            <div class="h-avatar">${iniciales}</div>
-            <div class="h-info">
-                <div class="h-title-row">
-                    <h4>${nombre}</h4>
-                    <span class="badge ${categoria}">${categoria}</span>
-                </div>
-                <div class="h-details">
-                    <p><i class="fa-solid fa-fingerprint"></i> <span>${h.tipoDoc || 'DOC'}:</span> ${documento}</p>
-                    <p><i class="fa-solid fa-mobile-screen-button"></i> <span>WhatsApp:</span> ${celular}</p>
-                </div>
-            </div>
-            <div class="h-actions">
-                <button class="btn-view" onclick="verDetalles('${h.id}')"><i class="fa-solid fa-eye"></i></button>
-                <button class="btn-edit" onclick="editarHuesped('${h.id}')"><i class="fa-solid fa-pen"></i></button>
-            </div>
-        `;
+        ${esCumpleaños ? '<div class="birthday-ribbon"><i class="fa-solid fa-cake-candles"></i></div>' : ''}
+        <div class="h-avatar">${nombre.charAt(0).toUpperCase()}</div>
+        <div class="h-info">
+            <span class="badge ${categoria.toLowerCase()}">${categoria}</span>
+            <h4>${nombre} ${esCumpleaños ? '🎂' : ''}</h4>
+            <p><i class="fa-solid fa-id-card"></i> ${documento}</p>
+            <p><i class="fa-solid fa-phone"></i> ${celular}</p>
+        </div>
+        <div class="h-actions">
+            <button onclick="verDetalles('${h.id}')" title="Ver"><i class="fa-solid fa-eye"></i></button>
+            <button onclick="editarHuesped('${h.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        </div>
+    `;
         container.appendChild(card);
     });
     actualizarControlesPagina(listaFiltrada.length);

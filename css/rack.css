@@ -415,32 +415,6 @@ body {
     transition: all 0.2s;
 }
 
-/* SECCIÓN DE PAGOS (ULTRA COMPACTA) */
-.highlight-section {
-    background: #ffffff;
-    padding: 8px !important;
-    border-radius: 12px;
-    border: 1px dashed #94a3b8; /* slate-400 */
-    gap: 5px 12px !important;
-}
-
-.input-total { 
-    background: #f0fdf4 !important; 
-    border: 1px solid #22c55e !important; /* success-green */
-    color: #166534 !important; font-weight: 800;
-}
-
-.input-adelanto { 
-    background: #fffbeb !important; 
-    border: 1px solid var(--amarillo-ocre) !important; 
-    color: #92400e !important; font-weight: 700; 
-}
-
-.input-diferencia { 
-    background: #fff1f2 !important; 
-    border: 1px solid #ef4444 !important; /* danger-red */
-    color: #9f1239 !important; font-weight: 800;
-}
 
 /* 7. ACCIONES FINALES */
 .form-actions-res {

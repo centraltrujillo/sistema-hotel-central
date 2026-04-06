@@ -253,6 +253,14 @@ const calcularMontos = () => {
     // 3. Subtotal
     let subtotal = noches * tarifaBase;
 
+    if (noches === 0) {
+        // ES DAY USE: El subtotal es directamente lo que la recepcionista ponga en Tarifa
+        subtotal = tarifaBase; 
+    } else {
+        // ES RESERVA NORMAL: Noches por Tarifa
+        subtotal = noches * tarifaBase;
+    }
+
     // 4. Recargos (50% de la tarifa base)
     if (tieneEarly) subtotal += (tarifaBase * 0.5);
     if (tieneLate) subtotal += (tarifaBase * 0.5);
