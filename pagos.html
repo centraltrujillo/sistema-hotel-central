@@ -98,7 +98,6 @@
         const fInicio = document.getElementById('fechaInicio');
         const fFin = document.getElementById('fechaFin');
         let todosLosPagos = [];
-        let pagosFiltrados = [];
 
         function convertirFecha(datoFecha) {
             if (!datoFecha) return null;
@@ -116,7 +115,7 @@
             const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
             const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
             
-            pagosFiltrados = todosLosPagos.filter(pago => {
+            const pagosFiltrados = todosLosPagos.filter(pago => {
                 const fechaObj = convertirFecha(pago.fechaPago);
                 if (!fechaObj) return false;
                 if (inicio && fechaObj < inicio) return false;
@@ -165,7 +164,7 @@
             });
         }
 
-        // --- FUNCIÓN PUENTE CORREGIDA CON TUS CAMPOS DE RESERVA ---
+        // --- 1. FUNCIÓN PUENTE: BUSCA LOS DATOS EN LA COLECCIÓN RESERVAS ---
         window.prepararDetalleHospedaje = async function(idReserva, early, late, total, moneda, tc) {
             if (!idReserva) {
                 Swal.fire("Aviso", "No hay un ID de reserva vinculado.", "warning");
@@ -179,26 +178,25 @@
                 if (resSnap.exists()) {
                     const d = resSnap.data();
                     
-                    // Mapeo dinámico: Busca 'resCheckIn' o 'fecha_entrada'
-                    const fIn = d.resCheckIn || d.fecha_entrada || "";
-                    const fOut = d.resCheckOut || d.fecha_salida || "";
-                    const tarifa = parseFloat(d.resTarifa || d.tarifa || 0);
+                    // MAPEO DE TUS CAMPOS REALES
+                    const fIn = d.checkIn || "";      
+                    const fOut = d.checkOut || "";    
+                    const tarifa = parseFloat(d.tarifa || 0); 
 
                     abrirDetalleHospedaje(fIn, fOut, tarifa, early, late, total, moneda, tc);
                 } else {
-                    Swal.fire("Error", "No se encontró la reserva en la base de datos.", "error");
+                    Swal.fire("Error", "No se encontró el documento de reserva.", "error");
                 }
             } catch (error) {
-                console.error(error);
+                console.error("Error al obtener reserva:", error);
                 Swal.fire("Error", "No se pudo obtener la información.", "error");
             }
         };
 
-        // --- MODAL 1: DETALLE DE HOSPEDAJE ---
+        // --- 2. MODAL: DIBUJA EL DESGLOSE DE HOSPEDAJE ---
         window.abrirDetalleHospedaje = function(inF, outF, tarifa, early, late, total, moneda, tc) {
             const simbolo = moneda === "USD" ? "$" : "S/";
             
-            // Invertir fechas para mostrar (YYYY-MM-DD -> DD/MM/YYYY)
             const fInTexto = (inF && inF.includes('-')) ? inF.split('-').reverse().join('/') : "---";
             const fOutTexto = (outF && outF.includes('-')) ? outF.split('-').reverse().join('/') : "---";
 
@@ -213,7 +211,7 @@
                 <div style="text-align:left; font-size:14px; font-family:'Lato', sans-serif;">
                     <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:15px; border-left:4px solid #800020;">
                         <p style="margin:0; font-size:12px; color:#64748b; font-weight:bold;">ESTANCIA</p>
-                        <p style="margin:0; font-size:14px; color:#1e293b;">${fInTexto} al ${fOutTexto}</p>
+                        <p style="margin:0; font-size:14px; color:#1e293b;">${fInTexto} al ${fOutTexto} (${noches} noches)</p>
                     </div>
                     <table style="width:100%; border-collapse:collapse;">
                         <tr style="border-bottom:1px solid #eee;">
@@ -229,7 +227,7 @@
                     </table>
                     ${moneda === "USD" && tc > 0 ? `
                     <div style="margin-top:15px; padding:8px; background:#fff9e6; border-radius:6px; font-size:11px; color:#856404; border:1px solid #ffeeba;">
-                        <i class="fa-solid fa-circle-info"></i> T. Cambio: S/ ${tc.toFixed(3)}
+                        <i class="fa-solid fa-circle-info"></i> T. Cambio aplicado: S/ ${tc.toFixed(3)}
                     </div>` : ''}
                 </div>`;
 
@@ -242,7 +240,7 @@
             });
         };
 
-        // --- MODAL 2: DETALLE DE EXTRAS ---
+        // --- 3. MODAL: DETALLE DE EXTRAS ---
         window.abrirDetalleExtras = async function(idReserva, totalExtras) {
             Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
             try {
