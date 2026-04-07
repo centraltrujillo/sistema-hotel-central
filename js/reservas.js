@@ -286,26 +286,25 @@ onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), 
 
         const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
         if (conteo.hasOwnProperty(m)) conteo[m]++;
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
-            <td><span class="badge-hab">Hab. ${res.habitacion}</span></td>
-            <td>${res.checkIn}</td>
-            <td>${res.checkOut}</td>
-            <td style="text-align:center">${res.personas}</td>
-
-
-            <td><strong>S/ ${Number(res.total).toFixed(2)}</strong></td>
-        
-            <td><span class="badge-medio type-${m}">${res.medio}</span></td>
-            <td>
-                <div class="actions">
-                    <button class="btn-edit" onclick="prepararEdicion('${id}')"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-delete" onclick="eliminarReserva('${id}')"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </td>`;
-        tablaBody.appendChild(tr);
+const tr = document.createElement("tr");
+tr.innerHTML = `
+    <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
+    
+    <td>${res.fechaRegistro ? new Date(res.fechaRegistro).toLocaleDateString() : '---'}</td>
+    
+    <td><span class="badge-hab">Hab. ${res.habitacion}</span></td>
+    <td>${res.checkIn}</td>
+    <td>${res.checkOut}</td>
+    <td style="text-align:center">${res.personas}</td>
+    <td><strong>S/ ${Number(res.total).toFixed(2)}</strong></td>
+    <td><span class="badge-medio type-${m}">${res.medio}</span></td>
+    <td>
+        <div class="actions">
+            <button class="btn-edit" onclick="prepararEdicion('${id}')"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-delete" onclick="eliminarReserva('${id}')"><i class="fa-solid fa-trash"></i></button>
+        </div>
+    </td>`;
+tablaBody.appendChild(tr);
     });
 
     Object.keys(conteo).forEach(k => {
