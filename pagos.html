@@ -93,24 +93,25 @@
     <script type="module">
         import { db } from "./js/firebaseconfig.js";
         import { collection, onSnapshot, query, orderBy, getDocs, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
+    
         const tbody = document.getElementById('tbody-pagos');
         const fInicio = document.getElementById('fechaInicio');
         const fFin = document.getElementById('fechaFin');
         let todosLosPagos = [];
-
+    
         function convertirFecha(datoFecha) {
             if (!datoFecha) return null;
             if (typeof datoFecha.toDate === 'function') return datoFecha.toDate();
             const d = new Date(datoFecha);
             return isNaN(d.getTime()) ? null : d;
         }
-
+    
+        // Escuchar cambios en la colección de pagos
         onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
             todosLosPagos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             aplicarFiltros();
         });
-
+    
         function aplicarFiltros() {
             const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
             const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
@@ -125,158 +126,152 @@
             
             renderTable(pagosFiltrados);
         }
-
+    
         function renderTable(datos) {
             tbody.innerHTML = '';
             if(datos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No se encontraron registros.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay movimientos en este rango.</td></tr>';
                 return;
             }
-
+    
             datos.forEach((p) => {
                 const f = convertirFecha(p.fechaPago);
                 const montoHospedaje = parseFloat(p.montoHospedaje || 0);
-                const montoEarly = parseFloat(p.montoEarly || 0); 
-                const montoLate = parseFloat(p.montoLate || 0);
-                const moneda = p.moneda || "PEN";
-                const tc = parseFloat(p.tipoCambio || 0);
-                const simbolo = moneda === "USD" ? "$" : "S/";
-
+                const montoExtras = parseFloat(p.montoExtras || 0);
+                const montoTotal = parseFloat(p.montoTotal || 0);
+                
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">${f ? f.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td>
-                    <td><strong>${p.huesped || 'S/N'}</strong></td>
+                    <td><strong>${p.huesped || 'S/N'}</strong><br><small style="color:#800020; font-size:10px;">Atendido por: ${p.atendidoBy || 'Sistema'}</small></td>
                     <td><span class="badge-hab">${p.habitacion || '--'}</span></td>
-                    <td><i class="fa-solid fa-wallet"></i> ${p.metodoPago || 'Efectivo'}</td>
+                    <td><span style="font-size:12px;"><i class="fa-solid fa-credit-card"></i> ${p.metodoPago || 'Efectivo'}</span></td>
                     <td>
-                        <button class="btn-detalle" onclick="prepararDetalleHospedaje('${p.idReserva}', ${montoEarly}, ${montoLate}, ${montoHospedaje}, '${moneda}', ${tc})">
-                            ${simbolo} ${montoHospedaje.toFixed(2)} <i class="fa-solid fa-eye"></i>
+                        <button class="btn-detalle" onclick="prepararDetalleHospedaje('${p.idReserva}', ${montoHospedaje})">
+                            S/ ${montoHospedaje.toFixed(2)} <i class="fa-solid fa-circle-info"></i>
                         </button>
                     </td>
                     <td>
-                        <button class="btn-detalle" onclick="abrirDetalleExtras('${p.idReserva}', ${parseFloat(p.montoExtras || 0)})">
-                            S/ ${parseFloat(p.montoExtras || 0).toFixed(2)} <i class="fa-solid fa-eye"></i>
+                        <button class="btn-detalle" onclick="abrirDetalleExtras('${p.idReserva}', ${montoExtras})">
+                            S/ ${montoExtras.toFixed(2)} <i class="fa-solid fa-basket-shopping"></i>
                         </button>
                     </td>
-                    <td class="monto-celda">${simbolo} ${parseFloat(p.montoTotal || 0).toFixed(2)}</td>
+                    <td class="monto-celda">S/ ${montoTotal.toFixed(2)}</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
-
-        // --- 1. FUNCIÓN PUENTE: BUSCA LOS DATOS EN LA COLECCIÓN RESERVAS ---
-        window.prepararDetalleHospedaje = async function(idReserva, early, late, total, moneda, tc) {
-            if (!idReserva) {
-                Swal.fire("Aviso", "No hay un ID de reserva vinculado.", "warning");
-                return;
-            }
-
-            Swal.fire({ title: 'Cargando detalle...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
-
+    
+        /* ==========================================================================
+           MODAL: DETALLE COMPLETO DE HOSPEDAJE (Inyectado desde Reservas)
+           ========================================================================== */
+        window.prepararDetalleHospedaje = async function(idReserva, montoLiquidado) {
+            if (!idReserva) return Swal.fire("Error", "ID de reserva no vinculado", "error");
+    
+            Swal.fire({ title: 'Obteniendo historial...', didOpen: () => Swal.showLoading() });
+    
             try {
                 const resSnap = await getDoc(doc(db, "reservas", idReserva));
-                if (resSnap.exists()) {
-                    const d = resSnap.data();
-                    
-                    // MAPEO DE TUS CAMPOS REALES
-                    const fIn = d.checkIn || "";      
-                    const fOut = d.checkOut || "";    
-                    const tarifa = parseFloat(d.tarifa || 0); 
-
-                    abrirDetalleHospedaje(fIn, fOut, tarifa, early, late, total, moneda, tc);
-                } else {
-                    Swal.fire("Error", "No se encontró el documento de reserva.", "error");
-                }
+                if (!resSnap.exists()) throw new Error("Reserva no encontrada");
+                
+                const d = resSnap.data();
+                const pagosPrevios = d.pagos || [];
+                
+                // Construir HTML del historial de abonos
+                let historialHTML = pagosPrevios.map((p, i) => `
+                    <div style="display:flex; justify-content:space-between; font-size:12px; padding:5px 0; border-bottom:1px solid #f1f1f1;">
+                        <span><b>#${i+1}</b> ${new Date(p.fecha).toLocaleDateString()}</span>
+                        <span>${p.metodo}</span>
+                        <span style="font-weight:bold;">S/ ${parseFloat(p.monto).toFixed(2)}</span>
+                    </div>
+                `).join('');
+    
+                const html = `
+                    <div style="text-align:left; font-family:'Lato', sans-serif;">
+                        <div style="background:#fdfaf5; padding:12px; border-radius:8px; border:1px solid #d4af37; margin-bottom:15px;">
+                            <p style="margin:0; font-size:11px; color:#800020; font-weight:bold;">ESTANCIA REGISTRADA</p>
+                            <p style="margin:0; font-size:14px;">Hab: ${d.habitacion} | ${d.checkIn} al ${d.checkOut}</p>
+                        </div>
+    
+                        <p style="font-size:12px; font-weight:bold; color:#5d4037; margin-bottom:8px;">HISTORIAL DE ABONOS:</p>
+                        <div style="max-height:150px; overflow-y:auto; margin-bottom:15px; background:#fff; border:1px solid #eee; padding:10px; border-radius:8px;">
+                            ${historialHTML || '<p style="text-align:center; color:#999;">Sin abonos previos</p>'}
+                        </div>
+    
+                        <div style="border-top:2px solid #800020; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold;">TOTAL RECAUDADO:</span>
+                            <span style="font-size:20px; font-weight:bold; color:#800020;">S/ ${parseFloat(d.adelantoMonto || 0).toFixed(2)}</span>
+                        </div>
+                    </div>`;
+    
+                Swal.fire({
+                    title: '<span style="font-family:Playfair Display; color:#800020;">Auditoría de Hospedaje</span>',
+                    html: html,
+                    width: '450px',
+                    confirmButtonText: 'ENTENDIDO',
+                    confirmButtonColor: '#800020',
+                    customClass: { popup: 'hotel-modal-custom' }
+                });
+    
             } catch (error) {
-                console.error("Error al obtener reserva:", error);
-                Swal.fire("Error", "No se pudo obtener la información.", "error");
+                Swal.fire("Error", "No se pudo cargar el historial.", "error");
             }
         };
-
-        // --- 2. MODAL: DIBUJA EL DESGLOSE DE HOSPEDAJE ---
-        window.abrirDetalleHospedaje = function(inF, outF, tarifa, early, late, total, moneda, tc) {
-            const simbolo = moneda === "USD" ? "$" : "S/";
-            
-            const fInTexto = (inF && inF.includes('-')) ? inF.split('-').reverse().join('/') : "---";
-            const fOutTexto = (outF && outF.includes('-')) ? outF.split('-').reverse().join('/') : "---";
-
-            const f1 = new Date(inF + "T12:00:00");
-            const f2 = new Date(outF + "T12:00:00");
-            let noches = Math.round((f2 - f1) / (1000 * 60 * 60 * 24));
-            if (isNaN(noches) || noches <= 0) noches = 1;
-
-            const subtotalBase = noches * tarifa;
-
-            let html = `
-                <div style="text-align:left; font-size:14px; font-family:'Lato', sans-serif;">
-                    <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:15px; border-left:4px solid #800020;">
-                        <p style="margin:0; font-size:12px; color:#64748b; font-weight:bold;">ESTANCIA</p>
-                        <p style="margin:0; font-size:14px; color:#1e293b;">${fInTexto} al ${fOutTexto} (${noches} noches)</p>
-                    </div>
-                    <table style="width:100%; border-collapse:collapse;">
-                        <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:8px 0;">Hospedaje (${noches} n. x ${simbolo}${tarifa.toFixed(2)})</td>
-                            <td align="right">${simbolo}${subtotalBase.toFixed(2)}</td>
-                        </tr>
-                        ${early > 0 ? `<tr><td style="padding:8px 0;">(+) Early Check-in</td><td align="right">${simbolo}${early.toFixed(2)}</td></tr>` : ''}
-                        ${late > 0 ? `<tr><td style="padding:8px 0;">(+) Late Check-out</td><td align="right">${simbolo}${late.toFixed(2)}</td></tr>` : ''}
-                        <tr style="border-top:2px solid #800020;">
-                            <td style="padding-top:10px;"><b>TOTAL HOSPEDAJE:</b></td>
-                            <td align="right" style="padding-top:10px; color:#800020; font-size:18px;"><b>${simbolo}${total.toFixed(2)}</b></td>
-                        </tr>
-                    </table>
-                    ${moneda === "USD" && tc > 0 ? `
-                    <div style="margin-top:15px; padding:8px; background:#fff9e6; border-radius:6px; font-size:11px; color:#856404; border:1px solid #ffeeba;">
-                        <i class="fa-solid fa-circle-info"></i> T. Cambio aplicado: S/ ${tc.toFixed(3)}
-                    </div>` : ''}
-                </div>`;
-
-            Swal.fire({
-                title: '<span style="color:#800020; font-family:Playfair Display;">Desglose de Hospedaje</span>',
-                html: html,
-                confirmButtonText: 'Cerrar',
-                confirmButtonColor: '#800020',
-                width: '400px'
-            });
-        };
-
-        // --- 3. MODAL: DETALLE DE EXTRAS ---
+    
+        /* ==========================================================================
+           MODAL: DETALLE DE CONSUMOS (Buscando en colección consumos)
+           ========================================================================== */
         window.abrirDetalleExtras = async function(idReserva, totalExtras) {
-            Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
+            if (totalExtras <= 0) return Swal.fire("Sin Consumos", "No se registraron extras en esta estadía.", "info");
+    
+            Swal.fire({ title: 'Cargando detalle...', didOpen: () => Swal.showLoading() });
+    
             try {
                 const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
                 const snap = await getDocs(q);
-                let tablaHTML = `<table style="width:100%; font-size:13px; text-align:left; border-collapse:collapse;">
-                                    <tr style="border-bottom:2px solid #eee;"><th>Cant.</th><th>Descripción</th><th align="right">Subtotal</th></tr>`;
                 
-                if (snap.empty) {
-                    tablaHTML += `<tr><td colspan="3" align="center" style="padding:15px; color:#94a3b8;">No hay consumos registrados.</td></tr>`;
-                } else {
-                    snap.forEach(doc => {
-                        const c = doc.data();
-                        tablaHTML += `<tr><td>${c.cantidad || 1}</td><td>${c.descripcion || c.producto}</td><td align="right">S/ ${parseFloat(c.precioTotal).toFixed(2)}</td></tr>`;
-                    });
-                }
-
-                tablaHTML += `</table><div style="margin-top:15px; border-top:1px solid #800020; padding-top:10px; text-align:right;">
-                                <b style="color:#800020;">TOTAL CONSUMOS: S/ ${totalExtras.toFixed(2)}</b>
-                             </div>`;
-
+                let itemsHTML = snap.docs.map(doc => {
+                    const c = doc.data();
+                    return `
+                        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; font-size:13px;">
+                            <span>${c.cantidad || 1}x ${c.descripcion || 'Producto'}</span>
+                            <span style="font-weight:bold;">S/ ${parseFloat(c.precioTotal).toFixed(2)}</span>
+                        </div>`;
+                }).join('');
+    
+                const html = `
+                    <div style="text-align:left; font-family:'Lato', sans-serif;">
+                        <div style="margin-bottom:15px; background:#fff; border:1px solid #eee; padding:10px; border-radius:8px;">
+                            ${itemsHTML}
+                        </div>
+                        <div style="text-align:right; font-size:16px; font-weight:bold; color:#5d4037;">
+                            TOTAL CONSUMOS: S/ ${totalExtras.toFixed(2)}
+                        </div>
+                    </div>`;
+    
                 Swal.fire({
-                    title: '<span style="color:#800020; font-family:Playfair Display;">Detalle de Consumos</span>',
-                    html: tablaHTML,
-                    confirmButtonText: 'Cerrar',
-                    confirmButtonColor: '#800020'
+                    title: '<span style="font-family:Playfair Display; color:#5d4037;">Detalle de Consumos</span>',
+                    html: html,
+                    confirmButtonText: 'CERRAR',
+                    confirmButtonColor: '#5d4037',
+                    customClass: { popup: 'hotel-modal-custom' }
                 });
             } catch (e) {
-                Swal.fire("Error", "No se pudo cargar el detalle.", "error");
+                Swal.fire("Error", "No se pudo cargar los consumos.", "error");
             }
         };
-
+    
+        // Filtros y Eventos
         fInicio.addEventListener('change', aplicarFiltros);
         fFin.addEventListener('change', aplicarFiltros);
         document.getElementById('btnLimpiar').addEventListener('click', () => { fInicio.value = ''; fFin.value = ''; aplicarFiltros(); });
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+        // Exportar a Excel (Básico)
+        document.getElementById('btnExportar').addEventListener('click', () => {
+            const wb = XLSX.utils.table_to_book(document.getElementById('tablaPagos'));
+            XLSX.writeFile(wb, `Reporte_Pagos_${new Date().toLocaleDateString()}.xlsx`);
+        });
     </script>
 </body>
 </html>
