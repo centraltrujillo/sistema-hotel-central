@@ -899,6 +899,43 @@ body {
     }
 }
 
+/* Estilo para el botón de Historial / Abonos */
+.btn-pagos-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Espacio entre el icono y el texto */
+    background-color: #ffffff;
+    color: #800020; /* Color vino de tu marca */
+    border: 1px solid #800020;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px; /* Tamaño base según tus specs */
+    font-weight: 600;
+    transition: all 0.3s ease;
+    width: 100%; /* Para que ocupe el ancho de la tarjeta */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Efecto al pasar el mouse (Hover) */
+.btn-pagos-sm:hover {
+    background-color: #800020;
+    color: #ffffff;
+    box-shadow: 0 4px 8px rgba(128, 0, 32, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Efecto al hacer clic (Active) */
+.btn-pagos-sm:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 2px rgba(128, 0, 32, 0.1);
+}
+
+/* Estilo del icono dentro del botón */
+.btn-pagos-sm i {
+    font-size: 14px;
+}
+
 /* --- AJUSTES RESPONSIVOS (SIEMPRE AL FINAL) --- */
 @media (max-width: 1024px) {
     .main-content { padding: 15px; }
