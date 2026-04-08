@@ -704,10 +704,19 @@ const { value: nuevoAbono } = await Swal.fire({
         }
     }
 }
-async function agregarConsumo(resId, hab) {
+
+/* ==========================================================================
+   6. AGREGAR CONSUMO (CON LÓGICA DE PAGO INMEDIATO)
+   ========================================================================== */
+   async function agregarConsumo(resId, hab) {
     const ahora = new Date();
     const offset = ahora.getTimezoneOffset() * 60000;
     const fechaLocal = new Date(ahora - offset).toISOString().slice(0, 16);
+
+    // Primero obtenemos los datos frescos de la reserva para el historial de pagos
+    const resDoc = await getDoc(doc(db, "reservas", resId));
+    if (!resDoc.exists()) return;
+    const rData = resDoc.data();
 
     const { value: formValues } = await Swal.fire({
         title: `<span style="font-family: 'Playfair Display', serif; color: #800020; font-size: 22px;">Nuevo Cargo / Consumo</span>`,
@@ -733,15 +742,27 @@ async function agregarConsumo(resId, hab) {
                     </div>
                 </div>
 
-                <div style="margin-top: 15px;">
-                    <label style="font-size: 11px; color: #5d4037; font-weight: bold; text-transform: uppercase;">Fecha y Hora</label>
-                    <input id="sw-fecha" type="datetime-local" class="swal2-input" value="${fechaLocal}" style="margin: 5px 0; width: 100%; font-size: 14px; border-radius: 5px;">
+                <div style="margin-top: 15px; padding: 12px; background: #fdfaf5; border-radius: 8px; border: 1px solid #d4af37;">
+                    <label style="display: flex; align-items: center; cursor: pointer; font-size: 13px; color: #800020; font-weight: bold; margin: 0;">
+                        <input id="sw-pagado" type="checkbox" style="margin-right: 10px; width: 18px; height: 18px; accent-color: #800020;"> 
+                        ¿PAGÓ EN EL MOMENTO?
+                    </label>
+                    
+                    <div id="metodo-pago-box" style="display: none; margin-top: 12px;">
+                        <label style="font-size: 10px; color: #5d4037; font-weight: bold; text-transform: uppercase;">Método de Pago</label>
+                        <select id="sw-metodo" class="swal2-select" style="margin: 5px 0 0 0; width: 100%; font-size: 13px; height: 35px;">
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Yape/Plin">📱 Yape / Plin</option>
+                            <option value="Tarjeta">💳 Tarjeta</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div id="subtotal-preview" style="margin-top: 20px; padding: 15px; background: #fdfaf5; border-radius: 8px; text-align: center; border: 1px dashed #d4af37;">
-                    <span style="font-size: 12px; color: #5d4037;">SUBTOTAL A CARGAR:</span>
-                    <strong id="preview-monto" style="display: block; font-size: 24px; color: #800020; margin-top: 5px;">S/ 0.00</strong>
+                <div id="subtotal-preview" style="margin-top: 20px; padding: 15px; background: #800020; border-radius: 8px; text-align: center; color: white;">
+                    <span style="font-size: 11px; text-transform: uppercase; opacity: 0.8;">Monto a registrar:</span>
+                    <strong id="preview-monto" style="display: block; font-size: 24px; font-weight: 900; margin-top: 2px;">S/ 0.00</strong>
                 </div>
+                <input id="sw-fecha" type="hidden" value="${fechaLocal}">
             </div>`,
         showCancelButton: true,
         confirmButtonText: '✅ REGISTRAR CARGO',
@@ -750,6 +771,8 @@ async function agregarConsumo(resId, hab) {
         didOpen: () => {
             const inputCant = document.getElementById('sw-cant');
             const inputPre = document.getElementById('sw-pre');
+            const checkPagado = document.getElementById('sw-pagado');
+            const metodoBox = document.getElementById('metodo-pago-box');
             const displaySubtotal = document.getElementById('preview-monto');
             
             const actualizarSubtotal = () => {
@@ -758,70 +781,115 @@ async function agregarConsumo(resId, hab) {
                 displaySubtotal.innerText = `S/ ${(c * p).toFixed(2)}`;
             };
             
-            inputCant.oninput = actualizarSubtotal; // Más limpio que addEventListener
+            inputCant.oninput = actualizarSubtotal;
             inputPre.oninput = actualizarSubtotal;
+            checkPagado.onchange = () => {
+                metodoBox.style.display = checkPagado.checked ? 'block' : 'none';
+            };
         },
         preConfirm: () => {
             const desc = document.getElementById('sw-desc').value.trim();
             const cant = parseInt(document.getElementById('sw-cant').value);
             const pre = parseFloat(document.getElementById('sw-pre').value);
+            const pagado = document.getElementById('sw-pagado').checked;
+            const metodo = document.getElementById('sw-metodo').value;
             const fecha = document.getElementById('sw-fecha').value;
 
-            if (!desc || isNaN(cant) || cant <= 0 || isNaN(pre) || pre < 0 || !fecha) {
-                Swal.showValidationMessage('Complete todos los campos correctamente');
+            if (!desc || isNaN(cant) || cant <= 0 || isNaN(pre) || pre < 0) {
+                Swal.showValidationMessage('Complete descripción y montos');
                 return false;
             }
-            // Retornamos los valores ya parseados para evitar errores luego
-            return { desc, cant, pre, fecha };
+            return { desc, cant, pre, fecha, pagado, metodo };
         }
     });
 
     if (formValues) {
         try {
-            // Guardamos el cargo
+            const montoTotal = Number((formValues.cant * formValues.pre).toFixed(2));
+
+            // 1. REGISTRAR EL CONSUMO EN LA COLECCIÓN (Para el historial de la habitación)
             await addDoc(collection(db, "consumos"), {
                 idReserva: resId,
                 descripcion: formValues.desc.toUpperCase(),
                 cantidad: formValues.cant,
                 precioUnitario: formValues.pre,
-                precioTotal: Number((formValues.cant * formValues.pre).toFixed(2)), // Forzamos número con 2 decimales
+                precioTotal: montoTotal,
                 fechaConsumo: formValues.fecha,
-                registradoEn: new Date().toISOString()
+                estadoPago: formValues.pagado ? "PAGADO" : "PENDIENTE"
             });
-            
-            // Usar Toast global si existe, sino este:
+
+            // 2. SI FUE PAGADO, REGISTRAR EN LA RESERVA Y EN LA CAJA (PAGOS.HTML)
+            if (formValues.pagado) {
+                const nuevoPagoObj = {
+                    fecha: new Date().toISOString(),
+                    monto: montoTotal,
+                    metodo: formValues.metodo,
+                    tipo: "Consumos",
+                    concepto: `Pago Inmediato: ${formValues.desc.toUpperCase()}`
+                };
+
+                const pagosActualizados = [...(rData.pagos || []), nuevoPagoObj];
+                const totalAbonoExtras = pagosActualizados
+                    .filter(p => p.tipo === "Consumos")
+                    .reduce((acc, p) => acc + (parseFloat(p.monto) || 0), 0);
+
+                // Actualizar Reserva
+                await updateDoc(doc(db, "reservas", resId), {
+                    pagos: pagosActualizados,
+                    adelantoConsumos: totalAbonoExtras 
+                });
+
+                // Registrar en Caja Diaria
+                await addDoc(collection(db, "pagos"), {
+                    idReserva: resId,
+                    huesped: rData.huesped,
+                    habitacion: hab.numero,
+                    montoTotal: montoTotal,
+                    montoExtras: montoTotal,
+                    montoHospedaje: 0,
+                    metodoPago: formValues.metodo,
+                    fechaPago: new Date().toISOString(),
+                    concepto: `Venta Directa: ${formValues.desc}`,
+                    atendidoBy: rData.recibidoPor || "Recepcionista"
+                });
+            }
+
             Swal.fire({
                 icon: 'success',
-                title: 'Cargo añadido',
+                title: formValues.pagado ? 'Venta cobrada con éxito' : 'Cargo añadido a la cuenta',
                 toast: true,
                 position: 'top-end',
-                timer: 2000,
+                timer: 2500,
                 showConfirmButton: false
             });
 
-            // RECARGA EL MODAL DE GESTIÓN
-            // Es vital que rData se actualice para mostrar el nuevo saldo
             abrirModalGestionOcupada(hab); 
 
         } catch (e) {
-            console.error("Error:", e);
-            Swal.fire('Error', 'No se pudo registrar el cargo.', 'error');
+            console.error("Error en consumo:", e);
+            Swal.fire('Error', 'No se pudo procesar el cargo.', 'error');
         }
     }
 }
-
-
 /* ==========================================================================
-   7. CHECK-OUT (SINCRONIZADO Y OPTIMIZADO)
+   7. CHECK-OUT (ACTUALIZADO CON LÓGICA DE ABONOS A CONSUMOS)
    ========================================================================== */
    async function realizarCheckOut(resId, hab, rData, totalConsumos) {
-    // 1. Cálculos base con seguridad matemática
+    // 1. Cálculos base diferenciados
     const subHosp = parseFloat(rData.total) || 0;
-    const adelantoAcumulado = parseFloat(rData.adelantoMonto || 0);
-    const saldoHospedaje = Math.max(0, subHosp - adelantoAcumulado); 
-    const granTotalAPagar = saldoHospedaje + totalConsumos; 
+    
+    // Obtenemos abonos según su tipo
+    const adelantoHospedaje = parseFloat(rData.adelantoMonto || 0); 
+    const adelantoConsumos = parseFloat(rData.adelantoConsumos || 0); // <-- NUEVO CAMPO
 
-    // Obtener consumos reales de la base de datos para el ticket
+    // Calculamos saldos pendientes individuales
+    const saldoHospedaje = Math.max(0, subHosp - adelantoHospedaje); 
+    const saldoExtras = Math.max(0, totalConsumos - adelantoConsumos); // <-- RESTA REAL
+
+    // El total a pagar ahora es la suma de los saldos pendientes
+    const granTotalAPagar = Number((saldoHospedaje + saldoExtras).toFixed(2)); 
+
+    // Obtener consumos para el ticket
     const qCons = query(collection(db, "consumos"), where("idReserva", "==", resId));
     const snapCons = await getDocs(qCons);
     const listaConsumos = snapCons.docs.map(d => d.data());
@@ -829,15 +897,14 @@ async function agregarConsumo(resId, hab) {
     // 2. Definir bloques visuales dinámicos
     const tituloModal = granTotalAPagar <= 0 ? "Finalizar Estadía" : "Finalizar Estadía y Pago";
     
-    // Bloque de liquidación según el saldo
     const bloqueLiquidacion = granTotalAPagar <= 0 
         ? `<div style="text-align: center; padding: 20px; background: #e8f5e9; border-radius: 10px; border: 1px dashed #27ae60; margin-top: 15px;">
                <div style="font-size: 30px; margin-bottom: 5px;">✨</div>
                <span style="font-weight: bold; color: #2e7d32; text-transform: uppercase; letter-spacing: 1px;">Cuenta Saldada</span>
-               <p style="font-size: 12px; color: #666; margin: 5px 0 0 0;">No hay montos pendientes de cobro.</p>
+               <p style="font-size: 12px; color: #666; margin: 5px 0 0 0;">No hay montos pendientes.</p>
            </div>`
         : `<div style="background: #800020; padding: 15px; border-radius: 10px; text-align: center; color: white; margin-top: 15px;">
-               <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total a Liquidar Ahora:</span>
+               <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Saldo Pendiente Total:</span>
                <div style="font-size: 28px; font-weight: 900;">S/ ${granTotalAPagar.toFixed(2)}</div>
            </div>`;
 
@@ -853,13 +920,13 @@ async function agregarConsumo(resId, hab) {
         html: `
             <div style="font-family: 'Lato', sans-serif; text-align: left;">
                 <div style="background: #fdfaf5; padding: 15px; border-radius: 10px; border: 1px solid #d4af37; margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px;">
-                        <span>Saldo Hospedaje:</span>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                        <span>Hospedaje (Pendiente):</span>
                         <span style="font-weight: bold;">S/ ${saldoHospedaje.toFixed(2)}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; font-size: 13px; color: #5d4037;">
-                        <span>Total Extras/Consumos:</span>
-                        <span style="font-weight: bold;">+ S/ ${totalConsumos.toFixed(2)}</span>
+                        <span>Consumos (Pendiente):</span>
+                        <span style="font-weight: bold;">+ S/ ${saldoExtras.toFixed(2)}</span>
                     </div>
                 </div>
 
@@ -868,12 +935,10 @@ async function agregarConsumo(resId, hab) {
                 ${granTotalAPagar > 0 ? `
                 <div style="margin-top: 20px;">
                     <label style="font-size: 11px; font-weight: bold; color: #5d4037; text-transform: uppercase;">Método de Pago Final:</label>
-                    <select id="metodoPago" class="swal2-select" style="width: 100%; margin: 8px 0 0 0; border-color: #d4af37;">
+                    <select id="metodoPago" class="swal2-select" style="width: 100%; margin: 8px 0 0 0; border-color: #d4af37; height: 40px;">
                         <option value="Efectivo">💵 Efectivo</option>
                         <option value="Tarjeta">💳 Tarjeta (POS)</option>
-                        <option value="Transferencia">📱 Transferencia</option>
-                        <option value="Yape">📱 Yape</option>
-                        <option value="Plin">📱 Plin</option>
+                        <option value="Yape/Plin">📱 Yape / Plin</option>
                     </select>
                 </div>` : ''}
             </div>`,
@@ -892,70 +957,69 @@ async function agregarConsumo(resId, hab) {
     if (isDismissed) return; 
 
     try {
-        // A. ACTUALIZAR HISTORIAL DE PAGOS
         const historialPagosActualizado = [...(rData.pagos || [])];
+        
+        // Si hay un saldo que pagar al cierre, lo agregamos al historial
         if (granTotalAPagar > 0) {
             historialPagosActualizado.push({
                 fecha: new Date().toISOString(),
                 monto: granTotalAPagar,
                 metodo: metodoSeleccionado,
-                concepto: "Liquidación Final"
+                tipo: "Liquidación", // Para diferenciarlo de abonos previos
+                concepto: "Cierre de Cuenta Final"
             });
         }
 
-        // Cálculo del total que realmente entró a caja en toda la estadía
-        const totalCobradoReal = historialPagosActualizado.reduce((acc, p) => acc + (parseFloat(p.monto) || 0), 0);
+        // El total final cobrado es la suma de TODO el historial de pagos
+        const totalCobradoHistorico = historialPagosActualizado.reduce((acc, p) => acc + (parseFloat(p.monto) || 0), 0);
 
-        // B. REGISTRO EN COLECCIÓN DE PAGOS (Auditoría diaria)
+        // Registro en caja diaria (solo si hubo pago en este momento)
         if (granTotalAPagar > 0) {
             await addDoc(collection(db, "pagos"), {
                 idReserva: resId,
                 huesped: rData.huesped,
                 habitacion: hab.numero,
                 montoTotal: granTotalAPagar,
+                montoHospedaje: saldoHospedaje,
+                montoExtras: saldoExtras,
                 metodoPago: metodoSeleccionado,
                 fechaPago: new Date().toISOString(),
-                concepto: "Cierre de Cuenta",
-                atendidoBy: rData.recibidoPor || "Sistema"
+                concepto: "Liquidación Check-out",
+                atendidoBy: rData.atendidoBy || "Recepcionista"
             });
         }
 
-        // C. IMPRESIÓN
+        // Impresión
         if (isConfirmed && typeof imprimirTicket === 'function') {
             imprimirTicket(rData, listaConsumos, totalConsumos, granTotalAPagar, metodoSeleccionado);
         }
 
-        // D. CIERRE EN FIREBASE
-        // 1. Reserva finalizada
+        // ACTUALIZACIÓN FINAL EN FIREBASE
         await updateDoc(doc(db, "reservas", resId), { 
             estado: "checkout",
             fechaSalidaReal: new Date().toISOString(),
             pagos: historialPagosActualizado,
-            adelantoMonto: totalCobradoReal, 
+            adelantoMonto: totalCobradoHistorico, // Actualizamos con la suma total final
             diferencia: 0,
             totalFinalConServicios: subHosp + totalConsumos
         });
 
-        // 2. Habitación libre
         await updateDoc(doc(db, "habitaciones", hab.id), { 
             estado: "Libre", 
             personasActuales: 0,
             reservaActualId: "" 
         });
 
-        Swal.fire({
-            icon: 'success',
-            title: 'Check-out Finalizado',
-            text: `Habitación ${hab.numero} está ahora disponible.`,
-            timer: 2500,
-            showConfirmButton: false
-        });
+        Swal.fire({ icon: 'success', title: 'Check-out Exitoso', timer: 2000, showConfirmButton: false });
 
     } catch (error) {
         console.error("Error en checkout:", error);
-        Swal.fire('Error', 'No se pudo procesar el cierre.', 'error');
+        Swal.fire('Error', 'No se pudo completar el cierre.', 'error');
     }
 }
+
+/*IMPRIMIR TICKET CORREGIDO*/
+
 async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodoPago) {
     let nombreAtendido = "RECEPCIONISTA"; 
     try {
@@ -981,18 +1045,40 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
         return p.length === 3 ? `${p[2]}/${p[1]}` : f;
     };
 
-    // 1. Conceptos de Hospedaje
+    // --- LÓGICA DE PRECIOS ---
+    const tarifaBase = parseFloat(rData.tarifa || 0);
+    const montoMediaTarifa = tarifaBase / 2; // Calculamos la mitad para Early/Late
+    
+    // El total de alojamiento puro (Noches x Tarifa)
+    const totalAlojamientoPuro = parseFloat(rData.total || 0);
+
+    // 1. Construcción de Filas de Hospedaje
     let filasHospedajeHTML = `
         <tr>
             <td>ALOJAMIENTO (${formatF(rData.checkIn)} - ${formatF(rData.checkOut)})</td>
-            <td class="text-right">S/ ${parseFloat(rData.total).toFixed(2)}</td>
+            <td class="text-right">S/ ${totalAlojamientoPuro.toFixed(2)}</td>
         </tr>`;
 
-    if (parseFloat(rData.early || 0) > 0) {
-        filasHospedajeHTML += `<tr><td>(+) EARLY CHECK-IN</td><td class="text-right">S/ ${parseFloat(rData.early).toFixed(2)}</td></tr>`;
+    // Si rData.early tiene un valor (como 8), imprimimos el cargo de media tarifa
+    let costoEarly = 0;
+    if (rData.early && rData.early !== "" && rData.early !== 0) {
+        costoEarly = montoMediaTarifa;
+        filasHospedajeHTML += `
+            <tr>
+                <td>(+) EARLY CHECK-IN (${rData.early}:00 HRS)</td>
+                <td class="text-right">S/ ${costoEarly.toFixed(2)}</td>
+            </tr>`;
     }
-    if (parseFloat(rData.late || 0) > 0) {
-        filasHospedajeHTML += `<tr><td>(+) LATE CHECK-OUT</td><td class="text-right">S/ ${parseFloat(rData.late).toFixed(2)}</td></tr>`;
+
+    // Si rData.late tiene un valor (como 18), imprimimos el cargo de media tarifa
+    let costoLate = 0;
+    if (rData.late && rData.late !== "" && rData.late !== 0) {
+        costoLate = montoMediaTarifa;
+        filasHospedajeHTML += `
+            <tr>
+                <td>(+) LATE CHECK-OUT (${rData.late}:00 HRS)</td>
+                <td class="text-right">S/ ${costoLate.toFixed(2)}</td>
+            </tr>`;
     }
 
     // 2. Conceptos de Consumos
@@ -1003,12 +1089,13 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
         </tr>
     `).join('');
 
-    // --- LÓGICA DE CÁLCULOS PARA EL TICKET ---
-    // Total de lo que costó todo (Hospedaje + Extras + Consumos)
-    const costoTotalServicios = parseFloat(rData.total) + parseFloat(rData.early || 0) + parseFloat(rData.late || 0) + totalConsumos;
+    // --- CÁLCULO TOTAL FINAL ---
+    // Sumamos: Hospedaje base + Early + Late + Consumos
+    const costoTotalServicios = totalAlojamientoPuro + costoEarly + costoLate + totalConsumos;
     
-    // Lo que ya estaba pagado antes de este momento
-    const abonadoAnteriormente = parseFloat(rData.adelantoMonto || 0);
+    // Lo que ya estaba pagado antes (incluyendo abonos a hospedaje y consumos previos)
+    const abonadoAnteriormente = (parseFloat(rData.adelantoMonto || 0) + parseFloat(rData.adelantoConsumos || 0)) - pagoActual;
+    const totalAbonosSeguro = Math.max(0, abonadoAnteriormente);
 
     ventana.document.write(`
         <html>
@@ -1016,7 +1103,7 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
             <title>Ticket_Hab_${rData.habitacion}</title>
             <style>
                 @page { margin: 0; }
-                body { font-family: 'Courier New', monospace; width: 260px; padding: 10px; font-size: 11px; color: #000; }
+                body { font-family: 'Courier New', monospace; width: 260px; padding: 10px; font-size: 11px; color: #000; line-height: 1.2; }
                 .text-center { text-align: center; }
                 .text-right { text-align: right; white-space: nowrap; }
                 .divider { border-top: 1px dashed #000; margin: 8px 0; }
@@ -1024,6 +1111,7 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
                 td { padding: 2px 0; vertical-align: top; }
                 .bold { font-weight: bold; }
                 .total-final { font-size: 13px; font-weight: bold; border-top: 1px solid #000; }
+                .resumen-table td { font-size: 10px; }
             </style>
         </head>
         <body onload="window.print(); window.close();">
@@ -1045,7 +1133,7 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
             
             <table>
                 <thead>
-                    <tr style="border-bottom: 1px solid #000;">
+                    <tr style="border-bottom: 1px solid #000; font-size: 9px;">
                         <th align="left">DESCRIPCIÓN</th>
                         <th align="right">TOTAL</th>
                     </tr>
@@ -1058,22 +1146,22 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
             
             <div class="divider"></div>
             
-            <table>
+            <table class="resumen-table">
                 <tr>
-                    <td>TOTAL SERVICIOS</td>
+                    <td>SUBTOTAL SERVICIOS</td>
                     <td class="text-right">S/ ${costoTotalServicios.toFixed(2)}</td>
                 </tr>
                 <tr>
-                    <td>ABONOS PREVIOS</td>
-                    <td class="text-right">- S/ ${abonadoAnteriormente.toFixed(2)}</td>
+                    <td>ABONOS REALIZADOS</td>
+                    <td class="text-right">- S/ ${totalAbonosSeguro.toFixed(2)}</td>
                 </tr>
                 <tr class="total-final">
-                    <td style="padding-top:5px;">SALDO CANCELADO</td>
+                    <td style="padding-top:5px;">TOTAL CANCELADO</td>
                     <td class="text-right" style="padding-top:5px;">S/ ${pagoActual.toFixed(2)}</td>
                 </tr>
             </table>
 
-            <div style="margin-top: 10px; font-size: 10px;">
+            <div style="margin-top: 10px; font-size: 9px;">
                 MÉTODO PAGO: <b>${metodoPago.toUpperCase()}</b><br>
                 ATENDIDO POR: ${nombreAtendido}
             </div>
