@@ -28,18 +28,10 @@
         .btn-excel { background: #166534; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700; transition: 0.3s; font-size: 13px; }
         .btn-excel:hover { background: #0e4b25; transform: translateY(-2px); }
         
-        .monto-celda { font-weight: 700; color: #166534; font-size: 16px; }
         .badge-hab { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: 700; }
         
-        /* Estilo para los botones de desglose */
         .btn-detalle { background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.2s; color: #475569; display: flex; align-items: center; gap: 5px; width: 100%; justify-content: space-between; }
         .btn-detalle:hover { background: #f1f5f9; border-color: #cbd5e1; color: #1e293b; }
-
-        /* Estilo Ticket dentro de SweetAlert */
-        .ticket-box { border: 1px dashed #000; padding: 15px; font-family: 'Courier New', monospace; background: #fff; color: #000; font-size: 13px; line-height: 1.4; }
-        .ticket-header { text-align: center; font-weight: bold; border-bottom: 1px solid #000; margin-bottom: 10px; padding-bottom: 5px; }
-        .ticket-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-        .ticket-total { border-top: 1px solid #000; margin-top: 10px; padding-top: 5px; font-weight: bold; font-size: 15px; }
     </style>
 </head>
 <body>
@@ -105,338 +97,167 @@
         const fInicio = document.getElementById('fechaInicio');
         const fFin = document.getElementById('fechaFin');
         let todosLosPagos = [];
-    
+
+        // --- 1. FUNCIONES DE APOYO ---
         function convertirFecha(datoFecha) {
             if (!datoFecha) return null;
             if (typeof datoFecha.toDate === 'function') return datoFecha.toDate();
             const d = new Date(datoFecha);
             return isNaN(d.getTime()) ? null : d;
         }
-    
-        onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
-    const pagosBrutos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const agrupados = {};
 
-    pagosBrutos.forEach(pago => {
-        const id = pago.idReserva;
-        
-        if (!agrupados[id]) {
-            agrupados[id] = {
-                ...pago,
-                montoHospedaje: 0,
-                montoExtras: 0,
-                montoTotal: 0,
-                // Inicializamos con la fecha del primer pago que encontremos (que será el más reciente por el orderBy)
-                ultimaFecha: pago.fechaPago,
-                usuario: pago.usuario || 'Sistema'
-            };
-        }
-
-        // Sumamos los montos
-        agrupados[id].montoHospedaje += parseFloat(pago.montoHospedaje || 0);
-        agrupados[id].montoExtras += parseFloat(pago.montoExtras || 0);
-        agrupados[id].montoTotal += parseFloat(pago.montoTotal || 0);
-
-        // LÓGICA DE ACTUALIZACIÓN POR RECIENCIA:
-        // Si el pago que estamos procesando es más reciente que el guardado, actualizamos usuario y fecha
-        const fechaActual = convertirFecha(pago.fechaPago);
-        const fechaGuardada = convertirFecha(agrupados[id].ultimaFecha);
-
-        if (fechaActual > fechaGuardada) {
-            agrupados[id].ultimaFecha = pago.fechaPago;
-            agrupados[id].usuario = pago.usuario || 'Sistema';
-            
-            // También actualizamos el método para que refleje el último
-            if (agrupados[id].metodoPago !== pago.metodoPago) {
-                agrupados[id].metodoPago = "Múltiple / " + pago.metodoPago;
+        // --- 2. RENDERIZADO DE TABLA ---
+        function renderTable(datos) {
+            tbody.innerHTML = '';
+            if(datos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay movimientos registrados.</td></tr>';
+                return;
             }
-        }
-    });
 
-    todosLosPagos = Object.values(agrupados);
-    aplicarFiltros();
-});
-
-    function renderTable(datos) {
-    tbody.innerHTML = '';
-    if(datos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay movimientos registrados.</td></tr>';
-        return;
-    }
-
-    datos.forEach((p) => {
-        const f = convertirFecha(p.ultimaFecha); 
-        
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">Último mov.</small></td>
-            <td>
-                <strong>${p.huesped || 'S/N'}</strong><br>
-            </td>
-            <td>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <i class="fa-solid fa-user-check" style="color: #64748b; font-size: 10px;"></i>
-                    <span style="font-weight: 600; text-transform: capitalize;">${p.usuario || 'Admin'}</span>
-                </div>
-                <small style="color:#64748b; font-size:10px;">Hab: ${p.habitacion || '--'}</small>
-            </td>
-            <td><span style="font-size:12px;"><i class="fa-solid fa-layer-group"></i> ${p.metodoPago}</span></td>
-            <td>
-                <button class="btn-detalle" onclick="verDetalleAlojamiento('${p.idReserva}', ${p.montoHospedaje})">
-                    <span>S/ ${p.montoHospedaje.toFixed(2)}</span> <i class="fa-solid fa-magnifying-glass-dollar"></i>
-                </button>
-            </td>
-            <td>
-                <button class="btn-detalle" onclick="verDetalleExtras('${p.idReserva}', ${p.montoExtras})">
-                    <span>S/ ${p.montoExtras.toFixed(2)}</span> <i class="fa-solid fa-receipt"></i>
-                </button>
-            </td>
-            <td>
-                <button class="btn-detalle" style="background: #fff7ed; border-color: #ffedd5; color: #9a3412;" 
-                        onclick="verTicketGlobal('${p.idReserva}', ${p.montoHospedaje}, ${p.montoExtras}, ${p.montoTotal})">
-                    <strong style="font-size:15px;">S/ ${p.montoTotal.toFixed(2)}</strong> <i class="fa-solid fa-file-invoice"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-/* ==========================================================================
-   MODAL: DETALLE DE HOSPEDAJE (Tamaño Ampliado 550px - Estilo Ticket)
-   ========================================================================== */
-   window.verDetalleAlojamiento = async function(idReserva, montoLiquidado) {
-    if (!idReserva) return Swal.fire("Error", "Reserva no vinculada", "error");
-    
-    Swal.fire({ title: 'Generando detalle...', didOpen: () => Swal.showLoading() });
-
-    try {
-        const resSnap = await getDoc(doc(db, "reservas", idReserva));
-        if (!resSnap.exists()) throw new Error("Reserva no encontrada");
-        
-        const d = resSnap.data();
-        
-        // --- LÓGICA DE CÁLCULO CORREGIDA ---
-        const tarifaNoche = parseFloat(d.tarifa || 0);
-        const mediaTarifa = tarifaNoche / 2;
-        const totalRegistrado = parseFloat(d.total || 0); // Este ya incluye Early/Late en tu DB
-        
-        let cargosExtra = 0;
-        let filasExtrasHTML = '';
-
-        if (d.early) {
-            cargosExtra += mediaTarifa;
-            filasExtrasHTML += `
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;">
-                    <span>(+) EARLY CHECK-IN (${d.early}:00 HRS)</span>
-                    <span>S/ ${mediaTarifa.toFixed(2)}</span>
-                </div>`;
-        }
-
-        if (d.late) {
-            cargosExtra += mediaTarifa;
-            filasExtrasHTML += `
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;">
-                    <span>(+) LATE CHECK-OUT (${d.late}:00 HRS)</span>
-                    <span>S/ ${mediaTarifa.toFixed(2)}</span>
-                </div>`;
-        }
-
-        // CALCULAMOS LA ESTANCIA PURA RESTANDO LOS EXTRAS DEL TOTAL
-        // Ejemplo: 250 (total) - 50 (early) = 200 (estancia de 2 noches)
-        const estanciaLimpia = totalRegistrado - cargosExtra;
-
-        const html = `
-            <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
-                <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #800020; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">
-                    DETALLE DE HOSPEDAJE
-                </div>
-                
-                <div style="margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; font-family: 'Lato', sans-serif;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <b>HABITACIÓN:</b> <span>${d.habitacion}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between;">
-                        <b>TARIFA BASE:</b> <span>S/ ${tarifaNoche.toFixed(2)} / Noche</span>
-                    </div>
-                </div>
-                
-                <div style="font-size: 16px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 10px;">
-                        <span>ESTANCIA (${d.checkIn} al ${d.checkOut})</span>
-                        <span style="font-weight: bold;">S/ ${estanciaLimpia.toFixed(2)}</span>
-                    </div>
-
-                    ${filasExtrasHTML}
-
-                    <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;">
-                        <div style="display:flex; justify-content:space-between; font-size: 26px; font-weight: bold; color: #800020;">
-                            <span>TOTAL</span>
-                            <span>S/ ${totalRegistrado.toFixed(2)}</span>
+            datos.forEach((p) => {
+                const f = convertirFecha(p.ultimaFecha); 
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">Último mov.</small></td>
+                    <td><strong>${p.huesped || 'S/N'}</strong></td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <i class="fa-solid fa-user-check" style="color: #64748b; font-size: 10px;"></i>
+                            <span style="font-weight: 600; text-transform: capitalize;">${p.usuario || 'Admin'}</span>
                         </div>
-                    </div>
-                </div>
+                        <small style="color:#64748b; font-size:10px;">Hab: ${p.habitacion || '--'}</small>
+                    </td>
+                    <td><span style="font-size:12px;"><i class="fa-solid fa-layer-group"></i> ${p.metodoPago}</span></td>
+                    <td>
+                        <button class="btn-detalle" onclick="verDetalleAlojamiento('${p.idReserva}', ${p.montoHospedaje})">
+                            <span>S/ ${p.montoHospedaje.toFixed(2)}</span> <i class="fa-solid fa-magnifying-glass-dollar"></i>
+                        </button>
+                    </td>
+                    <td>
+                        <button class="btn-detalle" onclick="verDetalleExtras('${p.idReserva}', ${p.montoExtras})">
+                            <span>S/ ${p.montoExtras.toFixed(2)}</span> <i class="fa-solid fa-receipt"></i>
+                        </button>
+                    </td>
+                    <td>
+                        <button class="btn-detalle" style="background: #fff7ed; border-color: #ffedd5; color: #9a3412;" 
+                                onclick="verTicketGlobal('${p.idReserva}', ${p.montoHospedaje}, ${p.montoExtras}, ${p.montoTotal})">
+                            <strong style="font-size:15px;">S/ ${p.montoTotal.toFixed(2)}</strong> <i class="fa-solid fa-file-invoice"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
-                <div style="margin-top: 35px; font-size: 13px; color: #666; text-align: center; border-top: 1px dashed #aaa; padding-top: 15px; font-family: 'Lato', sans-serif; line-height: 1.4;">
-                    Este documento es un desglose digital de la cuenta del huésped.<br>
-                    <b>Monto abonado en esta transacción: S/ ${montoLiquidado.toFixed(2)}</b>
-                </div>
-            </div>`;
+        // --- 3. APLICAR FILTROS ---
+        function aplicarFiltros() {
+            const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
+            const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
+            
+            const pagosFiltrados = todosLosPagos.filter(pago => {
+                const fechaObj = convertirFecha(pago.ultimaFecha);
+                if (!fechaObj) return false;
+                if (inicio && fechaObj < inicio) return false;
+                if (fin && fechaObj > fin) return false;
+                return true;
+            });
+            renderTable(pagosFiltrados);
+        }
 
-        Swal.fire({
-            html: html,
-            width: '550px',
-            confirmButtonText: 'CERRAR VISTA',
-            confirmButtonColor: '#800020',
-            customClass: {
-                popup: 'hotel-modal-ticket'
-            }
+        // --- 4. ESCUCHA DE DATOS (FIREBASE) ---
+        onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
+            const pagosBrutos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const agrupados = {};
+
+            pagosBrutos.forEach(pago => {
+                const id = pago.idReserva;
+                if (!agrupados[id]) {
+                    agrupados[id] = {
+                        ...pago,
+                        montoHospedaje: 0, montoExtras: 0, montoTotal: 0,
+                        ultimaFecha: pago.fechaPago,
+                        usuario: pago.usuario || 'Admin'
+                    };
+                }
+                agrupados[id].montoHospedaje += parseFloat(pago.montoHospedaje || 0);
+                agrupados[id].montoExtras += parseFloat(pago.montoExtras || 0);
+                agrupados[id].montoTotal += parseFloat(pago.montoTotal || 0);
+
+                if (convertirFecha(pago.fechaPago) > convertirFecha(agrupados[id].ultimaFecha)) {
+                    agrupados[id].ultimaFecha = pago.fechaPago;
+                    agrupados[id].usuario = pago.usuario || 'Admin';
+                }
+            });
+
+            todosLosPagos = Object.values(agrupados);
+            aplicarFiltros();
         });
 
-    } catch (error) {
-        console.error(error);
-        Swal.fire("Error", "No se pudo cargar el detalle del hospedaje.", "error");
-    }
-};
-  
-/* ==========================================================================
-   MODAL: DETALLE DE CONSUMOS (Tamaño Ampliado 550px con Precio Unitario)
-   ========================================================================== */
-   window.verDetalleExtras = async function(idReserva, totalExtras) {
-    if (totalExtras <= 0) return Swal.fire("Sin Consumos", "No se registraron extras en esta estadía.", "info");
+        // --- 5. MODALES (DEFINIDOS EN WINDOW PARA ACCESO DESDE HTML) ---
+        window.verDetalleAlojamiento = async function(idReserva, montoLiquidado) {
+            Swal.fire({ title: 'Generando detalle...', didOpen: () => Swal.showLoading() });
+            try {
+                const resSnap = await getDoc(doc(db, "reservas", idReserva));
+                const d = resSnap.data();
+                const tarifaNoche = parseFloat(d.tarifa || 0);
+                const mediaTarifa = tarifaNoche / 2;
+                const totalRegistrado = parseFloat(d.total || 0);
+                let cargosExtra = 0, filasExtrasHTML = '';
 
-    Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
+                if (d.early) { cargosExtra += mediaTarifa; filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>(+) EARLY CHECK-IN (${d.early}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`; }
+                if (d.late) { cargosExtra += mediaTarifa; filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>(+) LATE CHECK-OUT (${d.late}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`; }
 
-    try {
-        const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
-        const snap = await getDocs(q);
-        
-        let itemsHTML = snap.docs.map(doc => {
-            const c = doc.data();
-            const cant = parseInt(c.cantidad || 1);
-            const pTotal = parseFloat(c.precioTotal || 0);
-            const pUnitario = pTotal / cant; // Calculamos el unitario en base al total y cantidad
+                const estanciaLimpia = totalRegistrado - cargosExtra;
 
-            return `
-                <div style="margin-bottom:15px; font-size: 16px;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>${cant}x ${c.descripcion || 'Producto'}</span>
-                        <span style="font-weight: bold;">S/ ${pTotal.toFixed(2)}</span>
-                    </div>
-                    <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                        &nbsp;&nbsp;&nbsp;(Precio Unit: S/ ${pUnitario.toFixed(2)})
-                    </div>
-                </div>`;
-        }).join('');
+                const html = `
+                    <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
+                        <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #800020; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">DETALLE DE HOSPEDAJE</div>
+                        <div style="font-size: 16px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 10px;"><span>ESTANCIA</span><span style="font-weight: bold;">S/ ${estanciaLimpia.toFixed(2)}</span></div>
+                            ${filasExtrasHTML}
+                            <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;"><div style="display:flex; justify-content:space-between; font-size: 26px; font-weight: bold; color: #800020;"><span>TOTAL</span><span>S/ ${totalRegistrado.toFixed(2)}</span></div></div>
+                        </div>
+                    </div>`;
+                Swal.fire({ html, width: '550px', confirmButtonText: 'CERRAR', confirmButtonColor: '#800020' });
+            } catch (e) { Swal.fire("Error", "No se pudo cargar el detalle", "error"); }
+        };
 
-        const html = `
-            <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
-                <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #5d4037; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">
-                    TICKET DE CONSUMOS
-                </div>
-                
-                <div style="margin-bottom: 20px; min-height: 100px;">
-                    ${itemsHTML}
-                </div>
+        window.verDetalleExtras = async function(idReserva, totalExtras) {
+            if (totalExtras <= 0) return Swal.fire("Sin Consumos", "No se registraron extras.", "info");
+            Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
+            try {
+                const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
+                const snap = await getDocs(q);
+                let itemsHTML = snap.docs.map(doc => {
+                    const c = doc.data();
+                    const cant = parseInt(c.cantidad || 1);
+                    const pTotal = parseFloat(c.precioTotal || 0);
+                    return `<div style="margin-bottom:15px; font-size: 16px;"><div style="display:flex; justify-content:space-between;"><span>${cant}x ${c.descripcion}</span><span style="font-weight:bold;">S/ ${pTotal.toFixed(2)}</span></div><div style="font-size:12px; color:#666;">&nbsp;&nbsp;&nbsp;(P. Unit: S/ ${(pTotal/cant).toFixed(2)})</div></div>`;
+                }).join('');
+                const html = `<div style="text-align:left; padding:10px; font-family:'Courier New';"><div style="text-align:center; font-family:'Playfair Display'; font-size:24px; color:#5d4037; border-bottom:3px dashed #000; margin-bottom:20px; padding-bottom:15px;">TICKET CONSUMOS</div>${itemsHTML}<div style="margin-top:25px; border-top:3px solid #000; padding-top:15px;"><div style="display:flex; justify-content:space-between; font-size:26px; font-weight:bold; color:#5d4037;"><span>TOTAL</span><span>S/ ${totalExtras.toFixed(2)}</span></div></div></div>`;
+                Swal.fire({ html, width: '550px', confirmButtonColor: '#5d4037' });
+            } catch (e) { Swal.fire("Error", "Error al cargar consumos", "error"); }
+        };
 
-                <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;">
-                    <div style="display:flex; justify-content:space-between; font-size: 26px; font-weight: bold; color: #5d4037;">
-                        <span>TOTAL EXTRAS</span>
-                        <span>S/ ${totalExtras.toFixed(2)}</span>
-                    </div>
-                </div>
+        window.verTicketGlobal = async function(idReserva, mHosp, mCons, mTotal) {
+            try {
+                const resSnap = await getDoc(doc(db, "reservas", idReserva));
+                const d = resSnap.data();
+                const html = `<div style="text-align:left; padding:10px; font-family:'Courier New';"><div style="text-align:center; font-family:'Playfair Display'; font-size:24px; color:#166534; border-bottom:3px dashed #000; margin-bottom:20px; padding-bottom:15px;">ESTADO FINAL</div><div style="font-size:17px;"><div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>ALOJAMIENTO</span><span style="font-weight:bold;">S/ ${mHosp.toFixed(2)}</span></div><div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>CONSUMOS</span><span style="font-weight:bold;">S/ ${mCons.toFixed(2)}</span></div></div><div style="margin-top:25px; border-top:3px solid #000; padding-top:15px;"><div style="display:flex; justify-content:space-between; font-size:28px; font-weight:bold; color:#166534;"><span>TOTAL</span><span>S/ ${mTotal.toFixed(2)}</span></div></div></div>`;
+                Swal.fire({ html, width: '550px', confirmButtonColor: '#166534' });
+            } catch (e) { Swal.fire("Error", "Error al generar ticket global", "error"); }
+        };
 
-                <div style="margin-top: 35px; font-size: 13px; color: #666; text-align: center; border-top: 1px dashed #aaa; padding-top: 15px; font-family: 'Lato', sans-serif;">
-                    Consumos registrados en la habitación durante la estadía.
-                </div>
-            </div>`;
-
-        Swal.fire({
-            html: html,
-            width: '550px',
-            confirmButtonText: 'CERRAR',
-            confirmButtonColor: '#5d4037'
-        });
-    } catch (e) {
-        Swal.fire("Error", "No se pudo cargar los consumos.", "error");
-    }
-};
-
-/* ==========================================================================
-   MODAL: TICKET GLOBAL CONSOLIDADO (Tamaño Ampliado 550px)
-   ========================================================================== */
-   window.verTicketGlobal = async function(idReserva, mHosp, mCons, mTotal) {
-    Swal.fire({ title: 'Generando Estado de Cuenta...', didOpen: () => Swal.showLoading() });
-
-    try {
-        const resSnap = await getDoc(doc(db, "reservas", idReserva));
-        if (!resSnap.exists()) throw new Error("Reserva no encontrada");
-        const d = resSnap.data();
-
-        const html = `
-            <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
-                <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #166534; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">
-                    ESTADO DE CUENTA FINAL
-                </div>
-
-                <div style="margin-bottom: 20px; background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; font-family: 'Lato', sans-serif;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <b>HUÉSPED:</b> <span>${d.huesped.toUpperCase()}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <b>HABITACIÓN:</b> <span>${d.habitacion}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between;">
-                        <b>ESTANCIA:</b> <span>${d.checkIn} AL ${d.checkOut}</span>
-                    </div>
-                </div>
-
-                <div style="font-size: 17px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 12px;">
-                        <span>TOTAL ALOJAMIENTO</span>
-                        <span style="font-weight: bold;">S/ ${mHosp.toFixed(2)}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 12px;">
-                        <span>TOTAL CONSUMOS</span>
-                        <span style="font-weight: bold;">S/ ${mCons.toFixed(2)}</span>
-                    </div>
-                </div>
-
-                <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;">
-                    <div style="display:flex; justify-content:space-between; font-size: 28px; font-weight: bold; color: #166534;">
-                        <span>TOTAL COBRADO</span>
-                        <span>S/ ${mTotal.toFixed(2)}</span>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 35px; font-size: 12px; text-align: center; color: #666; font-family: 'Lato', sans-serif; line-height: 1.4;">
-                    Este ticket resume la totalidad de pagos recibidos.<br>
-                    <b>Gracias por elegir Hotel Central.</b>
-                </div>
-            </div>`;
-
-        Swal.fire({
-            html: html,
-            width: '550px',
-            confirmButtonText: 'CERRAR',
-            confirmButtonColor: '#166534'
-        });
-    } catch (e) {
-        Swal.fire("Error", "No se pudo generar el resumen.", "error");
-    }
-};
-    
-        // Filtros y Eventos
+        // --- 6. EVENTOS ---
         fInicio.addEventListener('change', aplicarFiltros);
         fFin.addEventListener('change', aplicarFiltros);
         document.getElementById('btnLimpiar').addEventListener('click', () => { fInicio.value = ''; fFin.value = ''; aplicarFiltros(); });
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    
-        // Exportar a Excel
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         document.getElementById('btnExportar').addEventListener('click', () => {
             const wb = XLSX.utils.table_to_book(document.getElementById('tablaPagos'));
-            XLSX.writeFile(wb, `Reporte_Pagos_HotelCentral_${new Date().toISOString().slice(0,10)}.xlsx`);
+            XLSX.writeFile(wb, `Reporte_Pagos_HotelCentral.xlsx`);
         });
+
     </script>
 </body>
 </html>
