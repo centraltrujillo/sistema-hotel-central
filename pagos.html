@@ -204,157 +204,212 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapsh
         tbody.appendChild(tr);
     });
 }
-    
-        /* ==========================================================================
-           MODAL: DESGLOSE DE HOSPEDAJE (Simil Ticket)
-           ========================================================================== */
-        window.verDetalleAlojamiento = async function(idReserva, montoLiquidado) {
-            if (!idReserva) return Swal.fire("Error", "Reserva no vinculada", "error");
-    
-            Swal.fire({ title: 'Generando auditoría...', didOpen: () => Swal.showLoading() });
-    
-            try {
-                const resSnap = await getDoc(doc(db, "reservas", idReserva));
-                if (!resSnap.exists()) throw new Error("Reserva no encontrada");
-                
-                const d = resSnap.data();
-                const tarifaBase = parseFloat(d.tarifa || 0);
-                const mediaTarifa = tarifaBase / 2;
-                const totalBase = parseFloat(d.total || 0);
 
-                let rowsHTML = `
-                    <div class="ticket-row">
-                        <span>ALOJAMIENTO (${d.checkIn} / ${d.checkOut})</span>
-                        <span>S/ ${totalBase.toFixed(2)}</span>
-                    </div>`;
-
-                if (d.early) {
-                    rowsHTML += `<div class="ticket-row"><span>(+) EARLY CHECK-IN (${d.early}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`;
-                }
-                if (d.late) {
-                    rowsHTML += `<div class="ticket-row"><span>(+) LATE CHECK-OUT (${d.late}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`;
-                }
-
-                const totalHospedajeCalculado = totalBase + (d.early ? mediaTarifa : 0) + (d.late ? mediaTarifa : 0);
-
-                const html = `
-                    <div class="ticket-box">
-                        <div class="ticket-header">DESGLOSE DE HOSPEDAJE</div>
-                        ${rowsHTML}
-                        <div class="ticket-total">
-                            <div class="ticket-row">
-                                <span>TOTAL HOSPEDAJE</span>
-                                <span>S/ ${totalHospedajeCalculado.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        <div style="margin-top:15px; font-size:11px; color:#800020; border-top:1px dashed #ccc; padding-top:5px; text-align:center;">
-                            Monto de esta transacción: <b>S/ ${montoLiquidado.toFixed(2)}</b>
-                        </div>
-                    </div>`;
-    
-                Swal.fire({
-                    title: '<span style="font-family:Playfair Display; color:#800020;">Ticket de Auditoría</span>',
-                    html: html,
-                    width: '450px',
-                    confirmButtonText: 'CERRAR',
-                    confirmButtonColor: '#800020'
-                });
-            } catch (error) {
-                Swal.fire("Error", "No se pudo cargar el historial.", "error");
-            }
-        };
-    
-        /* ==========================================================================
-           MODAL: DESGLOSE DE CONSUMOS (Simil Ticket)
-           ========================================================================== */
-        window.verDetalleExtras = async function(idReserva, totalExtras) {
-            if (totalExtras <= 0) return Swal.fire("Sin Consumos", "No se registraron extras en esta estadía.", "info");
-    
-            Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
-    
-            try {
-                const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
-                const snap = await getDocs(q);
-                
-                let itemsHTML = snap.docs.map(doc => {
-                    const c = doc.data();
-                    return `
-                        <div class="ticket-row">
-                            <span>${c.cantidad || 1}x ${c.descripcion || 'Producto'}</span>
-                            <span>S/ ${parseFloat(c.precioTotal).toFixed(2)}</span>
-                        </div>`;
-                }).join('');
-    
-                const html = `
-                    <div class="ticket-box">
-                        <div class="ticket-header">TICKET DE CONSUMOS</div>
-                        ${itemsHTML}
-                        <div class="ticket-total">
-                            <div class="ticket-row">
-                                <span>TOTAL EXTRAS</span>
-                                <span>S/ ${totalExtras.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    </div>`;
-    
-                Swal.fire({
-                    title: '<span style="font-family:Playfair Display; color:#5d4037;">Detalle de Consumos</span>',
-                    html: html,
-                    confirmButtonText: 'CERRAR',
-                    confirmButtonColor: '#5d4037'
-                });
-            } catch (e) {
-                Swal.fire("Error", "No se pudo cargar los consumos.", "error");
-            }
-        };
-
-        /* ==========================================================================
-   MODAL: TICKET GLOBAL CONSOLIDADO
+/* ==========================================================================
+   MODAL: DETALLE DE HOSPEDAJE (Tamaño Ampliado 550px - Estilo Ticket)
    ========================================================================== */
-window.verTicketGlobal = async function(idReserva, mHosp, mCons, mTotal) {
+   window.verDetalleAlojamiento = async function(idReserva, montoLiquidado) {
+    if (!idReserva) return Swal.fire("Error", "Reserva no vinculada", "error");
+    
+    Swal.fire({ title: 'Generando detalle...', didOpen: () => Swal.showLoading() });
+
+    try {
+        const resSnap = await getDoc(doc(db, "reservas", idReserva));
+        if (!resSnap.exists()) throw new Error("Reserva no encontrada");
+        
+        const d = resSnap.data();
+        
+        // --- LÓGICA DE CÁLCULO ---
+        const tarifaNoche = parseFloat(d.tarifa || 0);
+        const mediaTarifa = tarifaNoche / 2;
+        const subtotalNoches = parseFloat(d.total || 0); // Solo costo de noches
+        
+        let cargosExtra = 0;
+        let filasExtrasHTML = '';
+
+        if (d.early) {
+            cargosExtra += mediaTarifa;
+            filasExtrasHTML += `
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;">
+                    <span>(+) EARLY CHECK-IN (${d.early}:00 HRS)</span>
+                    <span>S/ ${mediaTarifa.toFixed(2)}</span>
+                </div>`;
+        }
+
+        if (d.late) {
+            cargosExtra += mediaTarifa;
+            filasExtrasHTML += `
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;">
+                    <span>(+) LATE CHECK-OUT (${d.late}:00 HRS)</span>
+                    <span>S/ ${mediaTarifa.toFixed(2)}</span>
+                </div>`;
+        }
+
+        const totalHospedajeReal = subtotalNoches + cargosExtra;
+
+        const html = `
+            <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
+                <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #800020; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">
+                    DETALLE DE HOSPEDAJE
+                </div>
+                
+                <div style="margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; font-family: 'Lato', sans-serif;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <b>HABITACIÓN:</b> <span>${d.habitacion}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>TARIFA BASE:</b> <span>S/ ${tarifaNoche.toFixed(2)} / Noche</span>
+                    </div>
+                </div>
+                
+                <div style="font-size: 16px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 10px;">
+                        <span>ESTANCIA (${d.checkIn} al ${d.checkOut})</span>
+                        <span style="font-weight: bold;">S/ ${subtotalNoches.toFixed(2)}</span>
+                    </div>
+
+                    ${filasExtrasHTML}
+
+                    <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;">
+                        <div style="display:flex; justify-content:space-between; font-size: 26px; font-weight: bold; color: #800020;">
+                            <span>TOTAL</span>
+                            <span>S/ ${totalHospedajeReal.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 35px; font-size: 13px; color: #666; text-align: center; border-top: 1px dashed #aaa; padding-top: 15px; font-family: 'Lato', sans-serif; line-height: 1.4;">
+                    Este documento es un desglose digital de la cuenta del huésped.<br>
+                    <b>Monto abonado en esta transacción: S/ ${montoLiquidado.toFixed(2)}</b>
+                </div>
+            </div>`;
+
+        Swal.fire({
+            html: html,
+            width: '550px',
+            confirmButtonText: 'CERRAR VISTA',
+            confirmButtonColor: '#800020',
+            customClass: {
+                popup: 'hotel-modal-ticket'
+            }
+        });
+
+    } catch (error) {
+        console.error(error);
+        Swal.fire("Error", "No se pudo cargar el detalle del hospedaje.", "error");
+    }
+};
+  
+/* ==========================================================================
+   MODAL: DETALLE DE CONSUMOS (Tamaño Ampliado 550px)
+   ========================================================================== */
+   window.verDetalleExtras = async function(idReserva, totalExtras) {
+    if (totalExtras <= 0) return Swal.fire("Sin Consumos", "No se registraron extras en esta estadía.", "info");
+
+    Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
+
+    try {
+        const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
+        const snap = await getDocs(q);
+        
+        let itemsHTML = snap.docs.map(doc => {
+            const c = doc.data();
+            return `
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size: 16px;">
+                    <span>${c.cantidad || 1}x ${c.descripcion || 'Producto'}</span>
+                    <span style="font-weight: bold;">S/ ${parseFloat(c.precioTotal).toFixed(2)}</span>
+                </div>`;
+        }).join('');
+
+        const html = `
+            <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
+                <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #5d4037; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">
+                    TICKET DE CONSUMOS
+                </div>
+                
+                <div style="margin-bottom: 20px; min-height: 100px;">
+                    ${itemsHTML}
+                </div>
+
+                <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;">
+                    <div style="display:flex; justify-content:space-between; font-size: 26px; font-weight: bold; color: #5d4037;">
+                        <span>TOTAL EXTRAS</span>
+                        <span>S/ ${totalExtras.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 35px; font-size: 13px; color: #666; text-align: center; border-top: 1px dashed #aaa; padding-top: 15px; font-family: 'Lato', sans-serif;">
+                    Consumos registrados en la habitación durante la estadía.
+                </div>
+            </div>`;
+
+        Swal.fire({
+            html: html,
+            width: '550px',
+            confirmButtonText: 'CERRAR',
+            confirmButtonColor: '#5d4037'
+        });
+    } catch (e) {
+        Swal.fire("Error", "No se pudo cargar los consumos.", "error");
+    }
+};
+
+/* ==========================================================================
+   MODAL: TICKET GLOBAL CONSOLIDADO (Tamaño Ampliado 550px)
+   ========================================================================== */
+   window.verTicketGlobal = async function(idReserva, mHosp, mCons, mTotal) {
     Swal.fire({ title: 'Generando Estado de Cuenta...', didOpen: () => Swal.showLoading() });
 
     try {
         const resSnap = await getDoc(doc(db, "reservas", idReserva));
+        if (!resSnap.exists()) throw new Error("Reserva no encontrada");
         const d = resSnap.data();
 
         const html = `
-            <div class="ticket-box" style="text-align: left;">
-                <div class="ticket-header">ESTADO DE CUENTA FINAL</div>
-                <div style="font-size: 11px; margin-bottom: 10px;">
-                    <b>HUÉSPED:</b> ${d.huesped.toUpperCase()}<br>
-                    <b>HABITACIÓN:</b> ${d.habitacion}<br>
-                    <b>ESTANCIA:</b> ${d.checkIn} al ${d.checkOut}
+            <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
+                <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #166534; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">
+                    ESTADO DE CUENTA FINAL
                 </div>
 
-                <div class="ticket-row bold"><span>CONCEPTO</span><span>TOTAL</span></div>
-                <div class="divider" style="border-top: 1px dashed #000; margin: 5px 0;"></div>
-                
-                <div class="ticket-row">
-                    <span>Total Hospedaje</span>
-                    <span>S/ ${mHosp.toFixed(2)}</span>
-                </div>
-                <div class="ticket-row">
-                    <span>Total Consumos (Extras)</span>
-                    <span>S/ ${mCons.toFixed(2)}</span>
+                <div style="margin-bottom: 20px; background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; font-family: 'Lato', sans-serif;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <b>HUÉSPED:</b> <span>${d.huesped.toUpperCase()}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <b>HABITACIÓN:</b> <span>${d.habitacion}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>ESTANCIA:</b> <span>${d.checkIn} AL ${d.checkOut}</span>
+                    </div>
                 </div>
 
-                <div class="ticket-total" style="margin-top: 15px; border-top: 2px solid #000; padding-top: 8px;">
-                    <div class="ticket-row" style="font-size: 16px;">
+                <div style="font-size: 17px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 12px;">
+                        <span>TOTAL ALOJAMIENTO</span>
+                        <span style="font-weight: bold;">S/ ${mHosp.toFixed(2)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 12px;">
+                        <span>TOTAL CONSUMOS</span>
+                        <span style="font-weight: bold;">S/ ${mCons.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;">
+                    <div style="display:flex; justify-content:space-between; font-size: 28px; font-weight: bold; color: #166534;">
                         <span>TOTAL COBRADO</span>
                         <span>S/ ${mTotal.toFixed(2)}</span>
                     </div>
                 </div>
                 
-                <div style="margin-top: 15px; font-size: 10px; text-align: center; font-style: italic;">
-                    Este ticket resume todos los abonos y pagos realizados durante la estadía.
+                <div style="margin-top: 35px; font-size: 12px; text-align: center; color: #666; font-family: 'Lato', sans-serif; line-height: 1.4;">
+                    Este ticket resume la totalidad de pagos recibidos.<br>
+                    <b>Gracias por elegir Hotel Central.</b>
                 </div>
             </div>`;
 
         Swal.fire({
-            title: '<span style="font-family:Playfair Display; color:#166534;">Resumen de Cuenta</span>',
             html: html,
-            width: '400px',
+            width: '550px',
             confirmButtonText: 'CERRAR',
             confirmButtonColor: '#166534'
         });
