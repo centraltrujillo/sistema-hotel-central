@@ -28,8 +28,6 @@
         .btn-excel { background: #166534; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700; transition: 0.3s; font-size: 13px; }
         .btn-excel:hover { background: #0e4b25; transform: translateY(-2px); }
         
-        .badge-hab { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: 700; }
-        
         .btn-detalle { background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.2s; color: #475569; display: flex; align-items: center; gap: 5px; width: 100%; justify-content: space-between; }
         .btn-detalle:hover { background: #f1f5f9; border-color: #cbd5e1; color: #1e293b; }
     </style>
@@ -123,7 +121,7 @@
                     <td>
                         <div style="display: flex; align-items: center; gap: 5px;">
                             <i class="fa-solid fa-user-check" style="color: #64748b; font-size: 10px;"></i>
-                            <span style="font-weight: 600; text-transform: capitalize;">${p.usuario || 'Admin'}</span>
+                            <span style="font-weight: 600; text-transform: capitalize;">${p.atendidoBy || 'Admin'}</span>
                         </div>
                         <small style="color:#64748b; font-size:10px;">Hab: ${p.habitacion || '--'}</small>
                     </td>
@@ -176,7 +174,7 @@
                         ...pago,
                         montoHospedaje: 0, montoExtras: 0, montoTotal: 0,
                         ultimaFecha: pago.fechaPago,
-                        usuario: pago.usuario || 'Admin'
+                        usuarioDisplay: pago.atendidoBy || 'Admin' 
                     };
                 }
                 agrupados[id].montoHospedaje += parseFloat(pago.montoHospedaje || 0);
@@ -185,7 +183,7 @@
 
                 if (convertirFecha(pago.fechaPago) > convertirFecha(agrupados[id].ultimaFecha)) {
                     agrupados[id].ultimaFecha = pago.fechaPago;
-                    agrupados[id].usuario = pago.usuario || 'Admin';
+                    agrupados[id].atendidoBy = pago.atendidoBy || 'Admin';
                 }
             });
 
@@ -193,31 +191,49 @@
             aplicarFiltros();
         });
 
-        // --- 5. MODALES (DEFINIDOS EN WINDOW PARA ACCESO DESDE HTML) ---
+        // --- 5. MODALES (DEFINIDOS EN WINDOW) ---
         window.verDetalleAlojamiento = async function(idReserva, montoLiquidado) {
+            if (!idReserva) return Swal.fire("Error", "Reserva no vinculada", "error");
             Swal.fire({ title: 'Generando detalle...', didOpen: () => Swal.showLoading() });
+
             try {
                 const resSnap = await getDoc(doc(db, "reservas", idReserva));
+                if (!resSnap.exists()) throw new Error("Reserva no encontrada");
                 const d = resSnap.data();
+                
                 const tarifaNoche = parseFloat(d.tarifa || 0);
                 const mediaTarifa = tarifaNoche / 2;
-                const totalRegistrado = parseFloat(d.total || 0);
+                const totalRegistrado = parseFloat(d.total || 0); 
                 let cargosExtra = 0, filasExtrasHTML = '';
 
-                if (d.early) { cargosExtra += mediaTarifa; filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>(+) EARLY CHECK-IN (${d.early}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`; }
-                if (d.late) { cargosExtra += mediaTarifa; filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>(+) LATE CHECK-OUT (${d.late}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`; }
+                if (d.early) {
+                    cargosExtra += mediaTarifa;
+                    filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;"><span>(+) EARLY CHECK-IN (${d.early}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`;
+                }
+                if (d.late) {
+                    cargosExtra += mediaTarifa;
+                    filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;"><span>(+) LATE CHECK-OUT (${d.late}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`;
+                }
 
                 const estanciaLimpia = totalRegistrado - cargosExtra;
 
                 const html = `
                     <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
                         <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #800020; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">DETALLE DE HOSPEDAJE</div>
+                        
+                        <div style="margin-bottom: 20px; background: #f4f4f4; padding: 15px; border-radius: 8px; border: 1px solid #ddd; font-family: 'Lato', sans-serif; font-size: 14px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 5px;"><b>HABITACIÓN:</b> <span>${d.habitacion || '--'}</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 5px;"><b>TARIFA BASE:</b> <span>S/ ${tarifaNoche.toFixed(2)} / Noche</span></div>
+                            <div style="display:flex; justify-content:space-between;"><b>ESTANCIA:</b> <span>${d.checkIn} al ${d.checkOut}</span></div>
+                        </div>
+                        
                         <div style="font-size: 16px;">
                             <div style="display:flex; justify-content:space-between; margin-bottom: 10px;"><span>ESTANCIA</span><span style="font-weight: bold;">S/ ${estanciaLimpia.toFixed(2)}</span></div>
                             ${filasExtrasHTML}
                             <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;"><div style="display:flex; justify-content:space-between; font-size: 26px; font-weight: bold; color: #800020;"><span>TOTAL</span><span>S/ ${totalRegistrado.toFixed(2)}</span></div></div>
                         </div>
                     </div>`;
+
                 Swal.fire({ html, width: '550px', confirmButtonText: 'CERRAR', confirmButtonColor: '#800020' });
             } catch (e) { Swal.fire("Error", "No se pudo cargar el detalle", "error"); }
         };
@@ -253,9 +269,12 @@
         fFin.addEventListener('change', aplicarFiltros);
         document.getElementById('btnLimpiar').addEventListener('click', () => { fInicio.value = ''; fFin.value = ''; aplicarFiltros(); });
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
         document.getElementById('btnExportar').addEventListener('click', () => {
+            const inicio = fInicio.value || "Inicio";
+            const fin = fFin.value || "Fin";
             const wb = XLSX.utils.table_to_book(document.getElementById('tablaPagos'));
-            XLSX.writeFile(wb, `Reporte_Pagos_HotelCentral.xlsx`);
+            XLSX.writeFile(wb, `Reporte_Pagos_${inicio}_al_${fin}.xlsx`);
         });
 
     </script>
