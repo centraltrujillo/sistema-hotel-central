@@ -85,7 +85,7 @@
                             <th>Hab.</th>
                             <th>Método</th>
                             <th>Hospedaje</th>
-                            <th>Extras</th>
+                            <th>Consumos</th>
                             <th>Total Cobrado</th>
                         </tr>
                     </thead>
@@ -113,60 +113,97 @@
             return isNaN(d.getTime()) ? null : d;
         }
     
-        onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
-            todosLosPagos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            aplicarFiltros();
-        });
-    
-        function aplicarFiltros() {
-            const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
-            const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
-            
-            const pagosFiltrados = todosLosPagos.filter(pago => {
-                const fechaObj = convertirFecha(pago.fechaPago);
-                if (!fechaObj) return false;
-                if (inicio && fechaObj < inicio) return false;
-                if (fin && fechaObj > fin) return false;
-                return true;
-            });
-            
-            renderTable(pagosFiltrados);
-        }
-    
-        function renderTable(datos) {
-            tbody.innerHTML = '';
-            if(datos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay movimientos en este rango.</td></tr>';
-                return;
+// Escuchar cambios en la colección de pagos
+onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
+        // Traemos todos los pagos brutos
+        const pagosBrutos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // --- AQUÍ ESTÁ EL TRUCO: AGRUPAR POR RESERVA ---
+        const agrupados = {};
+
+        pagosBrutos.forEach(pago => {
+            const id = pago.idReserva;
+            if (!agrupados[id]) {
+                // Si es la primera vez que vemos esta reserva, creamos el objeto base
+                agrupados[id] = {
+                    ...pago,
+                    montoHospedaje: 0,
+                    montoExtras: 0,
+                    montoTotal: 0,
+                    ultimaFecha: pago.fechaPago // Guardamos la fecha del movimiento más reciente
+                };
             }
-    
-            datos.forEach((p) => {
-                const f = convertirFecha(p.fechaPago);
-                const mHospedaje = parseFloat(p.montoHospedaje || 0);
-                const mExtras = parseFloat(p.montoExtras || 0);
-                const mTotal = parseFloat(p.montoTotal || 0);
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">${f ? f.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td>
-                    <td><strong>${p.huesped || 'S/N'}</strong><br><small style="color:#800020; font-size:10px;">Atendido por: ${p.atendidoBy || 'Sistema'}</small></td>
-                    <td><span class="badge-hab">${p.habitacion || '--'}</span></td>
-                    <td><span style="font-size:12px;"><i class="fa-solid fa-credit-card"></i> ${p.metodoPago || 'Efectivo'}</span></td>
-                    <td>
-                        <button class="btn-detalle" onclick="verDetalleAlojamiento('${p.idReserva}', ${mHospedaje})">
-                            <span>S/ ${mHospedaje.toFixed(2)}</span> <i class="fa-solid fa-magnifying-glass-dollar"></i>
-                        </button>
-                    </td>
-                    <td>
-                        <button class="btn-detalle" onclick="verDetalleExtras('${p.idReserva}', ${mExtras})">
-                            <span>S/ ${mExtras.toFixed(2)}</span> <i class="fa-solid fa-receipt"></i>
-                        </button>
-                    </td>
-                    <td class="monto-celda">S/ ${mTotal.toFixed(2)}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
+            // Sumamos los montos de todos los tickets de esta misma reserva
+            agrupados[id].montoHospedaje += parseFloat(pago.montoHospedaje || 0);
+            agrupados[id].montoExtras += parseFloat(pago.montoExtras || 0);
+            agrupados[id].montoTotal += parseFloat(pago.montoTotal || 0);
+            
+            // Actualizamos el método de pago para que muestre el último usado (o una lista)
+            if (agrupados[id].metodoPago !== pago.metodoPago) {
+                agrupados[id].metodoPago = "Múltiple / " + pago.metodoPago;
+            }
+        });
+
+        // Convertimos el objeto de nuevo a un Array para poder filtrarlo y mostrarlo
+        todosLosPagos = Object.values(agrupados);
+        aplicarFiltros();
+    });
+
+    function aplicarFiltros() {
+        const inicio = fInicio.value ? new Date(fInicio.value + "T00:00:00") : null;
+        const fin = fFin.value ? new Date(fFin.value + "T23:59:59") : null;
+        
+        const pagosFiltrados = todosLosPagos.filter(pago => {
+            // Usamos la última fecha de movimiento para el filtro
+            const fechaObj = convertirFecha(pago.ultimaFecha);
+            if (!fechaObj) return false;
+            if (inicio && fechaObj < inicio) return false;
+            if (fin && fechaObj > fin) return false;
+            return true;
+        });
+        
+        renderTable(pagosFiltrados);
+    }
+
+    function renderTable(datos) {
+    tbody.innerHTML = '';
+    if(datos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay movimientos registrados.</td></tr>';
+        return;
+    }
+
+    datos.forEach((p) => {
+        const f = convertirFecha(p.ultimaFecha); 
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">Último mov.</small></td>
+            <td>
+                <strong>${p.huesped || 'S/N'}</strong><br>
+                <small style="color:#800020; font-size:10px;">Cuenta Consolidada</small>
+            </td>
+            <td><span class="badge-hab">${p.habitacion || '--'}</span></td>
+            <td><span style="font-size:12px;"><i class="fa-solid fa-layer-group"></i> ${p.metodoPago}</span></td>
+            <td>
+                <button class="btn-detalle" onclick="verDetalleAlojamiento('${p.idReserva}', ${p.montoHospedaje})">
+                    <span>S/ ${p.montoHospedaje.toFixed(2)}</span> <i class="fa-solid fa-magnifying-glass-dollar"></i>
+                </button>
+            </td>
+            <td>
+                <button class="btn-detalle" onclick="verDetalleExtras('${p.idReserva}', ${p.montoExtras})">
+                    <span>S/ ${p.montoExtras.toFixed(2)}</span> <i class="fa-solid fa-receipt"></i>
+                </button>
+            </td>
+            <td>
+                <button class="btn-detalle" style="background: #fff7ed; border-color: #ffedd5; color: #9a3412;" 
+                        onclick="verTicketGlobal('${p.idReserva}', ${p.montoHospedaje}, ${p.montoExtras}, ${p.montoTotal})">
+                    <strong style="font-size:15px;">S/ ${p.montoTotal.toFixed(2)}</strong> <i class="fa-solid fa-file-invoice"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
     
         /* ==========================================================================
            MODAL: DESGLOSE DE HOSPEDAJE (Simil Ticket)
@@ -228,7 +265,7 @@
         };
     
         /* ==========================================================================
-           MODAL: DESGLOSE DE EXTRAS (Simil Ticket)
+           MODAL: DESGLOSE DE CONSUMOS (Simil Ticket)
            ========================================================================== */
         window.verDetalleExtras = async function(idReserva, totalExtras) {
             if (totalExtras <= 0) return Swal.fire("Sin Consumos", "No se registraron extras en esta estadía.", "info");
@@ -270,6 +307,61 @@
                 Swal.fire("Error", "No se pudo cargar los consumos.", "error");
             }
         };
+
+        /* ==========================================================================
+   MODAL: TICKET GLOBAL CONSOLIDADO
+   ========================================================================== */
+window.verTicketGlobal = async function(idReserva, mHosp, mCons, mTotal) {
+    Swal.fire({ title: 'Generando Estado de Cuenta...', didOpen: () => Swal.showLoading() });
+
+    try {
+        const resSnap = await getDoc(doc(db, "reservas", idReserva));
+        const d = resSnap.data();
+
+        const html = `
+            <div class="ticket-box" style="text-align: left;">
+                <div class="ticket-header">ESTADO DE CUENTA FINAL</div>
+                <div style="font-size: 11px; margin-bottom: 10px;">
+                    <b>HUÉSPED:</b> ${d.huesped.toUpperCase()}<br>
+                    <b>HABITACIÓN:</b> ${d.habitacion}<br>
+                    <b>ESTANCIA:</b> ${d.checkIn} al ${d.checkOut}
+                </div>
+
+                <div class="ticket-row bold"><span>CONCEPTO</span><span>TOTAL</span></div>
+                <div class="divider" style="border-top: 1px dashed #000; margin: 5px 0;"></div>
+                
+                <div class="ticket-row">
+                    <span>Total Hospedaje</span>
+                    <span>S/ ${mHosp.toFixed(2)}</span>
+                </div>
+                <div class="ticket-row">
+                    <span>Total Consumos (Extras)</span>
+                    <span>S/ ${mCons.toFixed(2)}</span>
+                </div>
+
+                <div class="ticket-total" style="margin-top: 15px; border-top: 2px solid #000; padding-top: 8px;">
+                    <div class="ticket-row" style="font-size: 16px;">
+                        <span>TOTAL COBRADO</span>
+                        <span>S/ ${mTotal.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; font-size: 10px; text-align: center; font-style: italic;">
+                    Este ticket resume todos los abonos y pagos realizados durante la estadía.
+                </div>
+            </div>`;
+
+        Swal.fire({
+            title: '<span style="font-family:Playfair Display; color:#166534;">Resumen de Cuenta</span>',
+            html: html,
+            width: '400px',
+            confirmButtonText: 'CERRAR',
+            confirmButtonColor: '#166534'
+        });
+    } catch (e) {
+        Swal.fire("Error", "No se pudo generar el resumen.", "error");
+    }
+};
     
         // Filtros y Eventos
         fInicio.addEventListener('change', aplicarFiltros);
