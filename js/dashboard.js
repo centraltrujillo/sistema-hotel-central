@@ -78,14 +78,24 @@ function inicializarGraficos() {
     chartSemanal.render();
 
     // B. Gráfico Mensual
-    chartMensual = new ApexCharts(document.querySelector("#chart-radial"), {
-        chart: { type: 'bar', height: 250, toolbar: { show: false } },
-        plotOptions: { bar: { borderRadius: 4, columnWidth: '50%' } },
-        series: [{ name: 'Ingresos Mensuales', data: [0, 0, 0, 0, 0, 0] }],
-        xaxis: { categories: [] },
-        colors: ['#cc9900'] 
-    });
-    chartMensual.render();
+chartMensual = new ApexCharts(document.querySelector("#chart-radial"), {
+    chart: { type: 'bar', height: 250, toolbar: { show: false } },
+    plotOptions: { 
+        bar: { 
+            borderRadius: 4, 
+            columnWidth: '60%',
+            dataLabels: { position: 'top' } 
+        } 
+    },
+    series: [{ name: 'Ingresos S/', data: Array(12).fill(0) }], // 12 ceros iniciales
+    xaxis: { 
+        categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+        labels: { style: { fontSize: '10px' } }
+    },
+    colors: ['#cc9900'],
+    dataLabels: { enabled: false }
+});
+chartMensual.render();
 }
 
 // --- 3. LÓGICA DE DATOS EN TIEMPO REAL ---
@@ -147,30 +157,25 @@ onSnapshot(collection(db, "pagos"), (snapshot) => {
     // --- ACTUALIZAR GRÁFICO SEMANAL ---
     chartSemanal.updateSeries([{ data: ingresosSemana }]);
 
-    // --- ACTUALIZAR GRÁFICO MENSUAL (Lo que faltaba) ---
-    const mesesLabels = [];
-    const mesesData = [];
-    const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    
-    // Generar datos de los últimos 6 meses
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date();
-        d.setMonth(ahora.getMonth() - i);
-        const mLabel = d.getMonth();
-        const yLabel = d.getFullYear();
-        
-        mesesLabels.push(nombresMeses[mLabel]);
-        mesesData.push(ingresosPorMes[`${mLabel}-${yLabel}`] || 0);
-    }
+// --- ACTUALIZAR GRÁFICO MENSUAL (Los 12 meses del año actual) ---
+const mesesLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const mesesData = [];
+const anioParaGrafico = ahora.getFullYear();
 
-    // Actualizar el gráfico de barras
-    chartMensual.updateOptions({
-        xaxis: { categories: mesesLabels }
-    });
-    chartMensual.updateSeries([{
-        name: 'Ingresos Mensuales',
-        data: mesesData
-    }]);
+// Llenamos el array con los ingresos de cada mes (0 a 11)
+for (let m = 0; m <= 11; m++) {
+    const key = `${m}-${anioParaGrafico}`;
+    mesesData.push(ingresosPorMes[key] || 0);
+}
+
+// Aplicar actualización al gráfico
+chartMensual.updateOptions({
+    xaxis: { categories: mesesLabels }
+});
+chartMensual.updateSeries([{
+    name: 'Ingresos S/',
+    data: mesesData
+}]);
 });
 
     // B. OCUPACIÓN
