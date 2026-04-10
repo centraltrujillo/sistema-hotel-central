@@ -211,97 +211,135 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (
     aplicarFiltros();
 });
 
-        // --- 5. MODALES (DEFINIDOS EN WINDOW) ---
-        window.verDetalleAlojamiento = async function(idReserva, montoLiquidado) {
-            if (!idReserva) return Swal.fire("Error", "Reserva no vinculada", "error");
-            Swal.fire({ title: 'Generando detalle...', didOpen: () => Swal.showLoading() });
+// --- 5. MODALES (DEFINIDOS EN WINDOW) ---
 
-            try {
-                const resSnap = await getDoc(doc(db, "reservas", idReserva));
-                if (!resSnap.exists()) throw new Error("Reserva no encontrada");
-                const d = resSnap.data();
+/** * MODAL 1: DETALLE DE HOSPEDAJE
+ * Muestra el desglose de la estancia, cargos por Early/Late y el total de alojamiento.
+ */
+ window.verDetalleAlojamiento = async function(idReserva, montoLiquidado) {
+    if (!idReserva) return Swal.fire("Error", "Reserva no vinculada", "error");
+    Swal.fire({ title: 'Generando detalle...', didOpen: () => Swal.showLoading() });
+
+    try {
+        const resSnap = await getDoc(doc(db, "reservas", idReserva));
+        if (!resSnap.exists()) throw new Error("Reserva no encontrada");
+        const d = resSnap.data();
+        
+        const tarifaNoche = parseFloat(d.tarifa || 0);
+        const mediaTarifa = tarifaNoche / 2;
+        const totalRegistrado = parseFloat(d.total || 0); 
+        let cargosExtra = 0, filasExtrasHTML = '';
+
+        if (d.early) {
+            cargosExtra += mediaTarifa;
+            filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;"><span>(+) EARLY CHECK-IN (${d.early}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`;
+        }
+        if (d.late) {
+            cargosExtra += mediaTarifa;
+            filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;"><span>(+) LATE CHECK-OUT (${d.late}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`;
+        }
+
+        const estanciaLimpia = totalRegistrado - cargosExtra;
+
+        const html = `
+            <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
+                <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #800020; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">DETALLE DE HOSPEDAJE</div>
                 
-                const tarifaNoche = parseFloat(d.tarifa || 0);
-                const mediaTarifa = tarifaNoche / 2;
-                const totalRegistrado = parseFloat(d.total || 0); 
-                let cargosExtra = 0, filasExtrasHTML = '';
+                <div style="margin-bottom: 20px; background: #f4f4f4; padding: 15px; border-radius: 8px; border: 1px solid #ddd; font-family: 'Lato', sans-serif; font-size: 14px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;"><b>HABITACIÓN:</b> <span>${d.habitacion || '--'}</span></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;"><b>TARIFA BASE:</b> <span>S/ ${tarifaNoche.toFixed(2)} / Noche</span></div>
+                    <div style="display:flex; justify-content:space-between;"><b>ESTANCIA:</b> <span>${d.checkIn} al ${d.checkOut}</span></div>
+                </div>
+                
+                <div style="font-size: 16px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 10px;"><span>ESTANCIA</span><span style="font-weight: bold;">S/ ${estanciaLimpia.toFixed(2)}</span></div>
+                    ${filasExtrasHTML}
+                    <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;"><div style="display:flex; justify-content:space-between; font-size: 26px; font-weight: bold; color: #800020;"><span>TOTAL</span><span>S/ ${totalRegistrado.toFixed(2)}</span></div></div>
+                </div>
+            </div>`;
 
-                if (d.early) {
-                    cargosExtra += mediaTarifa;
-                    filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;"><span>(+) EARLY CHECK-IN (${d.early}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`;
-                }
-                if (d.late) {
-                    cargosExtra += mediaTarifa;
-                    filasExtrasHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#555;"><span>(+) LATE CHECK-OUT (${d.late}:00)</span><span>S/ ${mediaTarifa.toFixed(2)}</span></div>`;
-                }
+        Swal.fire({ html, width: '550px', confirmButtonText: 'CERRAR', confirmButtonColor: '#800020' });
+    } catch (e) { Swal.fire("Error", "No se pudo cargar el detalle", "error"); }
+};
 
-                const estanciaLimpia = totalRegistrado - cargosExtra;
+/** * MODAL 2: DETALLE DE CONSUMOS (EXTRAS)
+ * Muestra la lista de productos comprados con Cantidad, P.Unit y P.Total.
+ */
+window.verDetalleExtras = async function(idReserva, totalExtras_obsoleto) {
+    Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
+    try {
+        const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
+        const snap = await getDocs(q);
+        
+        let sumaReal = 0;
+        let itemsHTML = snap.docs.map(doc => {
+            const c = doc.data();
+            const cant = parseInt(c.cantidad || 1);
+            const pTotal = parseFloat(c.precioTotal || 0);
+            const pUnit = pTotal / cant;
+            sumaReal += pTotal;
 
-                const html = `
-                    <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace; color: #000;">
-                        <div style="text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #800020; font-weight: bold; margin-bottom: 20px; border-bottom: 3px dashed #000; padding-bottom: 15px;">DETALLE DE HOSPEDAJE</div>
-                        
-                        <div style="margin-bottom: 20px; background: #f4f4f4; padding: 15px; border-radius: 8px; border: 1px solid #ddd; font-family: 'Lato', sans-serif; font-size: 14px;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom: 5px;"><b>HABITACIÓN:</b> <span>${d.habitacion || '--'}</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom: 5px;"><b>TARIFA BASE:</b> <span>S/ ${tarifaNoche.toFixed(2)} / Noche</span></div>
-                            <div style="display:flex; justify-content:space-between;"><b>ESTANCIA:</b> <span>${d.checkIn} al ${d.checkOut}</span></div>
-                        </div>
-                        
-                        <div style="font-size: 16px;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom: 10px;"><span>ESTANCIA</span><span style="font-weight: bold;">S/ ${estanciaLimpia.toFixed(2)}</span></div>
-                            ${filasExtrasHTML}
-                            <div style="margin-top: 25px; border-top: 3px solid #000; padding-top: 15px;"><div style="display:flex; justify-content:space-between; font-size: 26px; font-weight: bold; color: #800020;"><span>TOTAL</span><span>S/ ${totalRegistrado.toFixed(2)}</span></div></div>
-                        </div>
-                    </div>`;
+            return `
+                <div style="margin-bottom:15px; font-size: 16px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>${cant}x ${c.descripcion}</span>
+                        <span style="font-weight:bold;">S/ ${pTotal.toFixed(2)}</span>
+                    </div>
+                    <div style="font-size:12px; color:#666;">&nbsp;&nbsp;&nbsp;(P. Unit: S/ ${pUnit.toFixed(2)})</div>
+                </div>`;
+        }).join('');
 
-                Swal.fire({ html, width: '550px', confirmButtonText: 'CERRAR', confirmButtonColor: '#800020' });
-            } catch (e) { Swal.fire("Error", "No se pudo cargar el detalle", "error"); }
-        };
+        if (sumaReal === 0) return Swal.fire("Sin Consumos", "No se registraron extras.", "info");
 
-        window.verDetalleExtras = async function(idReserva, totalExtras) {
-            if (totalExtras <= 0) return Swal.fire("Sin Consumos", "No se registraron extras.", "info");
-            Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
-            try {
-                const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
-                const snap = await getDocs(q);
-                let itemsHTML = snap.docs.map(doc => {
-                    const c = doc.data();
-                    const cant = parseInt(c.cantidad || 1);
-                    const pTotal = parseFloat(c.precioTotal || 0);
-                    return `<div style="margin-bottom:15px; font-size: 16px;"><div style="display:flex; justify-content:space-between;"><span>${cant}x ${c.descripcion}</span><span style="font-weight:bold;">S/ ${pTotal.toFixed(2)}</span></div><div style="font-size:12px; color:#666;">&nbsp;&nbsp;&nbsp;(P. Unit: S/ ${(pTotal/cant).toFixed(2)})</div></div>`;
-                }).join('');
-                const html = `<div style="text-align:left; padding:10px; font-family:'Courier New';"><div style="text-align:center; font-family:'Playfair Display'; font-size:24px; color:#5d4037; border-bottom:3px dashed #000; margin-bottom:20px; padding-bottom:15px;">TICKET CONSUMOS</div>${itemsHTML}<div style="margin-top:25px; border-top:3px solid #000; padding-top:15px;"><div style="display:flex; justify-content:space-between; font-size:26px; font-weight:bold; color:#5d4037;"><span>TOTAL</span><span>S/ ${totalExtras.toFixed(2)}</span></div></div></div>`;
-                Swal.fire({ html, width: '550px', confirmButtonColor: '#5d4037' });
-            } catch (e) { Swal.fire("Error", "Error al cargar consumos", "error"); }
-        };
+        const html = `
+            <div style="text-align:left; padding:10px; font-family:'Courier New';">
+                <div style="text-align:center; font-family:'Playfair Display'; font-size:24px; color:#5d4037; border-bottom:3px dashed #000; margin-bottom:20px; padding-bottom:15px;">TICKET CONSUMOS</div>
+                ${itemsHTML}
+                <div style="margin-top:25px; border-top:3px solid #000; padding-top:15px;">
+                    <div style="display:flex; justify-content:space-between; font-size:26px; font-weight:bold; color:#5d4037;">
+                        <span>TOTAL</span><span>S/ ${sumaReal.toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>`;
+        Swal.fire({ html, width: '550px', confirmButtonColor: '#5d4037' });
+    } catch (e) { Swal.fire("Error", "Error al cargar consumos", "error"); }
+};
 
-        window.verTicketGlobal = async function(idReserva, mHosp, mCons, mTotal) {
+/** * MODAL 3: ESTADO DE CUENTA GLOBAL
+ * Re-calcula todo en tiempo real para mostrar: Hospedaje + Consumos Detallados - Pagos/Adelantos = Saldo.
+ */
+window.verTicketGlobal = async function(idReserva, mHosp, mCons_obsoleto, mTotal_obsoleto) {
     Swal.fire({ title: 'Generando Estado de Cuenta...', didOpen: () => Swal.showLoading() });
 
     try {
-        // 1. Obtener Datos de la Reserva
         const resSnap = await getDoc(doc(db, "reservas", idReserva));
         if (!resSnap.exists()) throw new Error("No se halló la reserva");
         const res = resSnap.data();
 
-        // 2. Obtener Todos los Consumos
+        // 1. Obtener y detallar Consumos
         const qCons = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
         const snapCons = await getDocs(qCons);
-        let htmlConsumos = '';
+        let htmlConsumosDetallado = '';
+        let sumaExtraReal = 0;
+        
         snapCons.forEach(doc => {
             const c = doc.data();
-            htmlConsumos += `
-                <div style="display:flex; justify-content:space-between; font-size:12px; color:#555;">
-                    <span>${c.cantidad}x ${c.descripcion}</span>
-                    <span>S/ ${parseFloat(c.precioTotal).toFixed(2)}</span>
+            const cant = parseInt(c.cantidad || 1);
+            const pTotal = parseFloat(c.precioTotal || 0);
+            sumaExtraReal += pTotal;
+            htmlConsumosDetallado += `
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#555; margin-bottom:3px;">
+                    <span>${cant}x ${c.descripcion} (S/ ${(pTotal/cant).toFixed(2)})</span>
+                    <span>S/ ${pTotal.toFixed(2)}</span>
                 </div>`;
         });
 
-        // 3. Obtener Todos los Pagos (Adelantos/Abonos)
+        // 2. Obtener y detallar Pagos (Adelantos)
         const qPagos = query(collection(db, "pagos"), where("idReserva", "==", idReserva), orderBy("fechaPago", "asc"));
         const snapPagos = await getDocs(qPagos);
         let htmlPagos = '';
         let totalAbonado = 0;
+        
         snapPagos.forEach(doc => {
             const p = doc.data();
             const fecha = p.fechaPago?.toDate ? p.fechaPago.toDate().toLocaleDateString('es-PE') : '---';
@@ -314,54 +352,50 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (
                 </div>`;
         });
 
-        const saldoPendiente = mTotal - totalAbonado;
+        // 3. Cálculos de auditoría
+        const totalCargosReal = parseFloat(mHosp) + sumaExtraReal;
+        const saldoFinal = totalCargosReal - totalAbonado;
 
-        // 4. Construir el HTML del Ticket
         const html = `
-            <div style="text-align:left; padding:10px; font-family:'Courier New', monospace; color:#000; line-height:1.4;">
-                <div style="text-align:center; font-family:'Playfair Display', serif; font-size:22px; color:#166534; font-weight:bold; border-bottom:2px dashed #000; padding-bottom:10px; margin-bottom:15px;">
+            <div style="text-align:left; padding:10px; font-family:'Courier New', monospace; color:#000;">
+                <div style="text-align:center; font-family:'Playfair Display'; font-size:22px; color:#166534; font-weight:bold; border-bottom:2px dashed #000; padding-bottom:10px; margin-bottom:15px;">
                     ESTADO DE CUENTA FINAL
                 </div>
 
-                <div style="background:#f8fafc; padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #e2e8f0; font-family:'Lato', sans-serif;">
+                <div style="background:#f8fafc; padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #e2e8f0; font-family:sans-serif;">
                     <div style="display:flex; justify-content:space-between;"><b>HABITACIÓN:</b> <span>${res.habitacion}</span></div>
                     <div style="display:flex; justify-content:space-between;"><b>HUÉSPED:</b> <span style="text-transform:uppercase;">${res.huesped}</span></div>
                     <div style="display:flex; justify-content:space-between;"><b>ESTANCIA:</b> <span>${res.checkIn} al ${res.checkOut}</span></div>
                 </div>
 
                 <div style="margin-bottom:15px;">
-                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">CARGOS (HOSPEDAJE Y SERVICIOS)</div>
-                    <div style="display:flex; justify-content:space-between;"><span>Total Hospedaje</span> <span>S/ ${mHosp.toFixed(2)}</span></div>
-                    ${htmlConsumos || '<div style="font-size:12px; color:#999;">Sin consumos adicionales</div>'}
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
-                        <span>TOTAL CARGOS</span> <span>S/ ${mTotal.toFixed(2)}</span>
+                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">CARGOS Y SERVICIOS</div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px;"><span>TOTAL ALOJAMIENTO</span> <span>S/ ${parseFloat(mHosp).toFixed(2)}</span></div>
+                    ${htmlConsumosDetallado}
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px; font-size:15px;">
+                        <span>TOTAL CARGOS</span> <span>S/ ${totalCargosReal.toFixed(2)}</span>
                     </div>
                 </div>
 
                 <div style="margin-bottom:15px;">
-                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">PAGOS Y ADELANTOS</div>
-                    ${htmlPagos || '<div style="font-size:12px; color:#999;">No se registraron pagos</div>'}
+                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">PAGOS REALIZADOS</div>
+                    ${htmlPagos || '<div style="font-size:12px; color:#999;">Sin abonos registrados</div>'}
                     <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px; color:#166534;">
                         <span>TOTAL ABONADO</span> <span>S/ ${totalAbonado.toFixed(2)}</span>
                     </div>
                 </div>
 
-                <div style="border-top:3px solid #000; padding-top:10px; margin-top:10px;">
-                    <div style="display:flex; justify-content:space-between; font-size:22px; font-weight:bold; color:${saldoPendiente <= 0 ? '#166534' : '#b91c1c'};">
+                <div style="border-top:3px solid #000; padding-top:10px;">
+                    <div style="display:flex; justify-content:space-between; font-size:22px; font-weight:bold; color:${saldoFinal > 0.1 ? '#b91c1c' : '#166534'};">
                         <span>SALDO FINAL</span>
-                        <span>S/ ${saldoPendiente.toFixed(2)}</span>
-                    </div>
-                    <div style="text-align:center; font-size:10px; margin-top:15px; color:#666;">
-                        *** Documento informativo de control interno ***
+                        <span>S/ ${Math.abs(saldoFinal) < 0.01 ? "0.00" : saldoFinal.toFixed(2)}</span>
                     </div>
                 </div>
             </div>`;
 
-        Swal.fire({ html, width: '550px', confirmButtonText: 'ENTENDIDO', confirmButtonColor: '#166534' });
-
+        Swal.fire({ html, width: '580px', confirmButtonText: 'ENTENDIDO', confirmButtonColor: '#166534' });
     } catch (e) {
-        console.error(e);
-        Swal.fire("Error", "No se pudo generar el estado de cuenta completo", "error");
+        Swal.fire("Error", "No se pudo generar el ticket completo", "error");
     }
 };
 

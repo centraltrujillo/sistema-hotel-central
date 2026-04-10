@@ -96,41 +96,82 @@ function inicializarDashboard() {
     const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', opciones);
 
-    // A. PAGOS
-    onSnapshot(collection(db, "pagos"), (snapshot) => {
-        let ingresosSemana = [0, 0, 0, 0, 0, 0, 0];
-        let ingresosPorMes = {}; 
-        let totalMesActual = 0;
-        let totalMesAnterior = 0;
+// A. PAGOS (Ingresos, Tendencias y Gráficos)
+onSnapshot(collection(db, "pagos"), (snapshot) => {
+    let ingresosSemana = [0, 0, 0, 0, 0, 0, 0];
+    let ingresosPorMes = {}; 
+    let totalMesActual = 0;
+    let totalMesAnterior = 0;
 
-        const ahora = new Date();
-        const mesActual = ahora.getMonth();
-        const anioActual = ahora.getFullYear();
+    const ahora = new Date();
+    const mesActual = ahora.getMonth();
+    const anioActual = ahora.getFullYear();
 
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const monto = Number(data.montoTotal || 0);
-            const fechaObj = formatearFechaJS(data.fechaPago);
+    // Calcular mes pasado para la tendencia
+    const fechaMesPasado = new Date();
+    fechaMesPasado.setMonth(ahora.getMonth() - 1);
+    const mesPasado = fechaMesPasado.getMonth();
+    const anioPasado = fechaMesPasado.getFullYear();
+
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const monto = Number(data.montoTotal || 0);
+        const fechaObj = formatearFechaJS(data.fechaPago);
+        
+        if (fechaObj) {
+            const m = fechaObj.getMonth();
+            const y = fechaObj.getFullYear();
             
-            if (fechaObj) {
-                const m = fechaObj.getMonth();
-                const y = fechaObj.getFullYear();
-                
-                // Lógica Semanal (Ajuste para que Lunes sea index 0)
-                const dia = fechaObj.getDay();
-                const index = (dia === 0) ? 6 : dia - 1;
-                ingresosSemana[index] += monto;
+            // 1. Lógica Semanal (Solo si es de la semana actual)
+            // (Opcional: puedes filtrar aquí si solo quieres la semana en curso)
+            const dia = fechaObj.getDay();
+            const index = (dia === 0) ? 6 : dia - 1;
+            ingresosSemana[index] += monto;
 
-                const keyMes = `${m}-${y}`;
-                ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
+            // 2. Acumular por Mes-Año para el gráfico de barras
+            const keyMes = `${m}-${y}`;
+            ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
 
-                if (m === mesActual && y === anioActual) totalMesActual += monto;
-            }
-        });
-
-        document.getElementById('kpi-ingresos').innerText = `S/ ${totalMesActual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-        chartSemanal.updateSeries([{ data: ingresosSemana }]);
+            // 3. Totales para KPI y Tendencia
+            if (m === mesActual && y === anioActual) totalMesActual += monto;
+            if (m === mesPasado && y === anioPasado) totalMesAnterior += monto;
+        }
     });
+
+    // --- ACTUALIZAR UI ---
+    document.getElementById('kpi-ingresos').innerText = `S/ ${totalMesActual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+    
+    // Llamar a la función de tendencia
+    actualizarTendencia(totalMesActual, totalMesAnterior, 'trend-ingresos');
+
+    // --- ACTUALIZAR GRÁFICO SEMANAL ---
+    chartSemanal.updateSeries([{ data: ingresosSemana }]);
+
+    // --- ACTUALIZAR GRÁFICO MENSUAL (Lo que faltaba) ---
+    const mesesLabels = [];
+    const mesesData = [];
+    const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    // Generar datos de los últimos 6 meses
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(ahora.getMonth() - i);
+        const mLabel = d.getMonth();
+        const yLabel = d.getFullYear();
+        
+        mesesLabels.push(nombresMeses[mLabel]);
+        mesesData.push(ingresosPorMes[`${mLabel}-${yLabel}`] || 0);
+    }
+
+    // Actualizar el gráfico de barras
+    chartMensual.updateOptions({
+        xaxis: { categories: mesesLabels }
+    });
+    chartMensual.updateSeries([{
+        name: 'Ingresos Mensuales',
+        data: mesesData
+    }]);
+});
 
     // B. OCUPACIÓN
     onSnapshot(collection(db, "habitaciones"), (snapshot) => {
