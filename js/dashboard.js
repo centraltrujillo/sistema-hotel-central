@@ -193,7 +193,7 @@ function inicializarDashboard() {
         elReservas.innerText = reservasHoy;
     });
 
-// E. ACTIVIDAD RECIENTE (Detección de Consumos vs Check-out vs Abonos)
+// E. ACTIVIDAD RECIENTE (Cruce exacto por idReserva)
 const qPagos = query(collection(db, "pagos"), orderBy("fechaPago", "desc"), limit(5));
 onSnapshot(qPagos, async (snapshot) => {
     const list = document.getElementById('list-checkins');
@@ -203,39 +203,40 @@ onSnapshot(qPagos, async (snapshot) => {
     for (const docPago of snapshot.docs) {
         const dataPago = docPago.data();
         const idReserva = dataPago.idReserva;
-        let tipoExacto = "Pago de Estadía"; 
+        let tipoExacto = "PAGO DE ESTADÍA"; // Valor por defecto
 
         try {
             if (idReserva) {
-                // 1. ¿ES UN CONSUMO? (Cruce con colección consumos)
+                // 1. BUSCAR EN CONSUMOS
                 const qConsumos = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
                 const consumoSnap = await getDocs(qConsumos);
                 let esConsumo = false;
 
-                consumoSnap.forEach(cDoc => {
-                    const cData = cDoc.data();
-                    // Si el monto coincide con un consumo registrado
-                    if (Number(cData.precioTotal) === Number(dataPago.montoTotal)) {
-                        tipoExacto = `Consumo: ${cData.descripcion}`;
-                        esConsumo = true;
-                    }
-                });
+                if (!consumoSnap.empty) {
+                    consumoSnap.forEach(cDoc => {
+                        const cData = cDoc.data();
+                        // Comparamos si el monto del pago es igual al del consumo (ej. los S/ 3.00 del agua)
+                        if (Number(cData.precioTotal) === Number(dataPago.montoTotal)) {
+                            tipoExacto = `CONSUMO: ${cData.descripcion}`;
+                            esConsumo = true;
+                        }
+                    });
+                }
 
-                // 2. ¿ES CHECK-OUT O ABONO? (Cruce con colección reservas)
+                // 2. BUSCAR EN RESERVAS (Si no fue consumo, vemos si es Abono o Check-out)
                 if (!esConsumo) {
                     const resRef = doc(db, "reservas", idReserva);
                     const resSnap = await getDoc(resRef);
-                    
                     if (resSnap.exists()) {
                         const resData = resSnap.data();
                         
-                        // Si la reserva ya terminó o el pago es por el saldo pendiente al salir
+                        // Si la reserva está finalizada, es el pago del checkout
                         if (resData.estado === "finalizada" || resData.estado === "check-out") {
-                            tipoExacto = "Liquidación Check-out";
+                            tipoExacto = "LIQUIDACIÓN CHECK-OUT";
                         } 
-                        // Si es el primer pago registrado
+                        // Si el ticket dice adelanto o abono
                         else if (dataPago.tipoTicket === "Adelanto" || dataPago.tipoTicket === "Abono") {
-                            tipoExacto = "Abono / Reserva";
+                            tipoExacto = "ABONO / RESERVA";
                         }
                     }
                 }
@@ -244,17 +245,18 @@ onSnapshot(qPagos, async (snapshot) => {
             console.error("Error al procesar tipo de pago:", error);
         }
 
+        // --- RENDERIZADO EN LA LISTA ---
         const item = document.createElement('div');
         item.className = "activity-item";
         item.innerHTML = `
             <div class="activity-badge"></div>
             <div class="activity-info">
-                <p><strong>${dataPago.huesped}</strong> - Hab. ${dataPago.habitacion}</p>
+                <p><strong>${dataPago.huesped || 'Huésped'}</strong> - Hab. ${dataPago.habitacion || 'S/N'}</p>
                 <small>
-                    <span class="badge-tipo" style="background: #fff5f5; color: #800020; padding: 2px 5px; border-radius: 4px; font-weight: 700; font-size: 10px; border: 1px solid #80002020;">
-                        ${tipoExacto.toUpperCase()}
+                    <span class="badge-tipo" style="background: #fff5f5; color: #800020; padding: 2px 5px; border-radius: 4px; font-weight: bold; font-size: 10px; border: 1px solid #80002030;">
+                        ${tipoExacto}
                     </span> | 
-                    <strong>S/ ${Number(dataPago.montoTotal).toFixed(2)}</strong>
+                    <strong>S/ ${Number(dataPago.montoTotal || 0).toFixed(2)}</strong>
                 </small>
             </div>`;
         list.appendChild(item);
