@@ -1,7 +1,7 @@
 import { auth, db } from "./firebaseconfig.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { 
-    collection, onSnapshot, query, orderBy, limit, doc, getDoc 
+    collection, onSnapshot, query, orderBy, limit, doc, where, getDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // --- VARIABLES GLOBALES DE GRÁFICOS ---
