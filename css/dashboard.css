@@ -119,6 +119,27 @@ body {
     font-size: 24px;
 }
 
+/* --- Ajustes para la Info del Usuario --- */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Espacio entre el texto y el botón de logout */
+}
+
+.text-right {
+    text-align: right;
+    line-height: 1.2; /* Mantiene el nombre y rol juntos */
+}
+
+#userName {
+    font-size: 15px; /* Tu estándar de tamaño base profesional */
+}
+
+#userRole {
+    font-size: 14px; /* Tu estándar para enlaces y navegación */
+    font-weight: 400; /* Un poco más delgado que el nombre para jerarquía */
+}
+
 #btnLogout {
     background: var(--vino-tinto);
     color: white;

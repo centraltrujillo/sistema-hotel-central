@@ -1,28 +1,55 @@
 import { auth, db } from "./firebaseconfig.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { 
-    collection, onSnapshot, query, orderBy, limit 
+    collection, onSnapshot, query, orderBy, limit, doc, getDoc 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // --- VARIABLES GLOBALES DE GRÁFICOS ---
 let chartSemanal, chartMensual;
 
 // --- 1. CONTROL DE ACCESO ---
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
-        document.getElementById('userName').innerText = user.displayName || user.email.split('@')[0];
+        // Elementos del HTML
+        const uiNombre = document.getElementById('userName');
+        const uiRol = document.getElementById('userRole');
+
+        // 1. Mostrar algo inmediato (mientras carga Firestore)
+        uiNombre.innerText = "Cargando...";
+
+        try {
+            // 2. Referencia al documento del usuario usando su UID
+            // Nota: Se asume que tu colección se llama "usuarios"
+            const userDocRef = doc(db, "usuarios", user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                
+                // 3. Insertar datos reales de tu colección
+                uiNombre.innerText = userData.nombre; // Ej: "Tania" o "Administrador"
+                uiRol.innerText = userData.rol;      // Ej: "Recepcionista" o "Administrador"
+                
+                console.log(`Sesión iniciada: ${userData.nombre} con rol ${userData.rol}`);
+            } else {
+                // Si el usuario está en Auth pero no en la colección "usuarios"
+                uiNombre.innerText = user.email.split('@')[0];
+                uiRol.innerText = "Usuario Registrado";
+                console.warn("El UID no existe en la colección de usuarios.");
+            }
+        } catch (error) {
+            console.error("Error al obtener datos del usuario:", error);
+            uiNombre.innerText = "Error";
+            uiRol.innerText = "Revisar conexión";
+        }
+
+        // Inicializar el resto del dashboard
         inicializarDashboard();
     } else {
+        // Si no hay usuario, redirigir al login
         window.location.href = "index.html"; 
     }
 });
-
-// Función para evitar el error de .toDate()
-function formatearFechaJS(fecha) {
-    if (!fecha) return null;
-    if (typeof fecha.toDate === 'function') return fecha.toDate(); // Si es Timestamp
-    return new Date(fecha); // Si es String o ISO
-}
 
 // --- 2. INICIALIZACIÓN DE GRÁFICOS (ApexCharts) ---
 function inicializarGraficos() {
