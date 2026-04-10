@@ -162,34 +162,54 @@
             renderTable(pagosFiltrados);
         }
 
-        // --- 4. ESCUCHA DE DATOS (FIREBASE) ---
-        onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), (snapshot) => {
-            const pagosBrutos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            const agrupados = {};
+// --- 4. ESCUCHA DE DATOS (FIREBASE) ---
+onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (snapshot) => {
+    const pagosBrutos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const agrupados = {};
 
-            pagosBrutos.forEach(pago => {
-                const id = pago.idReserva;
-                if (!agrupados[id]) {
-                    agrupados[id] = {
-                        ...pago,
-                        montoHospedaje: 0, montoExtras: 0, montoTotal: 0,
-                        ultimaFecha: pago.fechaPago,
-                        usuarioDisplay: pago.atendidoBy || 'Admin' 
-                    };
-                }
-                agrupados[id].montoHospedaje += parseFloat(pago.montoHospedaje || 0);
-                agrupados[id].montoExtras += parseFloat(pago.montoExtras || 0);
-                agrupados[id].montoTotal += parseFloat(pago.montoTotal || 0);
+    // Primero identificamos las reservas únicas
+    for (const pago of pagosBrutos) {
+        const idRes = pago.idReserva;
+        
+        if (!agrupados[idRes]) {
+            // Buscamos la información oficial de la reserva para obtener los montos totales
+            const resSnap = await getDoc(doc(db, "reservas", idRes));
+            const reservaData = resSnap.exists() ? resSnap.data() : {};
 
-                if (convertirFecha(pago.fechaPago) > convertirFecha(agrupados[id].ultimaFecha)) {
-                    agrupados[id].ultimaFecha = pago.fechaPago;
-                    agrupados[id].atendidoBy = pago.atendidoBy || 'Admin';
-                }
-            });
+            agrupados[idRes] = {
+                ...pago,
+                // Usamos el total de la reserva, no la suma de pagos parciales
+                montoHospedaje: parseFloat(reservaData.total || 0), 
+                montoExtras: 0, // Lo calcularemos abajo con los consumos
+                montoTotal: 0,
+                ultimaFecha: pago.fechaPago,
+                idReserva: idRes
+            };
+        }
 
-            todosLosPagos = Object.values(agrupados);
-            aplicarFiltros();
+        // Actualizamos la fecha del último movimiento si es necesario
+        if (convertirFecha(pago.fechaPago) > convertirFecha(agrupados[idRes].ultimaFecha)) {
+            agrupados[idRes].ultimaFecha = pago.fechaPago;
+            agrupados[idRes].atendidoBy = pago.atendidoBy || 'Admin';
+        }
+    }
+
+    // Calculamos los extras y el total final para cada reserva agrupada
+    for (const idRes in agrupados) {
+        const qConsumos = query(collection(db, "consumos"), where("idReserva", "==", idRes));
+        const consSnap = await getDocs(qConsumos);
+        let sumaExtras = 0;
+        consSnap.forEach(c => {
+            sumaExtras += parseFloat(c.precioTotal || 0);
         });
+
+        agrupados[idRes].montoExtras = sumaExtras;
+        agrupados[idRes].montoTotal = agrupados[idRes].montoHospedaje + sumaExtras;
+    }
+
+    todosLosPagos = Object.values(agrupados);
+    aplicarFiltros();
+});
 
         // --- 5. MODALES (DEFINIDOS EN WINDOW) ---
         window.verDetalleAlojamiento = async function(idReserva, montoLiquidado) {
@@ -256,13 +276,94 @@
         };
 
         window.verTicketGlobal = async function(idReserva, mHosp, mCons, mTotal) {
-            try {
-                const resSnap = await getDoc(doc(db, "reservas", idReserva));
-                const d = resSnap.data();
-                const html = `<div style="text-align:left; padding:10px; font-family:'Courier New';"><div style="text-align:center; font-family:'Playfair Display'; font-size:24px; color:#166534; border-bottom:3px dashed #000; margin-bottom:20px; padding-bottom:15px;">ESTADO FINAL</div><div style="font-size:17px;"><div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>ALOJAMIENTO</span><span style="font-weight:bold;">S/ ${mHosp.toFixed(2)}</span></div><div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>CONSUMOS</span><span style="font-weight:bold;">S/ ${mCons.toFixed(2)}</span></div></div><div style="margin-top:25px; border-top:3px solid #000; padding-top:15px;"><div style="display:flex; justify-content:space-between; font-size:28px; font-weight:bold; color:#166534;"><span>TOTAL</span><span>S/ ${mTotal.toFixed(2)}</span></div></div></div>`;
-                Swal.fire({ html, width: '550px', confirmButtonColor: '#166534' });
-            } catch (e) { Swal.fire("Error", "Error al generar ticket global", "error"); }
-        };
+    Swal.fire({ title: 'Generando Estado de Cuenta...', didOpen: () => Swal.showLoading() });
+
+    try {
+        // 1. Obtener Datos de la Reserva
+        const resSnap = await getDoc(doc(db, "reservas", idReserva));
+        if (!resSnap.exists()) throw new Error("No se halló la reserva");
+        const res = resSnap.data();
+
+        // 2. Obtener Todos los Consumos
+        const qCons = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
+        const snapCons = await getDocs(qCons);
+        let htmlConsumos = '';
+        snapCons.forEach(doc => {
+            const c = doc.data();
+            htmlConsumos += `
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#555;">
+                    <span>${c.cantidad}x ${c.descripcion}</span>
+                    <span>S/ ${parseFloat(c.precioTotal).toFixed(2)}</span>
+                </div>`;
+        });
+
+        // 3. Obtener Todos los Pagos (Adelantos/Abonos)
+        const qPagos = query(collection(db, "pagos"), where("idReserva", "==", idReserva), orderBy("fechaPago", "asc"));
+        const snapPagos = await getDocs(qPagos);
+        let htmlPagos = '';
+        let totalAbonado = 0;
+        snapPagos.forEach(doc => {
+            const p = doc.data();
+            const fecha = p.fechaPago?.toDate ? p.fechaPago.toDate().toLocaleDateString('es-PE') : '---';
+            const monto = parseFloat(p.montoTotal || 0);
+            totalAbonado += monto;
+            htmlPagos += `
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#166534;">
+                    <span>${fecha} - Abono (${p.metodoPago})</span>
+                    <span>S/ ${monto.toFixed(2)}</span>
+                </div>`;
+        });
+
+        const saldoPendiente = mTotal - totalAbonado;
+
+        // 4. Construir el HTML del Ticket
+        const html = `
+            <div style="text-align:left; padding:10px; font-family:'Courier New', monospace; color:#000; line-height:1.4;">
+                <div style="text-align:center; font-family:'Playfair Display', serif; font-size:22px; color:#166534; font-weight:bold; border-bottom:2px dashed #000; padding-bottom:10px; margin-bottom:15px;">
+                    ESTADO DE CUENTA FINAL
+                </div>
+
+                <div style="background:#f8fafc; padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #e2e8f0; font-family:'Lato', sans-serif;">
+                    <div style="display:flex; justify-content:space-between;"><b>HABITACIÓN:</b> <span>${res.habitacion}</span></div>
+                    <div style="display:flex; justify-content:space-between;"><b>HUÉSPED:</b> <span style="text-transform:uppercase;">${res.huesped}</span></div>
+                    <div style="display:flex; justify-content:space-between;"><b>ESTANCIA:</b> <span>${res.checkIn} al ${res.checkOut}</span></div>
+                </div>
+
+                <div style="margin-bottom:15px;">
+                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">CARGOS (HOSPEDAJE Y SERVICIOS)</div>
+                    <div style="display:flex; justify-content:space-between;"><span>Total Hospedaje</span> <span>S/ ${mHosp.toFixed(2)}</span></div>
+                    ${htmlConsumos || '<div style="font-size:12px; color:#999;">Sin consumos adicionales</div>'}
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
+                        <span>TOTAL CARGOS</span> <span>S/ ${mTotal.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:15px;">
+                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">PAGOS Y ADELANTOS</div>
+                    ${htmlPagos || '<div style="font-size:12px; color:#999;">No se registraron pagos</div>'}
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px; color:#166534;">
+                        <span>TOTAL ABONADO</span> <span>S/ ${totalAbonado.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <div style="border-top:3px solid #000; padding-top:10px; margin-top:10px;">
+                    <div style="display:flex; justify-content:space-between; font-size:22px; font-weight:bold; color:${saldoPendiente <= 0 ? '#166534' : '#b91c1c'};">
+                        <span>SALDO FINAL</span>
+                        <span>S/ ${saldoPendiente.toFixed(2)}</span>
+                    </div>
+                    <div style="text-align:center; font-size:10px; margin-top:15px; color:#666;">
+                        *** Documento informativo de control interno ***
+                    </div>
+                </div>
+            </div>`;
+
+        Swal.fire({ html, width: '550px', confirmButtonText: 'ENTENDIDO', confirmButtonColor: '#166534' });
+
+    } catch (e) {
+        console.error(e);
+        Swal.fire("Error", "No se pudo generar el estado de cuenta completo", "error");
+    }
+};
 
         // --- 6. EVENTOS ---
         fInicio.addEventListener('change', aplicarFiltros);

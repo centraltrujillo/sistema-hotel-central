@@ -7,256 +7,14 @@ import {
 // --- VARIABLES GLOBALES DE GRÁFICOS ---
 let chartSemanal, chartMensual;
 
-// --- 1. CONTROL DE ACCESO ---
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        // Elementos del HTML
-        const uiNombre = document.getElementById('userName');
-        const uiRol = document.getElementById('userRole');
+// --- FUNCIONES DE APOYO ---
 
-        // 1. Mostrar algo inmediato (mientras carga Firestore)
-        uiNombre.innerText = "Cargando...";
-
-        try {
-            // 2. Referencia al documento del usuario usando su UID
-            // Nota: Se asume que tu colección se llama "usuarios"
-            const userDocRef = doc(db, "usuarios", user.uid);
-            const userDocSnap = await getDoc(userDocRef);
-
-            if (userDocSnap.exists()) {
-                const userData = userDocSnap.data();
-                
-                // 3. Insertar datos reales de tu colección
-                uiNombre.innerText = userData.nombre; // Ej: "Tania" o "Administrador"
-                uiRol.innerText = userData.rol;      // Ej: "Recepcionista" o "Administrador"
-                
-                console.log(`Sesión iniciada: ${userData.nombre} con rol ${userData.rol}`);
-            } else {
-                // Si el usuario está en Auth pero no en la colección "usuarios"
-                uiNombre.innerText = user.email.split('@')[0];
-                uiRol.innerText = "Usuario Registrado";
-                console.warn("El UID no existe en la colección de usuarios.");
-            }
-        } catch (error) {
-            console.error("Error al obtener datos del usuario:", error);
-            uiNombre.innerText = "Error";
-            uiRol.innerText = "Revisar conexión";
-        }
-
-        // Inicializar el resto del dashboard
-        inicializarDashboard();
-    } else {
-        // Si no hay usuario, redirigir al login
-        window.location.href = "index.html"; 
-    }
-});
-
-// --- 2. INICIALIZACIÓN DE GRÁFICOS (ApexCharts) ---
-function inicializarGraficos() {
-    // A. Gráfico Semanal (Líneas con degradado)
-    chartSemanal = new ApexCharts(document.querySelector("#chart-line"), {
-        chart: { 
-            type: 'area', 
-            height: 250, 
-            toolbar: { show: false },
-            zoom: { enabled: false }
-        },
-        series: [{ name: 'Ingresos S/', data: [0, 0, 0, 0, 0, 0, 0] }],
-        xaxis: { categories: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'] },
-        colors: ['#800020'], // Vino Tinto
-        stroke: { curve: 'smooth', width: 3 },
-        fill: {
-            type: 'gradient',
-            gradient: {
-                shadeIntensity: 1,
-                opacityFrom: 0.45,
-                opacityTo: 0.05,
-                stops: [20, 100]
-            }
-        },
-        dataLabels: { enabled: false },
-        grid: { borderColor: '#f1f1f1' }
-    });
-    chartSemanal.render();
-
-    // B. Gráfico Mensual (Barras Oro)
-    chartMensual = new ApexCharts(document.querySelector("#chart-radial"), {
-        chart: { type: 'bar', height: 250, toolbar: { show: false } },
-        plotOptions: { bar: { borderRadius: 4, columnWidth: '50%' } },
-        series: [{ name: 'Ingresos Mensuales', data: [0, 0, 0, 0, 0, 0] }],
-        xaxis: { categories: [] },
-        colors: ['#cc9900'] // Amarillo Ocre/Oro
-    });
-    chartMensual.render();
+function formatearFechaJS(fecha) {
+    if (!fecha) return null;
+    if (typeof fecha.toDate === 'function') return fecha.toDate(); 
+    return new Date(fecha); 
 }
 
-// --- 3. LÓGICA DE DATOS EN TIEMPO REAL ---
-function inicializarDashboard() {
-    inicializarGraficos();
-
-    // A. LÓGICA DE PAGOS (KPI Ingresos + Gráficos)
-    onSnapshot(collection(db, "pagos"), (snapshot) => {
-        let ingresosSemana = [0, 0, 0, 0, 0, 0, 0];
-        let ingresosPorMes = {}; 
-        let totalMesActual = 0;
-        let totalMesAnterior = 0;
-
-        const ahora = new Date();
-        const mesActual = ahora.getMonth();
-        const anioActual = ahora.getFullYear();
-
-        const fechaPasada = new Date();
-        fechaPasada.setMonth(ahora.getMonth() - 1);
-        const mesPasado = fechaPasada.getMonth();
-        const anioPasado = fechaPasada.getFullYear();
-
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const monto = Number(data.montoTotal || 0);
-        
-            // USAR EL OBJETO DE FECHA PARA LOS CÁLCULOS
-            const fechaObj = formatearFechaJS(data.fechaPago);
-            if (!fechaObj) return; // Saltar si no hay fecha
-        
-            const m = fechaObj.getMonth();    // CORRECTO: usar fechaObj
-            const y = fechaObj.getFullYear(); // CORRECTO: usar fechaObj
-            
-            // Lógica Semanal
-            const dia = fechaObj.getDay();    // CORRECTO: usar fechaObj
-            const index = (dia === 0) ? 6 : dia - 1;
-            
-            // Solo sumar a la semana actual (opcional, si quieres que el gráfico sea de la semana en curso)
-            ingresosSemana[index] += monto;
-        
-            // Agrupación Mensual
-            const keyMes = `${m}-${y}`;
-            ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
-        
-            // Comparativa de Meses para KPI
-            if (m === mesActual && y === anioActual) totalMesActual += monto;
-            if (m === mesPasado && y === anioPasado) totalMesAnterior += monto;
-        });
-
-        // Actualizar UI Ingresos
-        document.getElementById('kpi-ingresos').innerText = `S/ ${totalMesActual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-        actualizarTendencia(totalMesActual, totalMesAnterior, 'trend-ingresos');
-
-        // Actualizar Gráficos
-        chartSemanal.updateSeries([{ data: ingresosSemana }]);
-
-        const mesesLabels = [];
-        const mesesData = [];
-        const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date();
-            d.setMonth(ahora.getMonth() - i);
-            const mLabel = d.getMonth();
-            const yLabel = d.getFullYear();
-            mesesLabels.push(nombresMeses[mLabel]);
-            mesesData.push(ingresosPorMes[`${mLabel}-${yLabel}`] || 0);
-        }
-        chartMensual.updateOptions({ xaxis: { categories: mesesLabels } });
-        chartMensual.updateSeries([{ data: mesesData }]);
-    });
-
-    // B. LÓGICA DE OCUPACIÓN (Basado en tu Firebase de habitaciones)
-    onSnapshot(collection(db, "habitaciones"), (snapshot) => {
-        const totalHabitaciones = snapshot.size || 25; 
-        let ocupadas = 0;
-
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            if (data.estado === "Ocupado" || data.estado === "Ocupada") {
-                ocupadas++;
-            }
-        });
-
-        document.getElementById('kpi-ocupacion').innerText = `${ocupadas}/${totalHabitaciones}`;
-        const porcentaje = ((ocupadas / totalHabitaciones) * 100).toFixed(0);
-        const trend = document.getElementById('trend-ocupacion');
-        if(trend) {
-            trend.innerText = `${porcentaje}% de ocupación actual`;
-            trend.className = "trend-value trend-neutral";
-        }
-    });
-
-    // C. LÓGICA DE HUÉSPEDES
-    onSnapshot(collection(db, "huespedes"), (snapshot) => {
-        document.getElementById('kpi-huespedes').innerText = snapshot.size;
-        // Aquí podrías añadir lógica de tendencia si guardas fecha de registro
-    });
-
-    // D. ACTIVIDAD RECIENTE (Últimos 5 pagos)
-    const qPagos = query(collection(db, "pagos"), orderBy("fechaPago", "desc"), limit(5));
-    onSnapshot(qPagos, (snapshot) => {
-        const list = document.getElementById('list-checkins');
-        if (!list) return;
-        list.innerHTML = '';
-
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const item = document.createElement('div');
-            item.className = "activity-item";
-            item.innerHTML = `
-                <div class="activity-badge"></div>
-                <div class="activity-info">
-                    <p>${data.huesped} - Hab. ${data.habitacion}</p>
-                    
-                    <small>${data.tipoTicket || 'Pago'} | <strong>S/ ${data.montoTotal || 0}</strong></small>                </div>
-            `;
-            list.appendChild(item);
-        });
-    });
-}
-
-onSnapshot(collection(db, "reservas"), (snapshot) => {
-    const ahora = new Date();
-    
-    // Obtenemos año, mes y día LOCAL (Perú)
-    const anio = ahora.getFullYear();
-    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
-    const dia = String(ahora.getDate()).padStart(2, '0');
-    const hoyString = `${anio}-${mes}-${dia}`; 
-
-    console.log("--- Verificando Reservas ---");
-    console.log("Fecha de hoy (Local):", hoyString);
-
-    let reservasHoy = 0;
-    
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        const fechaEntrada = formatearFechaJS(data.checkIn);
-
-        if (fechaEntrada) {
-            // Obtenemos año, mes y día LOCAL de la reserva
-            const resAnio = fechaEntrada.getFullYear();
-            const resMes = String(fechaEntrada.getMonth() + 1).padStart(2, '0');
-            const resDia = String(fechaEntrada.getDate()).padStart(2, '0');
-            const reservaString = `${resAnio}-${resMes}-${resDia}`;
-
-            console.log(`Reserva ID: ${doc.id} | Fecha: ${reservaString} | Estado: ${data.estado}`);
-
-            // FILTRO: Fecha coincide Y el estado es Reservada
-            if (reservaString === hoyString && data.estado === "reservada") {
-                reservasHoy++;
-            }
-        } else {
-            console.warn(`Reserva ID: ${doc.id} no tiene una fecha válida.`);
-        }
-    });
-
-    console.log("Total reservas encontradas para hoy:", reservasHoy);
-    console.log("----------------------------");
-
-    const kpiReservas = document.getElementById('kpi-reservas-hoy');
-    if (kpiReservas) {
-        kpiReservas.innerText = reservasHoy;
-    }
-});
-
-
-// --- 4. FUNCIONES DE APOYO ---
 function actualizarTendencia(actual, anterior, elementoId) {
     const elemento = document.getElementById(elementoId);
     if (!elemento) return;
@@ -274,36 +32,185 @@ function actualizarTendencia(actual, anterior, elementoId) {
     elemento.className = porcentaje >= 0 ? "trend-value trend-positive" : "trend-value trend-negative";
 }
 
-// --- 5. LOGOUT CON SWEETALERT2 ---
+// --- 1. CONTROL DE ACCESO ---
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        const uiNombre = document.getElementById('userName');
+        const uiRol = document.getElementById('userRole');
+
+        try {
+            // Referencia a tu colección "usuarios" usando el UID
+            const userDocRef = doc(db, "usuarios", user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                uiNombre.innerText = userData.nombre; 
+                uiRol.innerText = userData.rol;      
+                console.log(`Sesión iniciada: ${userData.nombre} (${userData.rol})`);
+            } else {
+                uiNombre.innerText = user.email.split('@')[0];
+                uiRol.innerText = "Usuario";
+            }
+        } catch (error) {
+            console.error("Error al obtener datos del usuario:", error);
+            uiNombre.innerText = "Error";
+        }
+
+        inicializarDashboard();
+    } else {
+        window.location.href = "index.html"; 
+    }
+});
+
+// --- 2. INICIALIZACIÓN DE GRÁFICOS (ApexCharts) ---
+function inicializarGraficos() {
+    // A. Gráfico Semanal
+    chartSemanal = new ApexCharts(document.querySelector("#chart-line"), {
+        chart: { type: 'area', height: 250, toolbar: { show: false }, zoom: { enabled: false } },
+        series: [{ name: 'Ingresos S/', data: [0, 0, 0, 0, 0, 0, 0] }],
+        xaxis: { categories: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'] },
+        colors: ['#800020'], 
+        stroke: { curve: 'smooth', width: 3 },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [20, 100] } },
+        dataLabels: { enabled: false }
+    });
+    chartSemanal.render();
+
+    // B. Gráfico Mensual
+    chartMensual = new ApexCharts(document.querySelector("#chart-radial"), {
+        chart: { type: 'bar', height: 250, toolbar: { show: false } },
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '50%' } },
+        series: [{ name: 'Ingresos Mensuales', data: [0, 0, 0, 0, 0, 0] }],
+        xaxis: { categories: [] },
+        colors: ['#cc9900'] 
+    });
+    chartMensual.render();
+}
+
+// --- 3. LÓGICA DE DATOS EN TIEMPO REAL ---
+function inicializarDashboard() {
+    inicializarGraficos();
+
+    // Fecha actual en la cabecera
+    const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', opciones);
+
+    // A. PAGOS
+    onSnapshot(collection(db, "pagos"), (snapshot) => {
+        let ingresosSemana = [0, 0, 0, 0, 0, 0, 0];
+        let ingresosPorMes = {}; 
+        let totalMesActual = 0;
+        let totalMesAnterior = 0;
+
+        const ahora = new Date();
+        const mesActual = ahora.getMonth();
+        const anioActual = ahora.getFullYear();
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const monto = Number(data.montoTotal || 0);
+            const fechaObj = formatearFechaJS(data.fechaPago);
+            
+            if (fechaObj) {
+                const m = fechaObj.getMonth();
+                const y = fechaObj.getFullYear();
+                
+                // Lógica Semanal (Ajuste para que Lunes sea index 0)
+                const dia = fechaObj.getDay();
+                const index = (dia === 0) ? 6 : dia - 1;
+                ingresosSemana[index] += monto;
+
+                const keyMes = `${m}-${y}`;
+                ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
+
+                if (m === mesActual && y === anioActual) totalMesActual += monto;
+            }
+        });
+
+        document.getElementById('kpi-ingresos').innerText = `S/ ${totalMesActual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+        chartSemanal.updateSeries([{ data: ingresosSemana }]);
+    });
+
+    // B. OCUPACIÓN
+    onSnapshot(collection(db, "habitaciones"), (snapshot) => {
+        const totalHabitaciones = snapshot.size || 25; 
+        let ocupadas = 0;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.estado === "Ocupado" || data.estado === "Ocupada") ocupadas++;
+        });
+        document.getElementById('kpi-ocupacion').innerText = `${ocupadas}/${totalHabitaciones}`;
+    });
+
+    // C. HUÉSPEDES
+    onSnapshot(collection(db, "huespedes"), (snapshot) => {
+        document.getElementById('kpi-huespedes').innerText = snapshot.size;
+    });
+
+    // D. RESERVAS HOY
+    onSnapshot(collection(db, "reservas"), (snapshot) => {
+        const ahora = new Date();
+        const hoyString = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`; 
+
+        let reservasHoy = 0;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const fechaEntrada = formatearFechaJS(data.checkIn);
+            if (fechaEntrada) {
+                const resString = `${fechaEntrada.getFullYear()}-${String(fechaEntrada.getMonth() + 1).padStart(2, '0')}-${String(fechaEntrada.getDate()).padStart(2, '0')}`;
+                if (resString === hoyString && data.estado === "reservada") reservasHoy++;
+            }
+        });
+        document.getElementById('kpi-reservas-hoy').innerText = reservasHoy;
+    });
+
+    // E. ACTIVIDAD RECIENTE
+    const qPagos = query(collection(db, "pagos"), orderBy("fechaPago", "desc"), limit(5));
+    onSnapshot(qPagos, (snapshot) => {
+        const list = document.getElementById('list-checkins');
+        if (!list) return;
+        list.innerHTML = '';
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const item = document.createElement('div');
+            item.className = "activity-item";
+            item.innerHTML = `
+                <div class="activity-badge"></div>
+                <div class="activity-info">
+                    <p>${data.huesped} - Hab. ${data.habitacion}</p>
+                    <small>${data.tipoTicket || 'Pago'} | <strong>S/ ${data.montoTotal || 0}</strong></small>
+                </div>`;
+            list.appendChild(item);
+        });
+    });
+}
+
+// --- 5. LOGOUT ---
 document.getElementById('btnLogout')?.addEventListener('click', () => {
     Swal.fire({
         title: '¿Cerrar sesión?',
-        text: "Cerrarás sesion del Sistema Hotel Central",
+        text: "Cerrarás sesión del Sistema Hotel Central",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#800020', // Tu color Vino Tinto
+        confirmButtonColor: '#800020',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Sí, salir',
         cancelButtonText: 'Cancelar',
-        reverseButtons: true, // Pone el botón de confirmar a la derecha
-        background: '#fff',
-        backdrop: `rgba(128, 0, 32, 0.1)` // Un ligero fondo vino transparente
+        reverseButtons: true,
+        backdrop: `rgba(128, 0, 32, 0.1)`
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
                 await signOut(auth);
-                // Pequeña alerta de éxito antes de redirigir
                 Swal.fire({
                     title: '¡Sesión cerrada!',
                     icon: 'success',
                     showConfirmButton: false,
                     timer: 1500,
-                    colors: '#cc9900' // Color Oro
+                    iconColor: '#cc9900' 
                 });
-                
-                setTimeout(() => {
-                    window.location.href = "index.html";
-                }, 1500);
+                setTimeout(() => window.location.href = "index.html", 1500);
             } catch (error) {
                 Swal.fire('Error', 'No se pudo cerrar la sesión', 'error');
             }
