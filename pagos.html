@@ -170,6 +170,7 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (
     // 1. Identificar reservas y montos de hospedaje
     for (const pago of pagosBrutos) {
         const idRes = pago.idReserva;
+        if (!idRes) continue; // Saltar si no hay ID de reserva
         
         if (!agrupados[idRes]) {
             const resSnap = await getDoc(doc(db, "reservas", idRes));
@@ -191,8 +192,9 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (
         }
     }
 
-    // 2. CORRECCIÓN: Crear una lista de promesas para los consumos
-    const promesasConsumos = Object.keys(agrupados).map(async (idRes) => {
+    // 2. CORRECCIÓN: Usar Promise.all para asegurar que los montos se calculen ANTES de seguir
+    const idsReservas = Object.keys(agrupados);
+    await Promise.all(idsReservas.map(async (idRes) => {
         const qConsumos = query(collection(db, "consumos"), where("idReserva", "==", idRes));
         const consSnap = await getDocs(qConsumos);
         
@@ -201,18 +203,19 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (
             sumaExtras += parseFloat(c.precioTotal || 0);
         });
 
-        // Asignamos los valores calculados al objeto original
+        // Actualizamos los datos directamente en el objeto de la reserva
         agrupados[idRes].montoExtras = sumaExtras;
         agrupados[idRes].montoTotal = agrupados[idRes].montoHospedaje + sumaExtras;
-    });
+    }));
 
-    // 3. CORRECCIÓN: Esperar a que TODAS las consultas de consumos finalicen
-    await Promise.all(promesasConsumos);
-
-    // 4. Ahora que todos los montos están cargados, actualizamos la interfaz
+    // 3. Solo después de que TODO lo anterior terminó, actualizamos la variable global
     todosLosPagos = Object.values(agrupados);
+    
+    // Forzamos el renderizado
     aplicarFiltros();
 });
+
+
 // --- 5. MODALES (DEFINIDOS EN WINDOW) ---
 
 /** * MODAL 1: DETALLE DE HOSPEDAJE
