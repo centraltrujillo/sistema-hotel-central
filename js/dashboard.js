@@ -61,7 +61,7 @@ onAuthStateChanged(auth, async (user) => {
 // --- 2. INICIALIZACIÓN DE GRÁFICOS ---
 function inicializarGraficos() {
     const elSemanal = document.querySelector("#chart-line");
-    const elMensual = document.querySelector("#chart-radial");
+    const elMensual = document.querySelector("#chart-bar"); 
 
     // Gráfico Semanal
     if (elSemanal) {

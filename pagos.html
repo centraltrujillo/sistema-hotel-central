@@ -162,55 +162,57 @@
             renderTable(pagosFiltrados);
         }
 
-// --- 4. ESCUCHA DE DATOS (FIREBASE) ---
+// --- 4. ESCUCHA DE DATOS (FIREBASE) CORREGIDA ---
 onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (snapshot) => {
     const pagosBrutos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const agrupados = {};
 
-    // Primero identificamos las reservas únicas
+    // 1. Identificar reservas y montos de hospedaje
     for (const pago of pagosBrutos) {
         const idRes = pago.idReserva;
         
         if (!agrupados[idRes]) {
-            // Buscamos la información oficial de la reserva para obtener los montos totales
             const resSnap = await getDoc(doc(db, "reservas", idRes));
             const reservaData = resSnap.exists() ? resSnap.data() : {};
 
             agrupados[idRes] = {
                 ...pago,
-                // Usamos el total de la reserva, no la suma de pagos parciales
                 montoHospedaje: parseFloat(reservaData.total || 0), 
-                montoExtras: 0, // Lo calcularemos abajo con los consumos
+                montoExtras: 0, 
                 montoTotal: 0,
                 ultimaFecha: pago.fechaPago,
                 idReserva: idRes
             };
         }
 
-        // Actualizamos la fecha del último movimiento si es necesario
         if (convertirFecha(pago.fechaPago) > convertirFecha(agrupados[idRes].ultimaFecha)) {
             agrupados[idRes].ultimaFecha = pago.fechaPago;
             agrupados[idRes].atendidoBy = pago.atendidoBy || 'Admin';
         }
     }
 
-    // Calculamos los extras y el total final para cada reserva agrupada
-    for (const idRes in agrupados) {
+    // 2. CORRECCIÓN: Crear una lista de promesas para los consumos
+    const promesasConsumos = Object.keys(agrupados).map(async (idRes) => {
         const qConsumos = query(collection(db, "consumos"), where("idReserva", "==", idRes));
         const consSnap = await getDocs(qConsumos);
+        
         let sumaExtras = 0;
         consSnap.forEach(c => {
             sumaExtras += parseFloat(c.precioTotal || 0);
         });
 
+        // Asignamos los valores calculados al objeto original
         agrupados[idRes].montoExtras = sumaExtras;
         agrupados[idRes].montoTotal = agrupados[idRes].montoHospedaje + sumaExtras;
-    }
+    });
 
+    // 3. CORRECCIÓN: Esperar a que TODAS las consultas de consumos finalicen
+    await Promise.all(promesasConsumos);
+
+    // 4. Ahora que todos los montos están cargados, actualizamos la interfaz
     todosLosPagos = Object.values(agrupados);
     aplicarFiltros();
 });
-
 // --- 5. MODALES (DEFINIDOS EN WINDOW) ---
 
 /** * MODAL 1: DETALLE DE HOSPEDAJE
@@ -305,18 +307,18 @@ window.verDetalleExtras = async function(idReserva, totalExtras_obsoleto) {
     } catch (e) { Swal.fire("Error", "Error al cargar consumos", "error"); }
 };
 
-/** * MODAL 3: ESTADO DE CUENTA GLOBAL
- * Re-calcula todo en tiempo real para mostrar: Hospedaje + Consumos Detallados - Pagos/Adelantos = Saldo.
+/** * MODAL 3: ESTADO DE CUENTA FINAL (Versión Corregida)
+ * Muestra el resumen de lo que el cliente consumió y el total que pagó.
  */
-window.verTicketGlobal = async function(idReserva, mHosp, mCons_obsoleto, mTotal_obsoleto) {
-    Swal.fire({ title: 'Generando Estado de Cuenta...', didOpen: () => Swal.showLoading() });
+ window.verTicketGlobal = async function(idReserva, mHosp, mCons_obsoleto, mTotal_obsoleto) {
+    Swal.fire({ title: 'Generando comprobante...', didOpen: () => Swal.showLoading() });
 
     try {
         const resSnap = await getDoc(doc(db, "reservas", idReserva));
         if (!resSnap.exists()) throw new Error("No se halló la reserva");
         const res = resSnap.data();
 
-        // 1. Obtener y detallar Consumos
+        // 1. Detalle de Consumos
         const qCons = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
         const snapCons = await getDocs(qCons);
         let htmlConsumosDetallado = '';
@@ -329,12 +331,12 @@ window.verTicketGlobal = async function(idReserva, mHosp, mCons_obsoleto, mTotal
             sumaExtraReal += pTotal;
             htmlConsumosDetallado += `
                 <div style="display:flex; justify-content:space-between; font-size:12px; color:#555; margin-bottom:3px;">
-                    <span>${cant}x ${c.descripcion} (S/ ${(pTotal/cant).toFixed(2)})</span>
+                    <span>${cant}x ${c.descripcion} (S/ ${(pTotal/(cant||1)).toFixed(2)})</span>
                     <span>S/ ${pTotal.toFixed(2)}</span>
                 </div>`;
         });
 
-        // 2. Obtener y detallar Pagos (Adelantos)
+        // 2. Historial de Pagos (Total Abonado)
         const qPagos = query(collection(db, "pagos"), where("idReserva", "==", idReserva), orderBy("fechaPago", "asc"));
         const snapPagos = await getDocs(qPagos);
         let htmlPagos = '';
@@ -347,14 +349,12 @@ window.verTicketGlobal = async function(idReserva, mHosp, mCons_obsoleto, mTotal
             totalAbonado += monto;
             htmlPagos += `
                 <div style="display:flex; justify-content:space-between; font-size:12px; color:#166534;">
-                    <span>${fecha} - Abono (${p.metodoPago})</span>
+                    <span>${fecha} - Pago (${p.metodoPago})</span>
                     <span>S/ ${monto.toFixed(2)}</span>
                 </div>`;
         });
 
-        // 3. Cálculos de auditoría
         const totalCargosReal = parseFloat(mHosp) + sumaExtraReal;
-        const saldoFinal = totalCargosReal - totalAbonado;
 
         const html = `
             <div style="text-align:left; padding:10px; font-family:'Courier New', monospace; color:#000;">
@@ -369,7 +369,7 @@ window.verTicketGlobal = async function(idReserva, mHosp, mCons_obsoleto, mTotal
                 </div>
 
                 <div style="margin-bottom:15px;">
-                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">CARGOS Y SERVICIOS</div>
+                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">DESGLOSE DE CARGOS</div>
                     <div style="display:flex; justify-content:space-between; font-size:13px;"><span>TOTAL ALOJAMIENTO</span> <span>S/ ${parseFloat(mHosp).toFixed(2)}</span></div>
                     ${htmlConsumosDetallado}
                     <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px; font-size:15px;">
@@ -378,24 +378,22 @@ window.verTicketGlobal = async function(idReserva, mHosp, mCons_obsoleto, mTotal
                 </div>
 
                 <div style="margin-bottom:15px;">
-                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">PAGOS REALIZADOS</div>
-                    ${htmlPagos || '<div style="font-size:12px; color:#999;">Sin abonos registrados</div>'}
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px; color:#166534;">
-                        <span>TOTAL ABONADO</span> <span>S/ ${totalAbonado.toFixed(2)}</span>
-                    </div>
+                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">PAGOS REGISTRADOS</div>
+                    ${htmlPagos || '<div style="font-size:12px; color:#999;">Sin pagos realizados</div>'}
                 </div>
 
-                <div style="border-top:3px solid #000; padding-top:10px;">
-                    <div style="display:flex; justify-content:space-between; font-size:22px; font-weight:bold; color:${saldoFinal > 0.1 ? '#b91c1c' : '#166534'};">
-                        <span>SALDO FINAL</span>
-                        <span>S/ ${Math.abs(saldoFinal) < 0.01 ? "0.00" : saldoFinal.toFixed(2)}</span>
+                <div style="border-top:3px solid #000; padding-top:10px; background: #f0fdf4; padding: 10px;">
+                    <div style="display:flex; justify-content:space-between; font-size:22px; font-weight:bold; color:#166534;">
+                        <span>TOTAL PAGADO</span>
+                        <span>S/ ${totalAbonado.toFixed(2)}</span>
                     </div>
+                    <div style="text-align:center; font-size:10px; color:#166534; margin-top:5px; font-weight:bold;">*** CUENTA CANCELADA ***</div>
                 </div>
             </div>`;
 
         Swal.fire({ html, width: '580px', confirmButtonText: 'ENTENDIDO', confirmButtonColor: '#166534' });
     } catch (e) {
-        Swal.fire("Error", "No se pudo generar el ticket completo", "error");
+        Swal.fire("Error", "Error al generar el estado de cuenta", "error");
     }
 };
 
