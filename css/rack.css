@@ -290,6 +290,16 @@ body {
     padding: 2px 0 !important;
 }
 
+
+.fc-resource-area-resizer {
+    width: 8px !important;
+    cursor: col-resize !important;
+}
+
+.fc-resource-area-resizer:hover {
+    background-color: rgba(212, 175, 55, 0.2) !important; /* Brillo dorado suave */
+}
+
 /* Fila de TOTAL OCUP (La de abajo) */
 .fc-timeline-lane[data-resource-id="total-row"] {
     background-color: #fef9c3 !important; /* Amarillo suave tipo Excel */

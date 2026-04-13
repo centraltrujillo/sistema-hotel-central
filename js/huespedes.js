@@ -15,7 +15,7 @@ const totalH = document.getElementById('totalHuespedesHoy');
 let listaHuespedesGlobal = [];
 let listaFiltrada = [];
 let paginaActual = 1;
-const huespedesPorPagina = 10;
+const huespedesPorPagina = 9;
 
 // --- CARGAR DATOS EN TIEMPO REAL ---
 function cargarHuespedes() {
@@ -37,6 +37,7 @@ function renderizarHuespedes() {
     const inicio = (paginaActual - 1) * huespedesPorPagina;
     const fin = inicio + huespedesPorPagina;
     const itemsParaMostrar = listaFiltrada.slice(inicio, fin);
+    console.log("Mostrando items:", itemsParaMostrar.length); // Debería decir 10 si tienes 13
 
     if (itemsParaMostrar.length === 0) {
         container.innerHTML = `

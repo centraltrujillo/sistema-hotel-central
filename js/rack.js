@@ -200,8 +200,10 @@ contentHeight: 'auto',
 expandRows: true,            
 resourceAreaWidth: '220px',  
 stickyHeaderDates: true,     
-handleWindowResize: true,    // Recalcula si cambias el tamaño de la ventana
-aspectRatio: 2.5, 
+handleWindowResize: true,   
+resourceAreaResizable: true, 
+resourceAreaMinWidth: 150, 
+resourceAreaMaxWidth: 400,
 
 
 locale: 'es', 
