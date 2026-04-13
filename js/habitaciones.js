@@ -752,15 +752,19 @@ const { value: nuevoAbono } = await Swal.fire({
                         <label style="font-size: 10px; color: #5d4037; font-weight: bold; text-transform: uppercase;">Método de Pago</label>
                         <select id="sw-metodo" class="swal2-select" style="margin: 5px 0 0 0; width: 100%; font-size: 13px; height: 35px;">
                             <option value="Efectivo">💵 Efectivo</option>
-                            <option value="Yape/Plin">📱 Yape / Plin</option>
                             <option value="Tarjeta">💳 Tarjeta</option>
+                            <option value="Yape">📱 Yape</option>
+                            <option value="Plin">📱 Plin</option>
+                            <option value="Transferencia">📱 Transferencia</option>
+
                         </select>
                     </div>
                 </div>
 
                 <div id="subtotal-preview" style="margin-top: 20px; padding: 15px; background: #800020; border-radius: 8px; text-align: center; color: white;">
                     <span style="font-size: 11px; text-transform: uppercase; opacity: 0.8;">Monto a registrar:</span>
-                    <strong id="preview-monto" style="display: block; font-size: 24px; font-weight: 900; margin-top: 2px;">S/ 0.00</strong>
+
+<strong id="preview-monto" style="display: block; font-size: 24px; font-weight: 900; margin-top: 2px; color: #800020;">S/ 0.00</strong>
                 </div>
                 <input id="sw-fecha" type="hidden" value="${fechaLocal}">
             </div>`,
@@ -936,9 +940,11 @@ const { value: nuevoAbono } = await Swal.fire({
                 <div style="margin-top: 20px;">
                     <label style="font-size: 11px; font-weight: bold; color: #5d4037; text-transform: uppercase;">Método de Pago Final:</label>
                     <select id="metodoPago" class="swal2-select" style="width: 100%; margin: 8px 0 0 0; border-color: #d4af37; height: 40px;">
-                        <option value="Efectivo">💵 Efectivo</option>
-                        <option value="Tarjeta">💳 Tarjeta (POS)</option>
-                        <option value="Yape/Plin">📱 Yape / Plin</option>
+                    <option value="Efectivo">💵 Efectivo</option>
+                    <option value="Tarjeta">💳 Tarjeta</option>
+                    <option value="Yape">📱 Yape</option>
+                    <option value="Plin">📱 Plin</option>
+                    <option value="Transferencia">📱 Transferencia</option>
                     </select>
                 </div>` : ''}
             </div>`,

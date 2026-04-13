@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 observaciones: document.getElementById("resObservaciones").value,
                 recibidoPor: document.getElementById("resRecepcion").value,
                 confirmadoPor: document.getElementById("resRecepcionconfi").value,
-                estado: "confirmada",
+                estado: "reservada",
                 fechaRegistro: editId ? (formulario.dataset.fechaReg || new Date().toISOString()) : new Date().toISOString()
             };
 
@@ -229,38 +229,32 @@ locale: 'es',
         resourceAreaHeaderContent: 'HABITACIONES',
 
         slotLabelContent: function(arg) {
-            if (arg.level > 0) { // Nivel de días (mie 1, jue 2...)
+            if (arg.level > 0) {
                 return { 
                     html: `<div style="font-size: 11px; font-weight: 700; color: #475569; padding: 5px 0;">${arg.text}</div>` 
                 };
             }
         },
 
-        // Agrega esto dentro de la configuración de FullCalendar (new FullCalendar.Calendar)
-resourceLaneContent: function(arg) {
-    if (arg.resource.id === 'total-row') {
-        const fechaSlot = arg.date;
-        const eventos = calendar.getEvents();
-        let count = 0;
-
-        eventos.forEach(ev => {
-            // Contamos solo reservas en habitaciones (ID que empieza con 'hab')
-            const esHabitacion = ev.resourceId && ev.resourceId.startsWith('hab');
-            
-            // Si la reserva ocupa este día, sumamos
-            if (esHabitacion && fechaSlot >= ev.start && fechaSlot < ev.end) {
-                count++;
+        // --- CORRECCIÓN AQUÍ: Dejamos la celda limpia ---
+        resourceLaneContent: function(arg) {
+            if (arg.resource.id === 'total-row') {
+                return; // No escribimos nada aquí, dejaremos que el evento lo haga
             }
-        });
+        },
 
-        // Retornamos el número centrado en la celda
-        return { 
-            html: `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #6e0d25; font-size: 14px;">
-                    ${count > 0 ? count : '-'}
-                   </div>` 
-        };
-    }
-},
+        // --- AGREGA ESTO: Para que el número del total y el texto se vean bien ---
+        eventContent: function(arg) {
+            if (arg.event.extendedProps.esTotal) {
+                return { 
+                    html: `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #6e0d25; font-size: 16px; padding-top: 4px;">
+                    ${arg.event.title}
+                    </div>` 
+                };
+            }
+            // Para el resto de eventos (reservas, early, late)
+            return { html: `<div style="padding: 2px; font-size: 11px;">${arg.event.title}</div>` };
+        },
 
         eventClick: function(info) {
             const r = info.event.extendedProps; 
@@ -375,24 +369,17 @@ resourceLaneContent: function(arg) {
     const cargarHabitaciones = async () => {
         try {
             const querySnapshot = await getDocs(collection(db, "habitaciones"));
-            
-            // --- 1. Referencia al select de tu HTML ---
             const selectHab = document.getElementById('resHabitacion');
-            if (selectHab) {
-                selectHab.innerHTML = '<option value="" disabled selected>Seleccione...</option>';
-            }
+            if (selectHab) selectHab.innerHTML = '<option value="" disabled selected>Seleccione...</option>';
     
             let listaHabitaciones = querySnapshot.docs.map(doc => {
                 const data = doc.data();
-                
-                // --- 2. Llenar el select del formulario mientras recorremos ---
                 if (selectHab) {
                     const option = document.createElement('option');
                     option.value = data.numero; 
                     option.textContent = `Hab. ${data.numero} - ${data.tipo}`;
                     selectHab.appendChild(option);
                 }
-    
                 return {
                     id: `hab${data.numero}`, 
                     title: data.numero.toString(), 
@@ -400,22 +387,27 @@ resourceLaneContent: function(arg) {
                 };
             });
             
+            // Ordenamos habitaciones numéricamente
             listaHabitaciones.sort((a, b) => a.title.localeCompare(b.title, undefined, {numeric: true}));
-
-            const extrasYTotal = [
-                { id: 'extra1', title: 'CHECK OL 1'},
-                { id: 'extra2', title: 'CHECK OL 2'},
-                { id: 'extra3', title: 'CHECK OL 3'},
-                { id: 'extra4', title: 'CHECK OL 4'},
-                { id: 'extra5', title: 'CHECK OL 5'},
-                { id: 'total-row', title: 'TOTAL OCUP' }
+    
+            // Definimos los extras y el total
+            const extras = [
+                { id: 'extra1', title: 'CHECK OL 1', tipo: 'EXTRA' },
+                { id: 'extra2', title: 'CHECK OL 2', tipo: 'EXTRA' },
+                { id: 'extra3', title: 'CHECK OL 3', tipo: 'EXTRA' },
+                { id: 'extra4', title: 'CHECK OL 4', tipo: 'EXTRA' },
+                { id: 'extra5', title: 'CHECK OL 5', tipo: 'EXTRA' }
             ];
+    
+            const filaTotal = [{ id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }];
+    
+            // IMPORTANTE: Unimos en este orden exacto
+            const recursosFinales = [...listaHabitaciones, ...extras, ...filaTotal];
             
-            // Usamos 'extrasYTotal' que es donde definiste los Check OL y el Total Ocup
-calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
+            calendar.setOption('resources', recursosFinales);
+    
         } catch (error) {
             console.error("Error en cargarHabitaciones:", error);
-            calendar.setOption('resources', [{ id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }]);
         }
     };
 
@@ -423,47 +415,66 @@ calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
     const escucharReservas = () => {
         onSnapshot(collection(db, "reservas"), (snapshot) => {
             const eventosFinales = [];
+            const conteoOcupacion = {}; // Objeto para sumar: { "2026-04-13": total }
+    
             snapshot.docs.forEach(doc => {
                 const data = doc.data();
-    const idReserva = doc.id;
+                const idReserva = doc.id;
+                
+                // 1. Configuración de Colores y Estilos
+                const colores = { 
+                    'booking': '#1e40af', 'airbnb': '#ff5a5f', 'expedia': '#ffb400', 
+                    'directas': '#7c3aed', 'personal': '#059669', 'gmail': '#ea4335', 'dayuse': '#db2777' 
+                };
     
-    // Definir colores originales por medio
-    const colores = { 
-        'booking': '#1e40af', 'airbnb': '#ff5a5f', 'expedia': '#ffb400', 
-        'directas': '#7c3aed', 'personal': '#059669', 'gmail': '#ea4335', 'dayuse': '#db2777' 
-    };
-
-    // Lógica de Color Dinámico y Checkmark
-    let colorFinal = colores[data.medio?.toLowerCase()] || '#555';
-    let textoNombre = data.huesped || 'Sin nombre';
-    let colorTexto = '#ffffff'; // Blanco por defecto para fondos oscuros
-    let colorBorde = 'transparent';
-
-    // Si ya se registró (Check-in o Check-out)
-    if (data.estado === 'checkin' || data.estado === 'checkout') {
-        colorFinal = '#ffffff';      // Fondo blanco
-        colorTexto = '#1e293b';      // Texto oscuro para que se lea en el blanco
-        colorBorde = '#cbd5e1';      // Borde gris suave para que no se pierda el bloque
-        textoNombre = `✅ ${textoNombre}`; // Añadimos el check al nombre
-    }
-
-    const esDayUse = data.medio?.toLowerCase() === 'dayuse' || data.tipoVenta?.toLowerCase() === 'day use';
-
-    // 1. EVENTO EN LA HABITACIÓN (Usando las nuevas variables)
-    eventosFinales.push({
-        id: idReserva,
-        resourceId: `hab${data.habitacion}`, 
-        title: textoNombre, // Ahora lleva el ✅ si corresponde
-        start: esDayUse ? `${data.checkIn}T08:00:00` : data.checkIn,
-        end: esDayUse ? `${data.checkIn}T20:00:00` : data.checkOut,
-        backgroundColor: colorFinal, // Blanco si hay check-in
-        textColor: colorTexto,       // Oscuro si hay check-in
-        borderColor: colorBorde,     // Gris si hay check-in
-        allDay: !esDayUse,
-        extendedProps: { ...data }
-    });
-
-                // 2. LATE CHECK-OUT (FILA EXTRA 1)
+                let colorFinal = colores[data.medio?.toLowerCase()] || '#555';
+                let textoNombre = data.huesped || 'Sin nombre';
+                let colorTexto = '#ffffff'; 
+                let colorBorde = 'transparent';
+    
+                // Si está en Check-in o Check-out: Fondo Blanco, Texto Negro
+                if (data.estado === 'checkin' || data.estado === 'checkout') {
+                    colorFinal = '#ffffff';
+                    colorTexto = '#000000'; 
+                    colorBorde = '#cbd5e1';
+                    textoNombre = `✅ ${textoNombre}`; 
+                }
+    
+                const esDayUse = data.medio?.toLowerCase() === 'dayuse' || data.tipoVenta?.toLowerCase() === 'day use';
+    
+                // --- FUNCIÓN PARA SUMAR AL CONTADOR DIARIO ---
+                const sumarAlTotal = (fechaISO) => {
+                    if (!fechaISO) return;
+                    conteoOcupacion[fechaISO] = (conteoOcupacion[fechaISO] || 0) + 1;
+                };
+    
+                // 2. EVENTO PRINCIPAL EN HABITACIÓN
+                eventosFinales.push({
+                    id: idReserva,
+                    resourceId: `hab${data.habitacion}`, 
+                    title: textoNombre,
+                    start: esDayUse ? `${data.checkIn}T08:00:00` : data.checkIn,
+                    end: esDayUse ? `${data.checkIn}T20:00:00` : data.checkOut,
+                    backgroundColor: colorFinal,
+                    textColor: colorTexto,
+                    borderColor: colorBorde,
+                    allDay: !esDayUse,
+                    extendedProps: { ...data }
+                });
+    
+                // Conteo de estancia (sin contar el día de salida a menos que sea Day Use)
+                let fActual = new Date(data.checkIn + "T00:00:00");
+                let fFin = new Date(data.checkOut + "T00:00:00");
+                if (esDayUse) {
+                    sumarAlTotal(data.checkIn);
+                } else {
+                    while (fActual < fFin) {
+                        sumarAlTotal(fActual.toISOString().split('T')[0]);
+                        fActual.setDate(fActual.getDate() + 1);
+                    }
+                }
+    
+                // 3. LATE CHECK-OUT (FILA EXTRA 1)
                 if (data.lateCheckOut && data.lateCheckOut !== "Normal" && !esDayUse) {
                     const horaLate = data.lateCheckOut.includes(':') ? data.lateCheckOut : "15:00";
                     eventosFinales.push({
@@ -471,14 +482,31 @@ calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
                         resourceId: 'extra1', 
                         title: `LATE ${data.habitacion} (${horaLate})`,
                         start: `${data.checkOut}T${horaLate}:00`, 
-                        end: `${data.checkOut}T23:59:00`, // IMPORTANTE: Termina casi a medianoche para que sume al contador
+                        end: `${data.checkOut}T23:59:00`,
                         backgroundColor: '#d9f99d',
                         textColor: '#166534',
                         extendedProps: { ...data, esExtra: true }
                     });
+                    sumarAlTotal(data.checkOut); // Se cuenta como ocupación adicional
                 }
-
-                // 3. DAY USE (FILA EXTRA 3)
+    
+                // 4. EARLY CHECK-IN (FILA EXTRA 2)
+                if (data.earlyCheckIn && data.earlyCheckIn !== "Normal" && !esDayUse) {
+                    const horaEarly = data.earlyCheckIn.includes(':') ? data.earlyCheckIn : "08:00";
+                    eventosFinales.push({
+                        id: idReserva + '_early',
+                        resourceId: 'extra2', 
+                        title: `EARLY ${data.habitacion} (${horaEarly})`,
+                        start: `${data.checkIn}T${horaEarly}:00`, 
+                        end: `${data.checkIn}T12:00:00`,
+                        backgroundColor: '#bae6fd',
+                        textColor: '#0369a1',
+                        extendedProps: { ...data, esExtra: true }
+                    });
+                    sumarAlTotal(data.checkIn); // Se cuenta como ocupación adicional
+                }
+    
+                // 5. DAY USE (FILA EXTRA 3)
                 if (esDayUse) {
                     const hEntrada = data.earlyCheckIn || "09:00";
                     const hSalida = data.lateCheckOut || "18:00";
@@ -486,22 +514,34 @@ calendar.setOption('resources', [...listaHabitaciones, ...extrasYTotal]);
                         id: idReserva + '_dayuse',
                         resourceId: 'extra3', 
                         title: `DAY USE ${data.habitacion} (${hEntrada}-${hSalida})`,
-                        start: `${data.checkIn}T${hEntrada.includes(':') ? hEntrada : hEntrada+':00'}:00`,
-                        end: `${data.checkIn}T${hSalida.includes(':') ? hSalida : hSalida+':00'}:00`,
+                        start: `${data.checkIn}T${hEntrada}:00`,
+                        end: `${data.checkIn}T${hSalida}:00`,
                         backgroundColor: '#fef3c7',
                         textColor: '#92400e',
                         extendedProps: { ...data, esExtra: true }
                     });
+                    // Nota: El conteo de Day Use ya se hizo arriba en la lógica de estancia
                 }
             });
+    
+            // 6. GENERAR LOS BLOQUES DE "TOTAL OCUPADO" EN LA FILA INFERIOR
+            Object.keys(conteoOcupacion).forEach(fecha => {
+                eventosFinales.push({
+                    resourceId: 'total-row',
+                    title: conteoOcupacion[fecha].toString(),
+                    start: fecha,
+                    end: fecha,
+                    allDay: true,
+                    display: 'background', // Ocupa toda la celda
+                    backgroundColor: 'transparent',
+                    extendedProps: { esTotal: true }
+                });
+            });
+    
             calendar.setOption('events', eventosFinales);
         });
     };
 
-    await cargarHabitaciones(); 
-    escucharReservas();        
-    calendar.render();
-});
 
 // --- FUNCIONES GLOBALES ---
 window.abrirModal = () => { 
@@ -516,19 +556,25 @@ window.cerrarModal = () => { document.getElementById('modalReserva').classList.r
 
 window.editarReserva = async (id) => {
     try {
-        // 1. Obtener los datos actuales de la reserva desde Firebase
-        const docRef = doc(db, "reservas", id);
-        const docSnap = await getDocs(query(collection(db, "reservas"))); // O usa el ID directo si tienes la ref
-        
-        // Buscamos en los eventos cargados en el calendario para no volver a consultar a Firebase
+        // 1. Buscamos la reserva directamente en el calendario (ya está en memoria)
         const reserva = calendar.getEventById(id);
-        const r = reserva.extendedProps;
+        
+        if (!reserva) {
+            Swal.fire('Error', 'No se encontró la reserva en el sistema', 'error');
+            return;
+        }
 
-        // 2. Cambiar el título y estado del modal
+        const r = reserva.extendedProps; // Aquí están todos tus datos de Firestore
+
+        // 2. Preparar el formulario
+        const formulario = document.getElementById('formNuevaReserva');
         document.getElementById('modalTitle').innerText = "Editar Reserva";
-        document.getElementById('formNuevaReserva').dataset.editId = id; // Guardamos el ID para saber que es edición
+        formulario.dataset.editId = id; // Guardamos el ID para el updateDoc posterior
+        
+        // OPCIONAL: Guarda la fecha original si no quieres que cambie al editar
+        formulario.dataset.fechaReg = r.fechaRegistro;
 
-        // 3. Llenar el formulario con los datos existentes
+        // 3. Llenar el formulario con los datos de 'r'
         document.getElementById("resHuesped").value = r.huesped || "";
         document.getElementById("resDoc").value = r.doc || "";
         document.getElementById("resTelefono").value = r.telefono || "";
@@ -556,15 +602,16 @@ window.editarReserva = async (id) => {
         document.getElementById("resRecepcion").value = r.recibidoPor || "";
         document.getElementById("resRecepcionconfi").value = r.confirmadoPor || "";
 
-        // 4. Abrir el modal
-        Swal.close(); // Cerramos el SweetAlert de gestión antes de abrir el modal
+        // 4. Abrir el modal y cerrar el SweetAlert previo
+        Swal.close(); 
         document.getElementById('modalReserva').classList.add('active');
 
     } catch (error) {
         console.error("Error al cargar datos para editar:", error);
-        Swal.fire('Error', 'No se pudieron cargar los datos de la reserva', 'error');
+        Swal.fire('Error', 'Error crítico al abrir edición', 'error');
     }
 };
+
 window.hacerCheckIn = async (id) => {
     const { isConfirmed } = await Swal.fire({
         title: '¿Confirmar Check-In?',
@@ -596,4 +643,4 @@ window.hacerCheckOut = async (id) => {
         } catch (e) { Swal.fire('Error', 'No se pudo completar', 'error'); }
     }
 };
-
+})

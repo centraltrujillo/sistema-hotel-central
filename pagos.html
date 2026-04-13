@@ -199,9 +199,12 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (
         const consSnap = await getDocs(qConsumos);
         
         let sumaExtras = 0;
-        consSnap.forEach(c => {
-            sumaExtras += parseFloat(c.precioTotal || 0);
-        });
+consSnap.forEach(c => {
+    const data = c.data();
+    // Forzamos a que sea número, por si Firebase lo devuelve como string o int64
+    const pTotal = parseFloat(data.precioTotal || 0); 
+    sumaExtras += pTotal;
+});
 
         // Actualizamos los datos directamente en el objeto de la reserva
         agrupados[idRes].montoExtras = sumaExtras;
@@ -270,44 +273,46 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (
 /** * MODAL 2: DETALLE DE CONSUMOS (EXTRAS)
  * Muestra la lista de productos comprados con Cantidad, P.Unit y P.Total.
  */
-window.verDetalleExtras = async function(idReserva, totalExtras_obsoleto) {
+ window.verDetalleExtras = async function(idReserva) {
     Swal.fire({ title: 'Cargando consumos...', didOpen: () => Swal.showLoading() });
     try {
         const q = query(collection(db, "consumos"), where("idReserva", "==", idReserva));
         const snap = await getDocs(q);
         
+        let itemsHTML = '';
         let sumaReal = 0;
-        let itemsHTML = snap.docs.map(doc => {
+
+        snap.forEach(doc => {
             const c = doc.data();
-            const cant = parseInt(c.cantidad || 1);
+            const cant = c.cantidad || 1;
+            const pUnit = parseFloat(c.precioUnitario || 0);
             const pTotal = parseFloat(c.precioTotal || 0);
-            const pUnit = pTotal / cant;
             sumaReal += pTotal;
 
-            return `
-                <div style="margin-bottom:15px; font-size: 16px;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>${cant}x ${c.descripcion}</span>
-                        <span style="font-weight:bold;">S/ ${pTotal.toFixed(2)}</span>
-                    </div>
-                    <div style="font-size:12px; color:#666;">&nbsp;&nbsp;&nbsp;(P. Unit: S/ ${pUnit.toFixed(2)})</div>
+            itemsHTML += `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+                    <span>${cant} x ${c.descripcion}</span>
+                    <span style="font-weight: bold;">S/ ${pTotal.toFixed(2)}</span>
+                </div>
+                <div style="font-size: 11px; color: #666; margin-top: -5px; margin-bottom: 10px;">
+                    (P. Unit: S/ ${pUnit.toFixed(2)})
                 </div>`;
-        }).join('');
-
-        if (sumaReal === 0) return Swal.fire("Sin Consumos", "No se registraron extras.", "info");
+        });
 
         const html = `
-            <div style="text-align:left; padding:10px; font-family:'Courier New';">
-                <div style="text-align:center; font-family:'Playfair Display'; font-size:24px; color:#5d4037; border-bottom:3px dashed #000; margin-bottom:20px; padding-bottom:15px;">TICKET CONSUMOS</div>
-                ${itemsHTML}
-                <div style="margin-top:25px; border-top:3px solid #000; padding-top:15px;">
-                    <div style="display:flex; justify-content:space-between; font-size:26px; font-weight:bold; color:#5d4037;">
-                        <span>TOTAL</span><span>S/ ${sumaReal.toFixed(2)}</span>
-                    </div>
+            <div style="text-align: left; padding: 10px; font-family: 'Courier New', monospace;">
+                <h3 style="text-align: center; color: var(--marron-zocalo); border-bottom: 2px dashed #000; padding-bottom: 10px;">DETALLE DE EXTRAS</h3>
+                ${itemsHTML || '<p style="text-align:center;">Sin consumos registrados</p>'}
+                <div style="border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+                    <span>TOTAL EXTRAS</span>
+                    <span>S/ ${sumaReal.toFixed(2)}</span>
                 </div>
             </div>`;
-        Swal.fire({ html, width: '550px', confirmButtonColor: '#5d4037' });
-    } catch (e) { Swal.fire("Error", "Error al cargar consumos", "error"); }
+
+        Swal.fire({ html, width: '450px', confirmButtonColor: '#800020' });
+    } catch (e) {
+        Swal.fire("Error", "No se pudo cargar el detalle", "error");
+    }
 };
 
 /** * MODAL 3: ESTADO DE CUENTA FINAL (Versión Corregida)
