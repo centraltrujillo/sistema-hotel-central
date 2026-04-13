@@ -354,8 +354,6 @@ locale: 'es',
                     
                     <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
                         <button onclick="window.editarReserva('${idReserva}')" style="background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-edit"></i> EDITAR</button>
-                        <button onclick="window.hacerCheckIn('${idReserva}')" style="background: #16a34a; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-key"></i> CHECK-IN</button>
-                        <button onclick="window.hacerCheckOut('${idReserva}')" style="background: #6e0d25; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-sign-out-alt"></i> CHECK-OUT</button>
                     </div>
                 `,
                 showConfirmButton: false,
