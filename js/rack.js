@@ -3,6 +3,8 @@ import {
     collection, getDocs, onSnapshot, doc, updateDoc, query, where, addDoc, increment, setDoc 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+let calendar;
+
 document.addEventListener('DOMContentLoaded', async () => {
     const calendarEl = document.getElementById('gantt_here');
     
@@ -193,17 +195,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById("resHabitacion").addEventListener("change", verificarDisponibilidadRealTime);
 
 
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'resourceTimelineMonth',
-height: 'parent',            // Se adapta al contenedor sin crear scroll propio
-contentHeight: 'auto',       
-expandRows: true,            
-resourceAreaWidth: '220px',  
-stickyHeaderDates: true,     
-handleWindowResize: true,   
-resourceAreaResizable: true, 
-resourceAreaMinWidth: 150, 
-resourceAreaMaxWidth: 400,
+// 2. INICIALIZA EL CALENDARIO (Sin el 'const' adelante)
+calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'resourceTimelineMonth',
+    height: 'parent',
+    contentHeight: 'auto',
+    expandRows: true,
+    resourceAreaWidth: '220px',
+    stickyHeaderDates: true,
+    handleWindowResize: true,
+    resourceOrder: 'index',
 
 
 locale: 'es', 
@@ -279,7 +280,6 @@ locale: 'es',
                     <div class="modal-header-gestion" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0; border-bottom: 2px solid #D4AF37;">
                         <div style="text-align: left;">
                             <span style="background: #6e0d25; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 800;">HABITACIÓN ${r.habitacion}</span>
-                            <br><small style="color: #64748b; font-size: 12px; text-transform: uppercase;">${r.tipoHab || 'Estándar'}</small>
                         </div>
                         <div style="background: #16a34a; color: white; padding: 4px 15px; border-radius: 8px; font-size: 12px; font-weight: bold;">${(r.estado || 'RESERVADA').toUpperCase()}</div>
                     </div>`,
