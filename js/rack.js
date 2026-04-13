@@ -261,6 +261,18 @@ locale: 'es',
         eventClick: function(info) {
             const r = info.event.extendedProps; 
             const idReserva = info.event.id;
+
+            // --- 1. DEFINICIÓN DE COLORES POR ESTADO ---
+    const estadoLimpio = (r.estado || 'reservada').toLowerCase();
+    
+    const configEstados = {
+        'reservada': { bg: '#16a34a', text: '#ffffff', border: 'none' },    // VERDE
+        'checkin':   { bg: '#D4AF37', text: '#ffffff', border: 'none' },    // DORADO (Ocre/Oro)
+        'checkout':  { bg: '#ffffff', text: '#6e0d25', border: '1px solid #cbd5e1' } // BLANCO con texto Vino y borde
+    };
+
+    // Obtenemos la configuración según el estado actual (si no existe, usa reservada por defecto)
+    const estilo = configEstados[estadoLimpio] || configEstados['reservada'];
         
             Swal.fire({
                 title: `
@@ -476,54 +488,59 @@ locale: 'es',
                     }
                 }
     
-                // 3. LATE CHECK-OUT (FILA EXTRA 1)
-                if (data.lateCheckOut && data.lateCheckOut !== "Normal" && !esDayUse) {
-                    const horaLate = data.lateCheckOut.includes(':') ? data.lateCheckOut : "15:00";
-                    eventosFinales.push({
-                        id: idReserva + '_late',
-                        resourceId: 'extra1', 
-                        title: `LATE ${data.habitacion} (${horaLate})`,
-                        start: `${data.checkOut}T${horaLate}:00`, 
-                        end: `${data.checkOut}T23:59:00`,
-                        backgroundColor: '#d9f99d',
-                        textColor: '#166534',
-                        extendedProps: { ...data, esExtra: true }
-                    });
-                    sumarAlTotal(data.checkOut); // Se cuenta como ocupación adicional
-                }
+// --- DENTRO DE snapshot.docs.forEach(doc => { ... }) ---
+
+// 3. LATE CHECK-OUT (Mismo día de la salida)
+if (data.lateCheckOut && data.lateCheckOut !== "Normal" && !esDayUse) {
+    const horaLate = data.lateCheckOut.includes(':') ? data.lateCheckOut : "15:00";
+    eventosFinales.push({
+        id: idReserva + '_late',
+        resourceId: 'extra1', 
+        title: `LATE H-${data.habitacion} (${horaLate})`,
+        // Inicia y termina el MISMO día del checkOut
+        start: `${data.checkOut}T12:00:00`, 
+        end: `${data.checkOut}T${horaLate}:00`,
+        backgroundColor: '#d9f99d',
+        textColor: '#166534',
+        allDay: false, // Obligatorio para que respete las horas
+        extendedProps: { ...data, esExtra: true }
+    });
+    // Ya lo estás sumando al total correctamente abajo
+}
+
+// 4. EARLY CHECK-IN (Mismo día de la entrada)
+if (data.earlyCheckIn && data.earlyCheckIn !== "Normal" && !esDayUse) {
+    const horaEarly = data.earlyCheckIn.includes(':') ? data.earlyCheckIn : "08:00";
+    eventosFinales.push({
+        id: idReserva + '_early',
+        resourceId: 'extra2', 
+        title: `EARLY H-${data.habitacion} (${horaEarly})`,
+        // Inicia y termina el MISMO día del checkIn
+        start: `${data.checkIn}T${horaEarly}:00`, 
+        end: `${data.checkIn}T13:00:00`,
+        backgroundColor: '#bae6fd',
+        textColor: '#0369a1',
+        allDay: false, 
+        extendedProps: { ...data, esExtra: true }
+    });
+}
     
-                // 4. EARLY CHECK-IN (FILA EXTRA 2)
-                if (data.earlyCheckIn && data.earlyCheckIn !== "Normal" && !esDayUse) {
-                    const horaEarly = data.earlyCheckIn.includes(':') ? data.earlyCheckIn : "08:00";
-                    eventosFinales.push({
-                        id: idReserva + '_early',
-                        resourceId: 'extra2', 
-                        title: `EARLY ${data.habitacion} (${horaEarly})`,
-                        start: `${data.checkIn}T${horaEarly}:00`, 
-                        end: `${data.checkIn}T12:00:00`,
-                        backgroundColor: '#bae6fd',
-                        textColor: '#0369a1',
-                        extendedProps: { ...data, esExtra: true }
-                    });
-                    sumarAlTotal(data.checkIn); // Se cuenta como ocupación adicional
-                }
-    
-                // 5. DAY USE (FILA EXTRA 3)
-                if (esDayUse) {
-                    const hEntrada = data.earlyCheckIn || "09:00";
-                    const hSalida = data.lateCheckOut || "18:00";
-                    eventosFinales.push({
-                        id: idReserva + '_dayuse',
-                        resourceId: 'extra3', 
-                        title: `DAY USE ${data.habitacion} (${hEntrada}-${hSalida})`,
-                        start: `${data.checkIn}T${hEntrada}:00`,
-                        end: `${data.checkIn}T${hSalida}:00`,
-                        backgroundColor: '#fef3c7',
-                        textColor: '#92400e',
-                        extendedProps: { ...data, esExtra: true }
-                    });
-                    // Nota: El conteo de Day Use ya se hizo arriba en la lógica de estancia
-                }
+// 5. DAY USE (Fila Extra 3)
+if (esDayUse) {
+    const hEntrada = data.earlyCheckIn || "09:00";
+    const hSalida = data.lateCheckOut || "18:00";
+    eventosFinales.push({
+        id: idReserva + '_dayuse',
+        resourceId: 'extra3', 
+        title: `DAY USE H-${data.habitacion} (${hEntrada}-${hSalida})`,
+        start: `${data.checkIn}T${hEntrada}:00`,
+        end: `${data.checkIn}T${hSalida}:00`,
+        backgroundColor: '#fef3c7',
+        textColor: '#92400e',
+        allDay: false,
+        extendedProps: { ...data, esExtra: true }
+    });
+}
             });
     
             // 6. GENERAR LOS BLOQUES DE "TOTAL OCUPADO" EN LA FILA INFERIOR
@@ -631,34 +648,61 @@ window.editarReserva = async (id) => {
 });
 
 window.hacerCheckIn = async (id) => {
+    const reservaSnap = await getDocs(query(collection(db, "reservas"))); // O busca el doc específico
+    // Necesitamos el número de habitación de esta reserva para actualizar el otro módulo
+    const reservaData = (calendar.getEventById(id)).extendedProps;
+    const numHab = reservaData.habitacion;
+
     const { isConfirmed } = await Swal.fire({
         title: '¿Confirmar Check-In?',
-        text: "La reserva pasará a estado OCUPADA",
+        text: `La habitación ${numHab} pasará a estado OCUPADA`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#16a34a'
     });
+
     if (isConfirmed) {
         try {
+            // 1. Actualiza la reserva
             await updateDoc(doc(db, "reservas", id), { estado: "checkin" });
+            
+            // 2. Actualiza la habitación (Para que el módulo de cuadritos cambie a rojo)
+            // Asumiendo que tus docs en 'habitaciones' tienen el ID igual al número (ej: "101")
+            await updateDoc(doc(db, "habitaciones", numHab.toString()), { 
+                estadoDoc: "checkin" 
+            });
+
             Swal.fire('¡Éxito!', 'Check-In registrado.', 'success');
-        } catch (e) { Swal.fire('Error', 'No se pudo actualizar', 'error'); }
+        } catch (e) { 
+            console.error(e);
+            Swal.fire('Error', 'No se pudo actualizar', 'error'); 
+        }
     }
 };
 
 window.hacerCheckOut = async (id) => {
+    const reservaData = (calendar.getEventById(id)).extendedProps;
+    const numHab = reservaData.habitacion;
+
     const { isConfirmed } = await Swal.fire({
         title: '¿Confirmar Check-Out?',
-        text: "La habitación quedará libre",
+        text: "La habitación pasará a limpieza",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#6e0d25'
     });
+
     if (isConfirmed) {
         try {
+            // 1. Actualiza la reserva
             await updateDoc(doc(db, "reservas", id), { estado: "checkout" });
+            
+            // 2. Actualiza la habitación a "sucio" o "disponible"
+            await updateDoc(doc(db, "habitaciones", numHab.toString()), { 
+                estadoDoc: "checkout" 
+            });
+
             Swal.fire('¡Éxito!', 'Check-Out registrado.', 'success');
         } catch (e) { Swal.fire('Error', 'No se pudo completar', 'error'); }
     }
 };
-
