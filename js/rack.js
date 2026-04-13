@@ -612,6 +612,22 @@ window.editarReserva = async (id) => {
     }
 };
 
+// --- EL "MOTOR" QUE ENCIENDE TODO ---
+// Estas líneas deben ir al final, justo antes de cerrar el DOMContentLoaded
+
+    calendar.render(); // 1. Dibuja el calendario vacío en el HTML
+    
+    // 2. Ejecuta las funciones que traen la data de Firebase
+    try {
+        await cargarHabitaciones(); // Carga las filas (Habitaciones + Extras + Total)
+        escucharReservas();        // Empieza a escuchar los eventos en tiempo real
+        console.log("Rack inicializado correctamente");
+    } catch (err) {
+        console.error("Error al inicializar el Rack:", err);
+    }
+
+});
+
 window.hacerCheckIn = async (id) => {
     const { isConfirmed } = await Swal.fire({
         title: '¿Confirmar Check-In?',
@@ -643,4 +659,4 @@ window.hacerCheckOut = async (id) => {
         } catch (e) { Swal.fire('Error', 'No se pudo completar', 'error'); }
     }
 };
-})
+
