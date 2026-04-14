@@ -133,8 +133,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 medio: document.getElementById("resMedio").value,
                 personas: parseInt(document.getElementById("resPersonas").value) || 1,
                 desayuno: document.getElementById("resInfo").value,
-                earlyCheckIn: document.getElementById("resEarly").value,
-                lateCheckOut: document.getElementById("resLate").value,
+                early: document.getElementById("resEarly").value,
+                late: document.getElementById("resLate").value,
                 cochera: document.getElementById("resCochera").value,
                 traslado: document.getElementById("resTraslado").value,
                 tarifa: Number(inputTarifa.value) || 0,
@@ -145,8 +145,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 adelantoDetalle: document.getElementById("resAdelantoDetalle").value,
                 diferencia: Number(inputDiferencia.value) || 0,
                 observaciones: document.getElementById("resObservaciones").value,
-                recibidoPor: document.getElementById("resRecepcion").value,
-                confirmadoPor: document.getElementById("resRecepcionconfi").value,
+                recepcion: document.getElementById("resRecepcion").value,
+                recepcionconfi: document.getElementById("resRecepcionconfi").value,
                 estado: "reservada",
                 fechaRegistro: editId ? (formulario.dataset.fechaReg || new Date().toISOString()) : new Date().toISOString()
             };
@@ -205,6 +205,8 @@ calendar = new FullCalendar.Calendar(calendarEl, {
     stickyHeaderDates: true,
     handleWindowResize: true,
     resourceOrder: 'index',
+    eventOverlap: false, // Evita que un evento se dibuje encima de otro
+    eventDisplay: 'block', // Fuerza a que ocupen su propio bloque
 
 
 locale: 'es', 
@@ -308,12 +310,16 @@ locale: 'es',
                             <div>
                                 <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-In</label>
                                 <p style="margin: 5px 0; font-weight: 700;">${r.checkIn}</p>
-                                <small style="color: #64748b;">Hora: ${r.early || 'Normal'}</small>
+                                <small style="color: ${r.early && r.early !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.early && r.early !== 'Normal' ? '800' : '400'};">
+                                Hora: ${r.early || 'Normal'}
+                            </small>
                             </div>
                             <div>
                                 <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-Out</label>
                                 <p style="margin: 5px 0; font-weight: 700; color: #800020;">${r.checkOut}</p>
-                                <small style="color: #64748b;">Hora: ${r.late || 'Normal'}</small>
+                                <small style="color: ${r.late && r.late !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.late && r.late !== 'Normal' ? '800' : '400'};">
+                                Hora: ${r.late || 'Normal'}
+                            </small>
                             </div>
                             <div>
                                 <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Pax & Cochera</label>
@@ -486,34 +492,29 @@ locale: 'es',
                     }
                 }
     
-// --- DENTRO DE snapshot.docs.forEach(doc => { ... }) ---
-
-// 3. LATE CHECK-OUT (Mismo día de la salida)
-if (data.lateCheckOut && data.lateCheckOut !== "Normal" && !esDayUse) {
-    const horaLate = data.lateCheckOut.includes(':') ? data.lateCheckOut : "15:00";
+// 3. LATE CHECK-OUT (Cambiado de lateCheckOut a late)
+if (data.late && data.late !== "Normal" && !esDayUse) {
+    const horaLate = data.late.includes(':') ? data.late : "15:00";
     eventosFinales.push({
         id: idReserva + '_late',
         resourceId: 'extra1', 
         title: `LATE H-${data.habitacion} (${horaLate})`,
-        // Inicia y termina el MISMO día del checkOut
         start: `${data.checkOut}T12:00:00`, 
         end: `${data.checkOut}T${horaLate}:00`,
         backgroundColor: '#d9f99d',
         textColor: '#166534',
-        allDay: false, // Obligatorio para que respete las horas
+        allDay: false, 
         extendedProps: { ...data, esExtra: true }
     });
-    // Ya lo estás sumando al total correctamente abajo
 }
 
-// 4. EARLY CHECK-IN (Mismo día de la entrada)
-if (data.earlyCheckIn && data.earlyCheckIn !== "Normal" && !esDayUse) {
-    const horaEarly = data.earlyCheckIn.includes(':') ? data.earlyCheckIn : "08:00";
+// 4. EARLY CHECK-IN (Cambiado de earlyCheckIn a early)
+if (data.early && data.early !== "Normal" && !esDayUse) {
+    const horaEarly = data.early.includes(':') ? data.early : "08:00";
     eventosFinales.push({
         id: idReserva + '_early',
         resourceId: 'extra2', 
         title: `EARLY H-${data.habitacion} (${horaEarly})`,
-        // Inicia y termina el MISMO día del checkIn
         start: `${data.checkIn}T${horaEarly}:00`, 
         end: `${data.checkIn}T13:00:00`,
         backgroundColor: '#bae6fd',
@@ -523,10 +524,11 @@ if (data.earlyCheckIn && data.earlyCheckIn !== "Normal" && !esDayUse) {
     });
 }
     
-// 5. DAY USE (Fila Extra 3)
+// 5. DAY USE 
 if (esDayUse) {
-    const hEntrada = data.earlyCheckIn || "09:00";
-    const hSalida = data.lateCheckOut || "18:00";
+    const hEntrada = (data.early && data.early !== "Normal") ? data.early : "09:00";
+    const hSalida = (data.late && data.late !== "Normal") ? data.late : "18:00";
+    
     eventosFinales.push({
         id: idReserva + '_dayuse',
         resourceId: 'extra3', 
@@ -573,7 +575,6 @@ window.cerrarModal = () => { document.getElementById('modalReserva').classList.r
 
 window.editarReserva = async (id) => {
     try {
-        // 1. Buscamos la reserva directamente en el calendario (ya está en memoria)
         const reserva = calendar.getEventById(id);
         
         if (!reserva) {
@@ -581,17 +582,13 @@ window.editarReserva = async (id) => {
             return;
         }
 
-        const r = reserva.extendedProps; // Aquí están todos tus datos de Firestore
-
-        // 2. Preparar el formulario
+        const r = reserva.extendedProps;
         const formulario = document.getElementById('formNuevaReserva');
         document.getElementById('modalTitle').innerText = "Editar Reserva";
-        formulario.dataset.editId = id; // Guardamos el ID para el updateDoc posterior
-        
-        // OPCIONAL: Guarda la fecha original si no quieres que cambie al editar
+        formulario.dataset.editId = id; 
         formulario.dataset.fechaReg = r.fechaRegistro;
 
-        // 3. Llenar el formulario con los datos de 'r'
+        // --- LLENADO DE DATOS ---
         document.getElementById("resHuesped").value = r.huesped || "";
         document.getElementById("resDoc").value = r.doc || "";
         document.getElementById("resTelefono").value = r.telefono || "";
@@ -604,8 +601,10 @@ window.editarReserva = async (id) => {
         document.getElementById("resMedio").value = r.medio || "";
         document.getElementById("resPersonas").value = r.personas || 1;
         document.getElementById("resInfo").value = r.desayuno || "SIN DESAYUNO";
-        document.getElementById("resEarly").value = r.earlyCheckIn || "";
-        document.getElementById("resLate").value = r.lateCheckOut || "";
+
+        document.getElementById("resEarly").value = r.early || ""; 
+        document.getElementById("resLate").value = r.late || "";   
+        
         document.getElementById("resCochera").value = r.cochera || "";
         document.getElementById("resTraslado").value = r.traslado || "";
         document.getElementById("resTarifa").value = r.tarifa || 0;
@@ -616,10 +615,10 @@ window.editarReserva = async (id) => {
         document.getElementById("resAdelantoDetalle").value = r.adelantoDetalle || "";
         document.getElementById("resDiferencia").value = r.diferencia || 0;
         document.getElementById("resObservaciones").value = r.observaciones || "";
-        document.getElementById("resRecepcion").value = r.recibidoPor || "";
-        document.getElementById("resRecepcionconfi").value = r.confirmadoPor || "";
+        
+        document.getElementById("resRecepcion").value = r.recepcion || "";
+        document.getElementById("resRecepcionconfi").value = r.recepcionconfi || "";
 
-        // 4. Abrir el modal y cerrar el SweetAlert previo
         Swal.close(); 
         document.getElementById('modalReserva').classList.add('active');
 

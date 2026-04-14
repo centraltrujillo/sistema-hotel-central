@@ -379,8 +379,8 @@ const calcularMontosRack = () => {
                 adelantoDetalle: metodoPago,
                 diferencia: parseFloat(document.getElementById('resDiferencia').value) || 0,
                 observaciones: document.getElementById('resObservaciones').value,
-                recibidoPor: document.getElementById('resRecepcion').value,
-                confirmadoPor: document.getElementById('resRecepcionconfi').value,
+                recepcion: document.getElementById("resRecepcion").value, 
+                recepcionconfi: document.getElementById("resRecepcionconfi").value,
                 estado: "checkin",
                 fechaRegistro: new Date().toISOString(),
                 pagos: adelantoMonto > 0 ? [{
@@ -557,11 +557,11 @@ const calcularMontosRack = () => {
                         </div>
                         <div class="ficha-col">
                             <label><i class="fas fa-user-edit"></i> Registrado por:</label>
-                            <p class="val-audit">${r.recibidoPor || 'Sistema'}</p>
+                            <p class="val-audit">${r.recepcion || 'Sistema'}</p>
                         </div>
                         <div class="ficha-col">
                             <label><i class="fas fa-check-double"></i> Confirmado por:</label>
-                            <p class="val-audit">${r.confirmadoPor || '-'}</p>
+                            <p class="val-audit">${r.recepcionconfi || '-'}</p>
                         </div>
                     </div>
                 </div>
@@ -854,7 +854,7 @@ const { value: nuevoAbono } = await Swal.fire({
                     metodoPago: formValues.metodo,
                     fechaPago: new Date().toISOString(),
                     concepto: `Venta Directa: ${formValues.desc}`,
-                    atendidoBy: rData.recibidoPor || "Recepcionista"
+                    atendidoBy: rData.recepcion || "Recepcionista"
                 });
             }
 
@@ -991,7 +991,7 @@ const { value: nuevoAbono } = await Swal.fire({
                 metodoPago: metodoSeleccionado,
                 fechaPago: new Date().toISOString(),
                 concepto: "Liquidación Check-out",
-                atendidoBy: rData.atendidoBy || "Recepcionista"
+                atendidoBy: rData.recepcion || "Recepcionista"
             });
         }
 
@@ -1024,8 +1024,6 @@ const { value: nuevoAbono } = await Swal.fire({
     }
 }
 
-/*IMPRIMIR TICKET CORREGIDO*/
-
 async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodoPago) {
     let nombreAtendido = "RECEPCIONISTA"; 
     try {
@@ -1051,43 +1049,40 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
         return p.length === 3 ? `${p[2]}/${p[1]}` : f;
     };
 
-    // --- LÓGICA DE PRECIOS ---
+    // --- LÓGICA ALINEADA CON MÓDULO PAGOS ---
     const tarifaBase = parseFloat(rData.tarifa || 0);
-    const montoMediaTarifa = tarifaBase / 2; // Calculamos la mitad para Early/Late
-    
-    // El total de alojamiento puro (Noches x Tarifa)
-    const totalAlojamientoPuro = parseFloat(rData.total || 0);
+    const montoMediaTarifa = tarifaBase / 2;
+    const totalRegistradoEnReserva = parseFloat(rData.total || 0); // Este es el total que ya tiene la reserva
 
-    // 1. Construcción de Filas de Hospedaje
-    let filasHospedajeHTML = `
-        <tr>
-            <td>ALOJAMIENTO (${formatF(rData.checkIn)} - ${formatF(rData.checkOut)})</td>
-            <td class="text-right">S/ ${totalAlojamientoPuro.toFixed(2)}</td>
-        </tr>`;
+    let cargosExtraHospedaje = 0;
+    let filasHospedajeHTML = '';
 
-    // Si rData.early tiene un valor (como 8), imprimimos el cargo de media tarifa
-    let costoEarly = 0;
+    // 1. Calculamos cuánto del total es "Extra" para desglosarlo como en el modal de Pagos
+    let htmlEarly = "";
     if (rData.early && rData.early !== "" && rData.early !== 0) {
-        costoEarly = montoMediaTarifa;
-        filasHospedajeHTML += `
-            <tr>
-                <td>(+) EARLY CHECK-IN (${rData.early}:00 HRS)</td>
-                <td class="text-right">S/ ${costoEarly.toFixed(2)}</td>
-            </tr>`;
+        cargosExtraHospedaje += montoMediaTarifa;
+        htmlEarly = `<tr><td>(+) EARLY CHECK-IN (${rData.early}:00)</td><td class="text-right">S/ ${montoMediaTarifa.toFixed(2)}</td></tr>`;
     }
 
-    // Si rData.late tiene un valor (como 18), imprimimos el cargo de media tarifa
-    let costoLate = 0;
+    let htmlLate = "";
     if (rData.late && rData.late !== "" && rData.late !== 0) {
-        costoLate = montoMediaTarifa;
-        filasHospedajeHTML += `
-            <tr>
-                <td>(+) LATE CHECK-OUT (${rData.late}:00 HRS)</td>
-                <td class="text-right">S/ ${costoLate.toFixed(2)}</td>
-            </tr>`;
+        cargosExtraHospedaje += montoMediaTarifa;
+        htmlLate = `<tr><td>(+) LATE CHECK-OUT (${rData.late}:00)</td><td class="text-right">S/ ${montoMediaTarifa.toFixed(2)}</td></tr>`;
     }
 
-    // 2. Conceptos de Consumos
+    // La estancia pura es el total de la reserva menos los cargos que acabamos de identificar
+    const estanciaLimpia = totalRegistradoEnReserva - cargosExtraHospedaje;
+
+    filasHospedajeHTML = `
+        <tr>
+            <td>ESTANCIA (${formatF(rData.checkIn)} - ${formatF(rData.checkOut)})</td>
+            <td class="text-right">S/ ${estanciaLimpia.toFixed(2)}</td>
+        </tr>
+        ${htmlEarly}
+        ${htmlLate}
+    `;
+
+    // 2. Consumos
     let filasConsumos = (consumos || []).map(c => `
         <tr>
             <td>${c.cantidad || 1}x ${c.descripcion}</td>
@@ -1095,13 +1090,11 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
         </tr>
     `).join('');
 
-    // --- CÁLCULO TOTAL FINAL ---
-    // Sumamos: Hospedaje base + Early + Late + Consumos
-    const costoTotalServicios = totalAlojamientoPuro + costoEarly + costoLate + totalConsumos;
+    // --- CÁLCULOS FINALES ---
+    const totalCargosGlobal = totalRegistradoEnReserva + totalConsumos;
     
-    // Lo que ya estaba pagado antes (incluyendo abonos a hospedaje y consumos previos)
-    const abonadoAnteriormente = (parseFloat(rData.adelantoMonto || 0) + parseFloat(rData.adelantoConsumos || 0)) - pagoActual;
-    const totalAbonosSeguro = Math.max(0, abonadoAnteriormente);
+    // El "Abonado Anteriormente" es el total de cargos menos lo que se está pagando ahora mismo
+    const saldoPendienteAntesDeEstePago = totalCargosGlobal - pagoActual;
 
     ventana.document.write(`
         <html>
@@ -1117,7 +1110,6 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
                 td { padding: 2px 0; vertical-align: top; }
                 .bold { font-weight: bold; }
                 .total-final { font-size: 13px; font-weight: bold; border-top: 1px solid #000; }
-                .resumen-table td { font-size: 10px; }
             </style>
         </head>
         <body onload="window.print(); window.close();">
@@ -1126,17 +1118,12 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
                 <span style="font-size: 9px;">RUC: 20601852153</span><br>
                 <span style="font-size: 9px;">Jr. Simón Bolívar 355 - Trujillo</span>
             </div>
-            
             <div class="divider"></div>
-            
             <div>
-                <b>HAB:</b> ${rData.habitacion}<br>
-                <b>HUESPED:</b> ${rData.huesped.toUpperCase()}<br>
-                <b>EMISIÓN:</b> ${fechaEmision}
+                <b>HAB:</b> ${rData.habitacion} | <b>HUESPED:</b> ${rData.huesped.toUpperCase()}<br>
+                <b>FECHA EMISIÓN:</b> ${fechaEmision}
             </div>
-            
             <div class="divider"></div>
-            
             <table>
                 <thead>
                     <tr style="border-bottom: 1px solid #000; font-size: 9px;">
@@ -1149,33 +1136,28 @@ async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodo
                     ${filasConsumos}
                 </tbody>
             </table>
-            
             <div class="divider"></div>
-            
-            <table class="resumen-table">
+            <table>
                 <tr>
-                    <td>SUBTOTAL SERVICIOS</td>
-                    <td class="text-right">S/ ${costoTotalServicios.toFixed(2)}</td>
+                    <td>TOTAL SERVICIOS</td>
+                    <td class="text-right">S/ ${totalCargosGlobal.toFixed(2)}</td>
                 </tr>
                 <tr>
-                    <td>ABONOS REALIZADOS</td>
-                    <td class="text-right">- S/ ${totalAbonosSeguro.toFixed(2)}</td>
+                    <td>ABONOS PREVIOS</td>
+                    <td class="text-right">- S/ ${Math.max(0, saldoPendienteAntesDeEstePago).toFixed(2)}</td>
                 </tr>
                 <tr class="total-final">
-                    <td style="padding-top:5px;">TOTAL CANCELADO</td>
+                    <td style="padding-top:5px;">Monto Pagado</td>
                     <td class="text-right" style="padding-top:5px;">S/ ${pagoActual.toFixed(2)}</td>
                 </tr>
             </table>
-
             <div style="margin-top: 10px; font-size: 9px;">
                 MÉTODO PAGO: <b>${metodoPago.toUpperCase()}</b><br>
                 ATENDIDO POR: ${nombreAtendido}
             </div>
-            
             <div class="divider"></div>
             <div class="text-center" style="font-size: 9px;">
-                *** Gracias por su preferencia ***<br>
-                Siga disfrutando su estancia en Trujillo
+                *** Gracias por su preferencia ***
             </div>
         </body>
         </html>

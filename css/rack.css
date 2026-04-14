@@ -141,7 +141,7 @@ body {
 /* --- 5. RACK (ESTILO EXCEL) --- */
 .gantt-wrapper {
     padding: 0; /* Quita el padding para ganar espacio */
-    background: white;
+    background: rgb(114, 110, 110);
     flex: 1; 
     min-height: 0; /* Permite que el contenedor se encoja si es necesario */
     display: flex;
@@ -253,10 +253,19 @@ body {
     display: none !important;
 }
 
+/* Evita que el texto se amontone y desborde las barras */
+.fc-timeline-event .fc-event-main {
+    padding: 2px 4px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
 /* Estilo de las barras de reserva */
 .fc-timeline-event {
     height: 18px !important;
     margin-top: 2px !important;
+    margin-bottom: 2px !important;
     border-radius: 4px !important;
     padding: 2px 4px !important;
     border: none !important;
