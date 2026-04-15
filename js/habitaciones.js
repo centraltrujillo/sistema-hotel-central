@@ -875,6 +875,7 @@ const { value: nuevoAbono } = await Swal.fire({
         }
     }
 }
+
 /* ==========================================================================
    7. CHECK-OUT (ACTUALIZADO CON LÓGICA DE ABONOS A CONSUMOS)
    ========================================================================== */
@@ -965,35 +966,34 @@ const { value: nuevoAbono } = await Swal.fire({
     try {
         const historialPagosActualizado = [...(rData.pagos || [])];
         
-        // Si hay un saldo que pagar al cierre, lo agregamos al historial
         if (granTotalAPagar > 0) {
             historialPagosActualizado.push({
                 fecha: new Date().toISOString(),
                 monto: granTotalAPagar,
                 metodo: metodoSeleccionado,
-                tipo: "Liquidación", // Para diferenciarlo de abonos previos
+                tipo: "Liquidación",
                 concepto: "Cierre de Cuenta Final"
             });
         }
 
-        // El total final cobrado es la suma de TODO el historial de pagos
         const totalCobradoHistorico = historialPagosActualizado.reduce((acc, p) => acc + (parseFloat(p.monto) || 0), 0);
 
-        // Registro en caja diaria (solo si hubo pago en este momento)
-        if (granTotalAPagar > 0) {
-            await addDoc(collection(db, "pagos"), {
-                idReserva: resId,
-                huesped: rData.huesped,
-                habitacion: hab.numero,
-                montoTotal: granTotalAPagar,
-                montoHospedaje: saldoHospedaje,
-                montoExtras: saldoExtras,
-                metodoPago: metodoSeleccionado,
-                fechaPago: new Date().toISOString(),
-                concepto: "Liquidación Check-out",
-                atendidoBy: rData.recepcion || "Recepcionista"
-            });
-        }
+        // --- CORRECCIÓN AQUÍ: Eliminamos el IF para que registre siempre ---
+        await addDoc(collection(db, "pagos"), {
+            idReserva: resId,
+            huesped: rData.huesped,
+            habitacion: hab.numero,
+            // Guardamos los montos reales (pueden ser 0)
+            montoTotal: Number(granTotalAPagar.toFixed(2)),
+            montoHospedaje: Number(saldoHospedaje.toFixed(2)),
+            montoExtras: Number(saldoExtras.toFixed(2)),
+            // Si el monto es 0, el método es "Cuenta Saldada"
+            metodoPago: granTotalAPagar > 0 ? metodoSeleccionado : "Cuenta Saldada",
+            fechaPago: new Date().toISOString(),
+            concepto: "Liquidación Check-out",
+            atendidoBy: rData.recepcion || "Recepcionista"
+        });
+        // --- FIN DE LA CORRECCIÓN ---
 
         // Impresión
         if (isConfirmed && typeof imprimirTicket === 'function') {

@@ -315,9 +315,7 @@ consSnap.forEach(c => {
     }
 };
 
-/** * MODAL 3: ESTADO DE CUENTA FINAL (Versión Corregida)
- * Muestra el resumen de lo que el cliente consumió y el total que pagó.
- */
+/** * MODAL 3: ESTADO DE CUENTA FINAL  */
  window.verTicketGlobal = async function(idReserva, mHosp, mCons_obsoleto, mTotal_obsoleto) {
     Swal.fire({ title: 'Generando comprobante...', didOpen: () => Swal.showLoading() });
 
@@ -344,7 +342,7 @@ consSnap.forEach(c => {
                 </div>`;
         });
 
-        // 2. Historial de Pagos (Total Abonado)
+        // 2. Historial de Pagos (Total Abonado con Fecha y Hora 24h)
         const qPagos = query(collection(db, "pagos"), where("idReserva", "==", idReserva), orderBy("fechaPago", "asc"));
         const snapPagos = await getDocs(qPagos);
         let htmlPagos = '';
@@ -352,13 +350,23 @@ consSnap.forEach(c => {
         
         snapPagos.forEach(doc => {
             const p = doc.data();
-            const fecha = p.fechaPago?.toDate ? p.fechaPago.toDate().toLocaleDateString('es-PE') : '---';
+            
+            // Lógica para detectar formato de fecha (Firebase Timestamp o String ISO)
+            const fObj = p.fechaPago?.toDate ? p.fechaPago.toDate() : (p.fechaPago ? new Date(p.fechaPago) : null);
+            
+            // Formatear a: DD/MM/AAAA HH:mm (24 horas)
+            const fechaHoraTexto = fObj 
+                ? `${fObj.toLocaleDateString('es-PE')} ${fObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false })}`
+                : '---';
+
             const monto = parseFloat(p.montoTotal || 0);
             totalAbonado += monto;
+
             htmlPagos += `
-                <div style="display:flex; justify-content:space-between; font-size:12px; color:#166534;">
-                    <span>${fecha} - Pago (${p.metodoPago})</span>
-                    <span>S/ ${monto.toFixed(2)}</span>
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#166534; margin-bottom: 4px;">
+                    <span><i class="fa-regular fa-calendar-check" style="font-size:10px;"></i> ${fechaHoraTexto} <br> 
+                          <small style="color:#666; margin-left:14px;">MÉTODO: ${p.metodoPago}</small></span>
+                    <span style="font-weight:bold;">S/ ${monto.toFixed(2)}</span>
                 </div>`;
         });
 
@@ -386,7 +394,7 @@ consSnap.forEach(c => {
                 </div>
 
                 <div style="margin-bottom:15px;">
-                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:5px;">PAGOS REGISTRADOS</div>
+                    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:8px;">HISTORIAL DE PAGOS</div>
                     ${htmlPagos || '<div style="font-size:12px; color:#999;">Sin pagos realizados</div>'}
                 </div>
 
@@ -401,6 +409,7 @@ consSnap.forEach(c => {
 
         Swal.fire({ html, width: '580px', confirmButtonText: 'ENTENDIDO', confirmButtonColor: '#166534' });
     } catch (e) {
+        console.error(e);
         Swal.fire("Error", "Error al generar el estado de cuenta", "error");
     }
 };
