@@ -5,9 +5,16 @@ import {
 
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
+    if (!calendarEl) return; // Seguridad
+
+    // Mostrar fecha actual en el header (Coherencia con tu diseño)
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const dateText = new Date().toLocaleDateString('es-ES', dateOptions);
+    const dateElement = document.getElementById('current-date');
+    if (dateElement) dateElement.textContent = dateText.charAt(0).toUpperCase() + dateText.slice(1);
+
     const eventosRef = collection(db, "eventos");
 
-    // Inicializar FullCalendar
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         locale: 'es',
@@ -17,15 +24,23 @@ document.addEventListener('DOMContentLoaded', function() {
             center: 'title',
             right: 'dayGridMonth,timeGridWeek'
         },
+        // Botones en español
+        buttonText: {
+            today: 'Hoy',
+            month: 'Mes',
+            week: 'Semana',
+            day: 'Día'
+        },
 
-        // --- CREATE: Agregar evento al hacer clic en un día ---
         dateClick: async function(info) {
             const { value: formValues } = await Swal.fire({
                 title: 'Nuevo Evento',
                 html:
                     `<input id="swal-input1" class="swal2-input" placeholder="Nombre del evento">` +
-                    `<input id="swal-input2" type="color" class="swal2-input" value="#800020" title="Color del evento">`, // Por defecto burgundy
+                    `<input id="swal-input2" type="color" class="swal2-input" value="#800020" title="Color del evento">`,
                 showCancelButton: true,
+                confirmButtonColor: '#800020', // Tu color burgundy
+                cancelButtonText: 'Cancelar',
                 confirmButtonText: 'Guardar',
                 preConfirm: () => {
                     const titulo = document.getElementById('swal-input1').value;
@@ -42,31 +57,29 @@ document.addEventListener('DOMContentLoaded', function() {
                         color: formValues[1],
                         createdAt: new Date()
                     });
-                    // No hace falta calendar.addEvent porque onSnapshot lo hará por nosotros
                 } catch (error) {
-                    console.error("Error al guardar:", error);
+                    Swal.fire('Error', 'No se pudo guardar el evento', 'error');
                 }
             }
         },
 
-        // --- DELETE: Eliminar evento al hacer clic en él ---
         eventClick: function(info) {
             Swal.fire({
                 title: '¿Eliminar evento?',
                 text: info.event.title,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#800020',
-                confirmButtonText: 'Sí, eliminar'
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Regresar'
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
-                        // El ID de Firebase está guardado en el id del evento de FullCalendar
-                        const id = info.event.id;
-                        await deleteDoc(doc(db, "eventos", id));
-                        Swal.fire('Eliminado', '', 'success');
+                        await deleteDoc(doc(db, "eventos", info.event.id));
+                        Swal.fire('Eliminado', 'El evento ha sido quitado.', 'success');
                     } catch (error) {
-                        console.error("Error al eliminar:", error);
+                        Swal.fire('Error', 'No se pudo eliminar', 'error');
                     }
                 }
             });
@@ -77,20 +90,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- READ: Escuchar cambios en tiempo real ---
     onSnapshot(query(eventosRef), (snapshot) => {
-        const eventos = [];
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            eventos.push({
-                id: doc.id, // Importante para poder eliminarlo después
-                title: data.title,
-                start: data.start,
-                backgroundColor: data.color,
-                borderColor: data.color,
-                allDay: true
-            });
-        });
+        const eventos = snapshot.docs.map(doc => ({
+            id: doc.id,
+            title: doc.data().title,
+            start: doc.data().start,
+            backgroundColor: doc.data().color,
+            borderColor: doc.data().color,
+            allDay: true
+        }));
 
-        // Limpiar eventos actuales y cargar los nuevos de Firebase
         calendar.removeAllEvents();
         calendar.addEventSource(eventos);
     });
