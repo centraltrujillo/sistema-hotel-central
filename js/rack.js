@@ -277,94 +277,192 @@ locale: 'es',
     // Obtenemos la configuración según el estado actual (si no existe, usa reservada por defecto)
     const estilo = configEstados[estadoLimpio] || configEstados['reservada'];
         
-            Swal.fire({
-                title: `
-                    <div class="modal-header-gestion" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0; border-bottom: 2px solid #D4AF37;">
-                        <div style="text-align: left;">
-                            <span style="background: #6e0d25; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 800;">HABITACIÓN ${r.habitacion}</span>
-                        </div>
-                        <div style="background: #16a34a; color: white; padding: 4px 15px; border-radius: 8px; font-size: 12px; font-weight: bold;">${(r.estado || 'RESERVADA').toUpperCase()}</div>
-                    </div>`,
-                width: '900px',
-                background: '#f8fafc',
-                html: `
-                    <div style="padding: 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-user"></i> Huésped Titular</label>
-                                <p style="margin: 5px 0; font-size: 16px; font-weight: 700; color: #1e293b;">${r.huesped}</p>
-                                <p style="margin: 0; font-size: 12px; color: #64748b;">${r.doc} • ${r.nacionalidad || 'Peruana'}</p>
-                            </div>
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-phone"></i> Contacto</label>
-                                <p style="margin: 5px 0; font-size: 13px;">${r.telefono || '-'}</p>
-                                <p style="margin: 0; font-size: 11px; color: #64748b;">${r.correo || 'Sin correo'}</p>
-                            </div>
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-tag"></i> Origen</label>
-                                <p style="margin: 5px 0;"><span style="background: #e2e8f0; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; color: #475569;">${(r.medio || 'Directo').toUpperCase()}</span></p>
-                            </div>
-                        </div>
+// ... dentro de eventClick: function(info) ...
+Swal.fire({
+    title: `
+        <div class="modal-header-gestion" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0; border-bottom: 2px solid #D4AF37;">
+            <div style="text-align: left;">
+                <span style="background: #6e0d25; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 800;">HABITACIÓN ${r.habitacion}</span>
+            </div>
+            <div style="background: #16a34a; color: white; padding: 4px 15px; border-radius: 8px; font-size: 12px; font-weight: bold;">${(r.estado || 'RESERVADA').toUpperCase()}</div>
+        </div>`,
+    width: '900px',
+    background: '#f8fafc',
+    html: `
+        <div style="padding: 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-user"></i> Huésped Titular</label>
+                    <p style="margin: 5px 0; font-size: 16px; font-weight: 700; color: #1e293b;">${r.huesped}</p>
+                    <p style="margin: 0; font-size: 12px; color: #64748b;">${r.doc} • ${r.nacionalidad || 'Peruana'}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-phone"></i> Contacto</label>
+                    <p style="margin: 5px 0; font-size: 13px;">${r.telefono || '-'}</p>
+                    <p style="margin: 0; font-size: 11px; color: #64748b;">${r.correo || 'Sin correo'}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-tag"></i> Origen</label>
+                    <p style="margin: 5px 0;"><span style="background: #e2e8f0; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; color: #475569;">${(r.medio || 'Directo').toUpperCase()}</span></p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-In</label>
+                    <p style="margin: 5px 0; font-weight: 700;">${r.checkIn}</p>
+                    <small style="color: ${r.early && r.early !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.early && r.early !== 'Normal' ? '800' : '400'};">
+                    Hora: ${r.early || 'Normal'}
+                </small>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-Out</label>
+                    <p style="margin: 5px 0; font-weight: 700; color: #800020;">${r.checkOut}</p>
+                    <small style="color: ${r.late && r.late !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.late && r.late !== 'Normal' ? '800' : '400'};">
+                    Hora: ${r.late || 'Normal'}
+                </small>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Pax & Cochera</label>
+                    <p style="margin: 5px 0; font-size: 13px;">${r.personas} Adultos</p>
+                    <small style="color: #64748b;">Cochera: <b>${r.cochera || 'No'}</b></small>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Servicios</label>
+                    <p style="margin: 5px 0; font-size: 13px;">${r.desayuno || 'S/D'}</p>
+                    <small style="color: #64748b;">Traslado: ${r.traslado || 'No'}</small>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; background: #fffbeb; border: 1px dashed #D4AF37; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TARIFA DÍA</label>
+                    <p style="margin: 5px 0; font-weight: 700;">${r.moneda} ${r.tarifa}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TOTAL HOSPEDAJE</label>
+                    <p style="margin: 5px 0; font-weight: 800; font-size: 16px;">S/ ${parseFloat(r.total).toFixed(2)}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #16a34a;">ADELANTOS</label>
+                    <p style="margin: 5px 0; font-weight: 700; color: #16a34a;">- S/ ${parseFloat(r.adelantoMonto || 0).toFixed(2)}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #800020;">SALDO PENDIENTE</label>
+                    <p style="margin: 5px 0; font-weight: 800; font-size: 18px; color: #800020;">S/ ${parseFloat(r.diferencia || 0).toFixed(2)}</p>
+                </div>
+            </div>
+
+            <div style="background: #f1f5f9; padding: 10px; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #475569; margin-bottom: 4px;">
+                    <span><i class="fas fa-comment-dots"></i> <b>Obs:</b> ${r.observaciones || 'Sin notas'}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; pt-5px; margin-top: 5px;">
+                    <span><b>Registrado por:</b> ${r.recepcion || 'Sistema'}</span>
+                    <span><b>Confirmado por:</b> ${r.recepcionconfi || 'Pendiente'}</span>
+                </div>
+            </div>
+        </div>
         
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-In</label>
-                                <p style="margin: 5px 0; font-weight: 700;">${r.checkIn}</p>
-                                <small style="color: ${r.early && r.early !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.early && r.early !== 'Normal' ? '800' : '400'};">
-                                Hora: ${r.early || 'Normal'}
-                            </small>
-                            </div>
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-Out</label>
-                                <p style="margin: 5px 0; font-weight: 700; color: #800020;">${r.checkOut}</p>
-                                <small style="color: ${r.late && r.late !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.late && r.late !== 'Normal' ? '800' : '400'};">
-                                Hora: ${r.late || 'Normal'}
-                            </small>
-                            </div>
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Pax & Cochera</label>
-                                <p style="margin: 5px 0; font-size: 13px;">${r.personas} Adultos</p>
-                                <small style="color: #64748b;">Cochera: <b>${r.cochera || 'No'}</b></small>
-                            </div>
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Servicios</label>
-                                <p style="margin: 5px 0; font-size: 13px;">${r.desayuno || 'S/D'}</p>
-                                <small style="color: #64748b;">Traslado: ${r.traslado || 'No'}</small>
-                            </div>
-                        </div>
+        <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+            <button onclick="window.editarReserva('${idReserva}')" style="background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-edit"></i> EDITAR</button>
+        </div>
+    `,
+    showConfirmButton: false,
+    showCloseButton: true
+});Swal.fire({
+    title: `
+        <div class="modal-header-gestion" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0; border-bottom: 2px solid #D4AF37;">
+            <div style="text-align: left;">
+                <span style="background: #6e0d25; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 800;">HABITACIÓN ${r.habitacion}</span>
+            </div>
+            <div style="background: #16a34a; color: white; padding: 4px 15px; border-radius: 8px; font-size: 12px; font-weight: bold;">${(r.estado || 'RESERVADA').toUpperCase()}</div>
+        </div>`,
+    width: '900px',
+    background: '#f8fafc',
+    html: `
+        <div style="padding: 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-user"></i> Huésped Titular</label>
+                    <p style="margin: 5px 0; font-size: 16px; font-weight: 700; color: #1e293b;">${r.huesped}</p>
+                    <p style="margin: 0; font-size: 12px; color: #64748b;">${r.doc} • ${r.nacionalidad || 'Peruana'}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-phone"></i> Contacto</label>
+                    <p style="margin: 5px 0; font-size: 13px;">${r.telefono || '-'}</p>
+                    <p style="margin: 0; font-size: 11px; color: #64748b;">${r.correo || 'Sin correo'}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-tag"></i> Origen</label>
+                    <p style="margin: 5px 0;"><span style="background: #e2e8f0; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; color: #475569;">${(r.medio || 'Directo').toUpperCase()}</span></p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-In</label>
+                    <p style="margin: 5px 0; font-weight: 700;">${r.checkIn}</p>
+                    <small style="color: ${r.early && r.early !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.early && r.early !== 'Normal' ? '800' : '400'};">
+                    Hora: ${r.early || 'Normal'}
+                </small>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-Out</label>
+                    <p style="margin: 5px 0; font-weight: 700; color: #800020;">${r.checkOut}</p>
+                    <small style="color: ${r.late && r.late !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.late && r.late !== 'Normal' ? '800' : '400'};">
+                    Hora: ${r.late || 'Normal'}
+                </small>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Pax & Cochera</label>
+                    <p style="margin: 5px 0; font-size: 13px;">${r.personas} Adultos</p>
+                    <small style="color: #64748b;">Cochera: <b>${r.cochera || 'No'}</b></small>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Servicios</label>
+                    <p style="margin: 5px 0; font-size: 13px;">${r.desayuno || 'S/D'}</p>
+                    <small style="color: #64748b;">Traslado: ${r.traslado || 'No'}</small>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; background: #fffbeb; border: 1px dashed #D4AF37; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TARIFA DÍA</label>
+                    <p style="margin: 5px 0; font-weight: 700;">${r.moneda} ${r.tarifa}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TOTAL HOSPEDAJE</label>
+                    <p style="margin: 5px 0; font-weight: 800; font-size: 16px;">S/ ${parseFloat(r.total).toFixed(2)}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #16a34a;">ADELANTOS</label>
+                    <p style="margin: 5px 0; font-weight: 700; color: #16a34a;">- S/ ${parseFloat(r.adelantoMonto || 0).toFixed(2)}</p>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #800020;">SALDO PENDIENTE</label>
+                    <p style="margin: 5px 0; font-weight: 800; font-size: 18px; color: #800020;">S/ ${parseFloat(r.diferencia || 0).toFixed(2)}</p>
+                </div>
+            </div>
+
+            <div style="background: #f1f5f9; padding: 10px; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #475569; margin-bottom: 4px;">
+                    <span><i class="fas fa-comment-dots"></i> <b>Obs:</b> ${r.observaciones || 'Sin notas'}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; pt-5px; margin-top: 5px;">
+                    <span><b>Registrado por:</b> ${r.recepcion || 'Sistema'}</span>
+                    <span><b>Confirmado por:</b> ${r.recepcionconfi || 'Pendiente'}</span>
+                </div>
+            </div>
+        </div>
         
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; background: #fffbeb; border: 1px dashed #D4AF37; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #92400e;">TARIFA DÍA</label>
-                                <p style="margin: 5px 0; font-weight: 700;">${r.moneda} ${r.tarifa}</p>
-                            </div>
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #92400e;">TOTAL HOSPEDAJE</label>
-                                <p style="margin: 5px 0; font-weight: 800; font-size: 16px;">S/ ${parseFloat(r.total).toFixed(2)}</p>
-                            </div>
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #16a34a;">ADELANTOS</label>
-                                <p style="margin: 5px 0; font-weight: 700; color: #16a34a;">- S/ ${parseFloat(r.adelantoMonto || 0).toFixed(2)}</p>
-                            </div>
-                            <div>
-                                <label style="font-size: 10px; font-weight: 800; color: #800020;">SALDO PENDIENTE</label>
-                                <p style="margin: 5px 0; font-weight: 800; font-size: 18px; color: #800020;">S/ ${parseFloat(r.diferencia || 0).toFixed(2)}</p>
-                            </div>
-                        </div>
-        
-                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; padding: 0 10px;">
-                            <span><b>Obs:</b> ${r.observaciones || 'Sin notas'}</span>
-                            <span><b>Registrado por:</b> ${r.recibidoPor || 'Sistema'}</span>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
-                        <button onclick="window.editarReserva('${idReserva}')" style="background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-edit"></i> EDITAR</button>
-                    </div>
-                `,
-                showConfirmButton: false,
-                showCloseButton: true
-            });
+        <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+            <button onclick="window.editarReserva('${idReserva}')" style="background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-edit"></i> EDITAR</button>
+        </div>
+    `,
+    showConfirmButton: false,
+    showCloseButton: true
+});
         },
 
         resourceLabelContent: function(arg) {
