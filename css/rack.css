@@ -29,6 +29,7 @@ body {
 }
 
 /* --- 2. HEADER: IZQUIERDA (Títulos y Volver) --- */
+/* Modifica tu regla .header-flex para que actúe como escudo */
 .header-flex {
     display: flex;
     justify-content: space-between; 
@@ -38,6 +39,10 @@ body {
     padding-bottom: 15px;
     margin-bottom: 20px;
     flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    background-color: var(--blanco-colonial); /* Evita que el calendario se vea por debajo */
+    z-index: 1000; /* Suficiente para tapar las flechas de FullCalendar */
 }
 
 .header-left {
@@ -138,6 +143,16 @@ body {
 .gmail   { background-color: #ea4335; }
 .dayuse  { background-color: #db2777; }
 
+/* Añade esto al final de tu archivo CSS */
+.fc-header-toolbar {
+    position: relative;
+    z-index: 10 !important; /* Mucho menor que el 1000 del header */
+}
+
+/* También para los botones específicos de Mes/Día y Hoy */
+.fc-button {
+    z-index: 5 !important;
+}
 /* --- 5. RACK (ESTILO EXCEL) --- */
 .gantt-wrapper {
     padding: 0; /* Quita el padding para ganar espacio */
