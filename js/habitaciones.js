@@ -42,7 +42,6 @@ let unsubHabs = null;
 
 // --- 2. CARGAR TABLERO EN TIEMPO REAL ---
 function cargarHabitaciones() {
-    // Si ya existe un listener activo, no creamos otro.
     if (unsubHabs) {
         console.log("El listener ya está activo, ignorando llamada duplicada.");
         return; 
@@ -53,17 +52,24 @@ function cargarHabitaciones() {
 
     console.log("Iniciando conexión en tiempo real con Rack de Habitaciones...");
 
-    // Guardamos la función de desuscripción en la variable global
     unsubHabs = onSnapshot(qHabs, async (snapshot) => {
-        // --- OPTIMIZACIÓN: Buscamos reservas ANTES de limpiar el HTML ---
+        // --- 1. BUSCAMOS RESERVAS DE HOY PARA DETECTAR EARLY CHECK-INS ---
         const qRes = query(collection(db, "reservas"), 
                      where("checkIn", "==", hoy), 
                      where("estado", "==", "reservada"));
         
         const snapRes = await getDocs(qRes);
-        const listaReservasHoy = snapRes.docs.map(d => String(d.data().habitacion));
+        
+        // Creamos un mapa de reservas para acceso rápido por número de habitación
+        const reservasMapa = {};
+        snapRes.docs.forEach(d => {
+            const data = d.data();
+            reservasMapa[String(data.habitacion)] = {
+                huesped: data.huesped,
+                early: data.early || ""
+            };
+        });
 
-        // Ahora sí, limpiamos y dibujamos (evita parpadeos en blanco largos)
         habGrid.innerHTML = '';
         let stats = { libres: 0, ocupadas: 0 };
 
@@ -75,9 +81,38 @@ function cargarHabitaciones() {
             if (est === "Libre" || est === "Disponible") stats.libres++;
             else if (est === "Ocupada") stats.ocupadas++;
 
-            const tieneReservaHoy = listaReservasHoy.includes(String(hab.numero));
-            const iconoDinamico = obtenerIconoSegunOcupacion(est, nPers);
+            // --- 2. LÓGICA DE AVISOS DINÁMICOS (Early / Late / Reserva) ---
+            let htmlAvisos = '';
+            const infoReserva = reservasMapa[String(hab.numero)];
 
+            if (est === "Ocupada") {
+                // Si está ocupada, revisamos si tiene Late Checkout guardado en el doc de la Habitación
+                if (hab.lateCheckOut) {
+                    htmlAvisos = `
+                        <div class="tag-rack late" style="background: #fff3e0; color: #e65100; font-size: 10px; font-weight: 800; padding: 2px 4px; border-radius: 4px; margin-top: 4px; border: 1px solid #ffcc80; display: inline-block;">
+                            <i class="fa-regular fa-clock"></i> LATE: ${hab.lateCheckOut}
+                        </div>`;
+                }
+            } else {
+                // Si está libre/disponible, revisamos si tiene una reserva para hoy
+                if (infoReserva) {
+                    if (infoReserva.early) {
+                        // AVISO DE EARLY (Prioridad alta)
+                        htmlAvisos = `
+                            <div class="tag-rack early" style="background: #e8f5e9; color: #2e7d32; font-size: 10px; font-weight: 800; padding: 2px 4px; border-radius: 4px; margin-top: 4px; border: 1px solid #a5d6a7; display: inline-block;">
+                                <i class="fa-solid fa-bolt"></i> EARLY: ${infoReserva.early}
+                            </div>`;
+                    } else {
+                        // AVISO DE RESERVA NORMAL
+                        htmlAvisos = `
+                            <div class="tag-rack reserva" style="color: #800020; font-size: 10px; font-weight: 800; margin-top: 5px;">
+                                ⚠️ RESERVA HOY
+                            </div>`;
+                    }
+                }
+            }
+
+            const iconoDinamico = obtenerIconoSegunOcupacion(est, nPers);
             const card = document.createElement('div');
             card.className = `hab-card ${est.toLowerCase()}`;
             
@@ -92,9 +127,7 @@ function cargarHabitaciones() {
                     </div>
                     <div class="hab-footer-info">
                         <span class="hab-badge">${est.toUpperCase()}</span>
-                        ${tieneReservaHoy && (est === "Libre" || est === "Disponible") 
-                            ? '<div class="reserva-hoy-tag" style="color: #800020; font-size: 10px; font-weight: 800; margin-top: 5px;">⚠️ RESERVA HOY</div>' 
-                            : ''}
+                        ${htmlAvisos}
                     </div>
                 </div>`;
 
@@ -176,7 +209,8 @@ async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
         await updateDoc(doc(db, "habitaciones", hab.id), { 
             estado: "Ocupada",
             personasActuales: parseInt(dataReserva.personas) || 1,
-            reservaActualId: resId // Guardamos el ID para acceder rápido a consumos
+            reservaActualId: resId, // Guardamos el ID para acceder rápido a consumos
+            lateCheckOut: dataReserva.late || ""
         });
 
         Swal.fire({ icon: 'success', title: 'Huésped en Habitación', showConfirmButton: false, timer: 1500 });
@@ -397,7 +431,8 @@ const calcularMontosRack = () => {
             await updateDoc(doc(db, "habitaciones", hab.id), { 
                 estado: "Ocupada",
                 personasActuales: nPers,
-                reservaActualId: docRef.id 
+                reservaActualId: docRef.id,
+                lateCheckOut: reservaData.late || ""
             });
 
             await setDoc(doc(db, "huespedes", reservaData.doc), {
@@ -1013,7 +1048,8 @@ const { value: nuevoAbono } = await Swal.fire({
         await updateDoc(doc(db, "habitaciones", hab.id), { 
             estado: "Libre", 
             personasActuales: 0,
-            reservaActualId: "" 
+            reservaActualId: "",
+            lateCheckOut: "" // Limpiar para que el aviso desaparezca
         });
 
         Swal.fire({ icon: 'success', title: 'Check-out Exitoso', timer: 2000, showConfirmButton: false });
