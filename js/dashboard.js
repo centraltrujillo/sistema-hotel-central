@@ -59,6 +59,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // --- 2. INICIALIZACIÓN DE GRÁFICOS ---
+// --- 2. INICIALIZACIÓN DE GRÁFICOS ---
 function inicializarGraficos() {
     const elSemanal = document.querySelector("#chart-line");
     const elMensual = document.querySelector("#chart-bar"); 
@@ -69,6 +70,14 @@ function inicializarGraficos() {
             chart: { type: 'area', height: 250, toolbar: { show: false }, zoom: { enabled: false } },
             series: [{ name: 'Ingresos S/', data: [0, 0, 0, 0, 0, 0, 0] }],
             xaxis: { categories: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'] },
+            // --- CORRECCIÓN AQUÍ: Configuración del eje Y ---
+            yaxis: {
+                labels: {
+                    formatter: (value) => `S/ ${value.toFixed(0)}`
+                },
+                min: 0,
+                forceNiceScale: true // Esto obliga a que los números sean "limpios" (100, 200, etc)
+            },
             colors: ['#800020'], 
             stroke: { curve: 'smooth', width: 3 },
             fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [20, 100] } },
@@ -81,13 +90,25 @@ function inicializarGraficos() {
     if (elMensual) {
         chartMensual = new ApexCharts(elMensual, {
             chart: { type: 'bar', height: 250, toolbar: { show: false } },
-            plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
+            plotOptions: { bar: { borderRadius: 4, columnWidth: '60%', dataLabels: { position: 'top' } } },
+            // --- CORRECCIÓN AQUÍ: Configuración del eje Y ---
+            yaxis: {
+                labels: {
+                    formatter: (value) => `S/ ${value >= 1000 ? (value/1000).toFixed(1) + 'k' : value.toFixed(0)}`
+                }
+            },
             series: [{ name: 'Ingresos S/', data: Array(12).fill(0) }],
             xaxis: { 
                 categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
                 labels: { style: { fontSize: '10px' } }
             },
-            colors: ['#cc9900']
+            colors: ['#cc9900'],
+            dataLabels: {
+                enabled: true,
+                formatter: (val) => `S/ ${val.toFixed(0)}`,
+                style: { colors: ['#333'], fontSize: '10px' },
+                offsetY: -20
+            }
         });
         chartMensual.render();
     }
