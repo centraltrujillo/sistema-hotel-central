@@ -87,10 +87,10 @@ function cargarHabitaciones() {
 
             if (est === "Ocupada") {
                 // Si está ocupada, revisamos si tiene Late Checkout guardado en el doc de la Habitación
-                if (hab.lateCheckOut) {
+                if (hab.late) {
                     htmlAvisos = `
                         <div class="tag-rack late" style="background: #fff3e0; color: #e65100; font-size: 10px; font-weight: 800; padding: 2px 4px; border-radius: 4px; margin-top: 4px; border: 1px solid #ffcc80; display: inline-block;">
-                            <i class="fa-regular fa-clock"></i> LATE: ${hab.lateCheckOut}
+                            <i class="fa-regular fa-clock"></i> LATE: ${hab.late}
                         </div>`;
                 }
             } else {
@@ -210,7 +210,7 @@ async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
             estado: "Ocupada",
             personasActuales: parseInt(dataReserva.personas) || 1,
             reservaActualId: resId, // Guardamos el ID para acceder rápido a consumos
-            lateCheckOut: dataReserva.late || ""
+            late: dataReserva.late || ""
         });
 
         Swal.fire({ icon: 'success', title: 'Huésped en Habitación', showConfirmButton: false, timer: 1500 });
@@ -432,7 +432,7 @@ const calcularMontosRack = () => {
                 estado: "Ocupada",
                 personasActuales: nPers,
                 reservaActualId: docRef.id,
-                lateCheckOut: reservaData.late || ""
+                late: reservaData.late || ""
             });
 
             await setDoc(doc(db, "huespedes", reservaData.doc), {
@@ -1049,7 +1049,7 @@ const { value: nuevoAbono } = await Swal.fire({
             estado: "Libre", 
             personasActuales: 0,
             reservaActualId: "",
-            lateCheckOut: "" // Limpiar para que el aviso desaparezca
+            late: "" // Limpiar para que el aviso desaparezca
         });
 
         Swal.fire({ icon: 'success', title: 'Check-out Exitoso', timer: 2000, showConfirmButton: false });
