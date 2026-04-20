@@ -114,6 +114,13 @@ function inicializarDashboard() {
         const mesActual = ahora.getMonth();
         const anioActual = ahora.getFullYear();
 
+        // --- LÓGICA PARA OBTENER EL INICIO DE LA SEMANA ACTUAL (LUNES) ---
+        const inicioSemana = new Date(ahora);
+        const diaHoy = inicioSemana.getDay(); // 0 es Dom, 1 es Lun...
+        const diff = inicioSemana.getDate() - diaHoy + (diaHoy === 0 ? -6 : 1); 
+        inicioSemana.setDate(diff);
+        inicioSemana.setHours(0, 0, 0, 0); // Lunes a las 00:00
+
         const fechaMesPasado = new Date();
         fechaMesPasado.setMonth(ahora.getMonth() - 1);
         const mesPasado = fechaMesPasado.getMonth();
@@ -128,9 +135,12 @@ function inicializarDashboard() {
                 const m = fechaObj.getMonth();
                 const y = fechaObj.getFullYear();
                 
-                const dia = fechaObj.getDay();
-                const index = (dia === 0) ? 6 : dia - 1;
-                ingresosSemana[index] += monto;
+                // 1. FILTRO PARA GRÁFICO SEMANAL: Solo si la fecha es mayor o igual al lunes de esta semana
+                if (fechaObj >= inicioSemana) {
+                    const dia = fechaObj.getDay();
+                    const index = (dia === 0) ? 6 : dia - 1; // Ajustar para que 0 sea Lunes y 6 Domingo
+                    ingresosSemana[index] += monto;
+                }
 
                 const keyMes = `${m}-${y}`;
                 ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
@@ -140,21 +150,22 @@ function inicializarDashboard() {
             }
         });
 
-        const elKpiIngresos = document.getElementById('kpi-ingresos');
-        if (elKpiIngresos) elKpiIngresos.innerText = `S/ ${totalMesActual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-        
-        actualizarTendencia(totalMesActual, totalMesAnterior, 'trend-ingresos');
+ const elKpiIngresos = document.getElementById('kpi-ingresos');
+ if (elKpiIngresos) elKpiIngresos.innerText = `S/ ${totalMesActual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+ 
+ actualizarTendencia(totalMesActual, totalMesAnterior, 'trend-ingresos');
 
-        if (chartSemanal) chartSemanal.updateSeries([{ data: ingresosSemana }]);
+ // El gráfico ahora solo mostrará datos de la semana actual
+ if (chartSemanal) chartSemanal.updateSeries([{ data: ingresosSemana }]);
 
-        if (chartMensual) {
-            const mesesData = [];
-            for (let m = 0; m <= 11; m++) {
-                mesesData.push(ingresosPorMes[`${m}-${anioActual}`] || 0);
-            }
-            chartMensual.updateSeries([{ name: 'Ingresos S/', data: mesesData }]);
-        }
-    });
+ if (chartMensual) {
+     const mesesData = [];
+     for (let m = 0; m <= 11; m++) {
+         mesesData.push(ingresosPorMes[`${m}-${anioActual}`] || 0);
+     }
+     chartMensual.updateSeries([{ name: 'Ingresos S/', data: mesesData }]);
+ }
+});
 
     // B. OCUPACIÓN
     onSnapshot(collection(db, "habitaciones"), (snapshot) => {
@@ -175,23 +186,24 @@ function inicializarDashboard() {
         if (elHuespedes) elHuespedes.innerText = snapshot.size;
     });
 
-    // D. RESERVAS HOY
-    onSnapshot(collection(db, "reservas"), (snapshot) => {
-        const elReservas = document.getElementById('kpi-reservas-hoy');
-        if (!elReservas) return;
-        const ahora = new Date();
-        const hoyString = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`; 
-        let reservasHoy = 0;
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const fechaEntrada = formatearFechaJS(data.checkIn);
-            if (fechaEntrada) {
-                const resString = `${fechaEntrada.getFullYear()}-${String(fechaEntrada.getMonth() + 1).padStart(2, '0')}-${String(fechaEntrada.getDate()).padStart(2, '0')}`;
-                if (resString === hoyString && data.estado === "reservada") reservasHoy++;
-            }
-        });
-        elReservas.innerText = reservasHoy;
-    });
+// D. RESERVAS HOY 
+const ahora = new Date();
+const hoyString = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+
+// Creamos la consulta para traer solo lo necesario
+const qReservasHoy = query(
+    collection(db, "reservas"),
+    where("checkIn", "==", hoyString),
+    where("estado", "==", "reservada")
+);
+
+onSnapshot(qReservasHoy, (snapshot) => {
+    const elReservas = document.getElementById('kpi-reservas-hoy');
+    if (!elReservas) return;
+
+    // snapshot.size nos da el conteo directo, sin necesidad de hacer forEach
+    elReservas.innerText = snapshot.size;
+});
 
 // E. ACTIVIDAD RECIENTE (Cruce exacto por idReserva)
 const qPagos = query(collection(db, "pagos"), orderBy("fechaPago", "desc"), limit(5));
