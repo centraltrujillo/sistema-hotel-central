@@ -262,6 +262,8 @@ locale: 'es',
         },
 
         eventClick: function(info) {
+            if (info.event.extendedProps.esTotal) return;
+
             const r = info.event.extendedProps; 
             const idReserva = info.event.id;
 
@@ -277,74 +279,74 @@ locale: 'es',
     // Obtenemos la configuración según el estado actual (si no existe, usa reservada por defecto)
     const estilo = configEstados[estadoLimpio] || configEstados['reservada'];
         
-// ... dentro de eventClick: function(info) ...
+// --- LANZAR EL MODAL ---
 Swal.fire({
     title: `
-        <div class="modal-header-gestion" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0; border-bottom: 2px solid #D4AF37;">
-            <div style="text-align: left;">
-                <span style="background: #6e0d25; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 800;">HABITACIÓN ${r.habitacion}</span>
-            </div>
-            <div style="background: #16a34a; color: white; padding: 4px 15px; border-radius: 8px; font-size: 12px; font-weight: bold;">${(r.estado || 'RESERVADA').toUpperCase()}</div>
-        </div>`,
+    <div class="modal-header-gestion" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0; border-bottom: 2px solid #D4AF37;">
+    <div style="text-align: left;">
+        <span style="background: #6e0d25; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 800;">HABITACIÓN ${r.habitacion}</span>
+    </div>
+    <div style="background: ${estilo.bg}; color: ${estilo.text}; border: ${estilo.border}; padding: 4px 15px; border-radius: 8px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
+        ${estadoLimpio}
+    </div>
+</div>`,
     width: '900px',
     background: '#f8fafc',
     html: `
-        <div style="padding: 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-user"></i> Huésped Titular</label>
-                    <p style="margin: 5px 0; font-size: 16px; font-weight: 700; color: #1e293b;">${r.huesped}</p>
-                    <p style="margin: 0; font-size: 12px; color: #64748b;">${r.doc} • ${r.nacionalidad || 'Peruana'}</p>
+        <div class="gestion-container" style="text-align: left; font-family: 'Segoe UI', sans-serif;">
+            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
+                    <div>
+                        <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-user-circle"></i> Huésped Titular</label>
+                        <p style="margin: 5px 0; font-size: 18px; font-weight: 700; color: #1e293b;">${r.huesped}</p>
+                        <p style="margin: 0; font-size: 12px; color: #64748b;">${r.doc} • ${r.nacionalidad || 'Peruana'}</p>
+                    </div>
+                    <div>
+                        <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-phone"></i> Contacto</label>
+                        <p style="margin: 5px 0; font-size: 13px;">${r.telefono || '-'}</p>
+                        <p style="margin: 0; font-size: 11px; color: #64748b;">${r.correo || 'Sin correo'}</p>
+                    </div>
+                    <div>
+                        <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-concierge-bell"></i> Medio</label>
+                        <p style="margin: 5px 0;"><span style="background: #6e0d25; color: white; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 800;">${(r.medio || 'Directo').toUpperCase()}</span></p>
+                    </div>
                 </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-phone"></i> Contacto</label>
-                    <p style="margin: 5px 0; font-size: 13px;">${r.telefono || '-'}</p>
-                    <p style="margin: 0; font-size: 11px; color: #64748b;">${r.correo || 'Sin correo'}</p>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-tag"></i> Origen</label>
-                    <p style="margin: 5px 0;"><span style="background: #e2e8f0; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; color: #475569;">${(r.medio || 'Directo').toUpperCase()}</span></p>
+
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; padding-top: 15px;">
+                    <div>
+                        <label style="font-size: 10px; font-weight: 800; color: #64748b;">CHECK-IN</label>
+                        <p style="margin: 5px 0; font-weight: 700;">${r.checkIn}</p>
+                        <small style="color: #475569;">Hora: ${r.early || 'Normal'}</small>
+                    </div>
+                    <div>
+                        <label style="font-size: 10px; font-weight: 800; color: #64748b;">CHECK-OUT</label>
+                        <p style="margin: 5px 0; font-weight: 700; color: #800020;">${r.checkOut}</p>
+                        <small style="color: #475569;">Hora: ${r.late || 'Normal'}</small>
+                    </div>
+                    <div>
+                        <label style="font-size: 10px; font-weight: 800; color: #64748b;">PAX & COCHERA</label>
+                        <p style="margin: 5px 0; font-size: 13px;">${r.personas} Adultos</p>
+                        <small style="color: #64748b;">Cochera: <b>${r.cochera || 'No'}</b></small>
+                    </div>
+                    <div>
+                        <label style="font-size: 10px; font-weight: 800; color: #64748b;">ALIMENTACIÓN</label>
+                        <p style="margin: 5px 0; font-size: 13px;">${r.desayuno || 'S/D'}</p>
+                        <small style="color: #64748b;">Traslado: ${r.traslado || 'No'}</small>
+                    </div>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; background: #fffbeb; border: 1px dashed #D4AF37; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
                 <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-In</label>
-                    <p style="margin: 5px 0; font-weight: 700;">${r.checkIn}</p>
-                    <small style="color: ${r.early && r.early !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.early && r.early !== 'Normal' ? '800' : '400'};">
-                    Hora: ${r.early || 'Normal'}
-                </small>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-Out</label>
-                    <p style="margin: 5px 0; font-weight: 700; color: #800020;">${r.checkOut}</p>
-                    <small style="color: ${r.late && r.late !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.late && r.late !== 'Normal' ? '800' : '400'};">
-                    Hora: ${r.late || 'Normal'}
-                </small>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Pax & Cochera</label>
-                    <p style="margin: 5px 0; font-size: 13px;">${r.personas} Adultos</p>
-                    <small style="color: #64748b;">Cochera: <b>${r.cochera || 'No'}</b></small>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Servicios</label>
-                    <p style="margin: 5px 0; font-size: 13px;">${r.desayuno || 'S/D'}</p>
-                    <small style="color: #64748b;">Traslado: ${r.traslado || 'No'}</small>
-                </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; background: #fffbeb; border: 1px dashed #D4AF37; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TARIFA DÍA</label>
+                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TARIFA BASE</label>
                     <p style="margin: 5px 0; font-weight: 700;">${r.moneda} ${r.tarifa}</p>
                 </div>
                 <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TOTAL HOSPEDAJE</label>
+                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TOTAL ALOJAMIENTO</label>
                     <p style="margin: 5px 0; font-weight: 800; font-size: 16px;">S/ ${parseFloat(r.total).toFixed(2)}</p>
                 </div>
                 <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #16a34a;">ADELANTOS</label>
+                    <label style="font-size: 10px; font-weight: 800; color: #16a34a;">PAGOS / ADELANTOS</label>
                     <p style="margin: 5px 0; font-weight: 700; color: #16a34a;">- S/ ${parseFloat(r.adelantoMonto || 0).toFixed(2)}</p>
                 </div>
                 <div>
@@ -353,111 +355,20 @@ Swal.fire({
                 </div>
             </div>
 
-            <div style="background: #f1f5f9; padding: 10px; border-radius: 8px;">
-                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #475569; margin-bottom: 4px;">
-                    <span><i class="fas fa-comment-dots"></i> <b>Obs:</b> ${r.observaciones || 'Sin notas'}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; pt-5px; margin-top: 5px;">
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 8px;">
+                <label style="font-size: 10px; font-weight: 800; color: #475569;"><i class="fas fa-comment-dots"></i> OBSERVACIONES:</label>
+                <p style="margin: 5px 0; font-size: 12px; color: #1e293b; font-style: italic;">${r.observaciones ? `"${r.observaciones}"` : 'Sin notas adicionales.'}</p>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 5px; font-size: 10px; color: #94a3b8;">
                     <span><b>Registrado por:</b> ${r.recepcion || 'Sistema'}</span>
-                    <span><b>Confirmado por:</b> ${r.recepcionconfi || 'Pendiente'}</span>
-                </div>
-            </div>
-        </div>
-        
-        <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
-            <button onclick="window.editarReserva('${idReserva}')" style="background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-edit"></i> EDITAR</button>
-        </div>
-    `,
-    showConfirmButton: false,
-    showCloseButton: true
-});Swal.fire({
-    title: `
-        <div class="modal-header-gestion" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0; border-bottom: 2px solid #D4AF37;">
-            <div style="text-align: left;">
-                <span style="background: #6e0d25; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 800;">HABITACIÓN ${r.habitacion}</span>
-            </div>
-            <div style="background: #16a34a; color: white; padding: 4px 15px; border-radius: 8px; font-size: 12px; font-weight: bold;">${(r.estado || 'RESERVADA').toUpperCase()}</div>
-        </div>`,
-    width: '900px',
-    background: '#f8fafc',
-    html: `
-        <div style="padding: 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-user"></i> Huésped Titular</label>
-                    <p style="margin: 5px 0; font-size: 16px; font-weight: 700; color: #1e293b;">${r.huesped}</p>
-                    <p style="margin: 0; font-size: 12px; color: #64748b;">${r.doc} • ${r.nacionalidad || 'Peruana'}</p>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-phone"></i> Contacto</label>
-                    <p style="margin: 5px 0; font-size: 13px;">${r.telefono || '-'}</p>
-                    <p style="margin: 0; font-size: 11px; color: #64748b;">${r.correo || 'Sin correo'}</p>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;"><i class="fas fa-tag"></i> Origen</label>
-                    <p style="margin: 5px 0;"><span style="background: #e2e8f0; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; color: #475569;">${(r.medio || 'Directo').toUpperCase()}</span></p>
+                    <span><b>Confirmado por:</b> ${r.recepcionconfi || '-'}</span>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: left; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-In</label>
-                    <p style="margin: 5px 0; font-weight: 700;">${r.checkIn}</p>
-                    <small style="color: ${r.early && r.early !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.early && r.early !== 'Normal' ? '800' : '400'};">
-                    Hora: ${r.early || 'Normal'}
-                </small>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Check-Out</label>
-                    <p style="margin: 5px 0; font-weight: 700; color: #800020;">${r.checkOut}</p>
-                    <small style="color: ${r.late && r.late !== 'Normal' ? '#10b981' : '#64748b'}; font-weight: ${r.late && r.late !== 'Normal' ? '800' : '400'};">
-                    Hora: ${r.late || 'Normal'}
-                </small>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Pax & Cochera</label>
-                    <p style="margin: 5px 0; font-size: 13px;">${r.personas} Adultos</p>
-                    <small style="color: #64748b;">Cochera: <b>${r.cochera || 'No'}</b></small>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Servicios</label>
-                    <p style="margin: 5px 0; font-size: 13px;">${r.desayuno || 'S/D'}</p>
-                    <small style="color: #64748b;">Traslado: ${r.traslado || 'No'}</small>
-                </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="Swal.close()" style="background: #64748b; color: white; border: none; padding: 12px 40px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    CERRAR VISTA
+                </button>
             </div>
-
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; background: #fffbeb; border: 1px dashed #D4AF37; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TARIFA DÍA</label>
-                    <p style="margin: 5px 0; font-weight: 700;">${r.moneda} ${r.tarifa}</p>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #92400e;">TOTAL HOSPEDAJE</label>
-                    <p style="margin: 5px 0; font-weight: 800; font-size: 16px;">S/ ${parseFloat(r.total).toFixed(2)}</p>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #16a34a;">ADELANTOS</label>
-                    <p style="margin: 5px 0; font-weight: 700; color: #16a34a;">- S/ ${parseFloat(r.adelantoMonto || 0).toFixed(2)}</p>
-                </div>
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #800020;">SALDO PENDIENTE</label>
-                    <p style="margin: 5px 0; font-weight: 800; font-size: 18px; color: #800020;">S/ ${parseFloat(r.diferencia || 0).toFixed(2)}</p>
-                </div>
-            </div>
-
-            <div style="background: #f1f5f9; padding: 10px; border-radius: 8px;">
-                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #475569; margin-bottom: 4px;">
-                    <span><i class="fas fa-comment-dots"></i> <b>Obs:</b> ${r.observaciones || 'Sin notas'}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; pt-5px; margin-top: 5px;">
-                    <span><b>Registrado por:</b> ${r.recepcion || 'Sistema'}</span>
-                    <span><b>Confirmado por:</b> ${r.recepcionconfi || 'Pendiente'}</span>
-                </div>
-            </div>
-        </div>
-        
-        <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
-            <button onclick="window.editarReserva('${idReserva}')" style="background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;"><i class="fas fa-edit"></i> EDITAR</button>
         </div>
     `,
     showConfirmButton: false,
@@ -531,13 +442,12 @@ Swal.fire({
     const escucharReservas = () => {
         onSnapshot(collection(db, "reservas"), (snapshot) => {
             const eventosFinales = [];
-            const conteoOcupacion = {}; // Objeto para sumar: { "2026-04-13": total }
+            const conteoOcupacion = {}; 
     
             snapshot.docs.forEach(doc => {
                 const data = doc.data();
                 const idReserva = doc.id;
                 
-                // 1. Configuración de Colores y Estilos
                 const colores = { 
                     'booking': '#1e40af', 'airbnb': '#ff5a5f', 'expedia': '#ffb400', 
                     'directas': '#7c3aed', 'personal': '#059669', 'gmail': '#ea4335', 'dayuse': '#db2777' 
@@ -548,7 +458,6 @@ Swal.fire({
                 let colorTexto = '#ffffff'; 
                 let colorBorde = 'transparent';
     
-                // Si está en Check-in o Check-out: Fondo Blanco, Texto Negro
                 if (data.estado === 'checkin' || data.estado === 'checkout') {
                     colorFinal = '#ffffff';
                     colorTexto = '#000000'; 
@@ -558,13 +467,12 @@ Swal.fire({
     
                 const esDayUse = data.medio?.toLowerCase() === 'dayuse' || data.tipoVenta?.toLowerCase() === 'day use';
     
-                // --- FUNCIÓN PARA SUMAR AL CONTADOR DIARIO ---
-                const sumarAlTotal = (fechaISO) => {
+                const registrarOcupacion = (fechaISO) => {
                     if (!fechaISO) return;
                     conteoOcupacion[fechaISO] = (conteoOcupacion[fechaISO] || 0) + 1;
                 };
     
-                // 2. EVENTO PRINCIPAL EN HABITACIÓN
+                // 1. EVENTO PRINCIPAL (Suma +1)
                 eventosFinales.push({
                     id: idReserva,
                     resourceId: `hab${data.habitacion}`, 
@@ -578,70 +486,73 @@ Swal.fire({
                     extendedProps: { ...data }
                 });
     
-                // Conteo de estancia (sin contar el día de salida a menos que sea Day Use)
+                // Lógica de conteo de estancia
                 let fActual = new Date(data.checkIn + "T00:00:00");
                 let fFin = new Date(data.checkOut + "T00:00:00");
+                
                 if (esDayUse) {
-                    sumarAlTotal(data.checkIn);
+                    registrarOcupacion(data.checkIn); // La habitación física
                 } else {
                     while (fActual < fFin) {
-                        sumarAlTotal(fActual.toISOString().split('T')[0]);
+                        registrarOcupacion(fActual.toISOString().split('T')[0]);
                         fActual.setDate(fActual.getDate() + 1);
                     }
                 }
     
-// 3. LATE CHECK-OUT (Cambiado de lateCheckOut a late)
-if (data.late && data.late !== "Normal" && !esDayUse) {
-    const horaLate = data.late.includes(':') ? data.late : "15:00";
-    eventosFinales.push({
-        id: idReserva + '_late',
-        resourceId: 'extra1', 
-        title: `LATE H-${data.habitacion} (${horaLate})`,
-        start: `${data.checkOut}T12:00:00`, 
-        end: `${data.checkOut}T${horaLate}:00`,
-        backgroundColor: '#d9f99d',
-        textColor: '#166534',
-        allDay: false, 
-        extendedProps: { ...data, esExtra: true }
-    });
-}
-
-// 4. EARLY CHECK-IN (Cambiado de earlyCheckIn a early)
-if (data.early && data.early !== "Normal" && !esDayUse) {
-    const horaEarly = data.early.includes(':') ? data.early : "08:00";
-    eventosFinales.push({
-        id: idReserva + '_early',
-        resourceId: 'extra2', 
-        title: `EARLY H-${data.habitacion} (${horaEarly})`,
-        start: `${data.checkIn}T${horaEarly}:00`, 
-        end: `${data.checkIn}T13:00:00`,
-        backgroundColor: '#bae6fd',
-        textColor: '#0369a1',
-        allDay: false, 
-        extendedProps: { ...data, esExtra: true }
-    });
-}
+                // 2. LATE CHECK-OUT (Suma +1 extra al día de salida)
+                if (data.late && data.late !== "Normal" && !esDayUse) {
+                    registrarOcupacion(data.checkOut);
+                    const horaLate = data.late.includes(':') ? data.late : "15:00";
+                    eventosFinales.push({
+                        id: idReserva + '_late',
+                        resourceId: 'extra1', 
+                        title: `LATE H-${data.habitacion} (${horaLate})`,
+                        start: `${data.checkOut}T12:00:00`, 
+                        end: `${data.checkOut}T${horaLate}:00`,
+                        backgroundColor: '#d9f99d',
+                        textColor: '#166534',
+                        allDay: false, 
+                        extendedProps: { ...data, esExtra: true }
+                    });
+                }
     
-// 5. DAY USE 
-if (esDayUse) {
-    const hEntrada = (data.early && data.early !== "Normal") ? data.early : "09:00";
-    const hSalida = (data.late && data.late !== "Normal") ? data.late : "18:00";
-    
-    eventosFinales.push({
-        id: idReserva + '_dayuse',
-        resourceId: 'extra3', 
-        title: `DAY USE H-${data.habitacion} (${hEntrada}-${hSalida})`,
-        start: `${data.checkIn}T${hEntrada}:00`,
-        end: `${data.checkIn}T${hSalida}:00`,
-        backgroundColor: '#fef3c7',
-        textColor: '#92400e',
-        allDay: false,
-        extendedProps: { ...data, esExtra: true }
-    });
-}
+                // 3. EARLY CHECK-IN (Suma +1 extra al día de entrada)
+                if (data.early && data.early !== "Normal" && !esDayUse) {
+                    registrarOcupacion(data.checkIn);
+                    const horaEarly = data.early.includes(':') ? data.early : "08:00";
+                    eventosFinales.push({
+                        id: idReserva + '_early',
+                        resourceId: 'extra2', 
+                        title: `EARLY H-${data.habitacion} (${horaEarly})`,
+                        start: `${data.checkIn}T${horaEarly}:00`, 
+                        end: `${data.checkIn}T13:00:00`,
+                        backgroundColor: '#bae6fd',
+                        textColor: '#0369a1',
+                        allDay: false, 
+                        extendedProps: { ...data, esExtra: true }
+                    });
+                }
+                    
+                // 4. DAY USE (Suma +1 ADICIONAL al de la habitación = TOTAL 2)
+                if (esDayUse) {
+                    registrarOcupacion(data.checkIn); // El segundo punto por ser Day Use
+                    const hEntrada = (data.early && data.early !== "Normal") ? data.early : "09:00";
+                    const hSalida = (data.late && data.late !== "Normal") ? data.late : "18:00";
+                    eventosFinales.push({
+                        id: idReserva + '_dayuse',
+                        resourceId: 'extra3', 
+                        title: `DAY USE H-${data.habitacion} (${hEntrada}-${hSalida})`,
+                        start: `${data.checkIn}T${hEntrada}:00`,
+                        end: `${data.checkIn}T${hSalida}:00`,
+                        backgroundColor: '#fef3c7',
+                        textColor: '#92400e',
+                        allDay: false,
+                        extendedProps: { ...data, esExtra: true }
+                    });
+                }
             });
     
-            // 6. GENERAR LOS BLOQUES DE "TOTAL OCUPADO" EN LA FILA INFERIOR
+            // 5. RENDERIZAR TOTALES
             Object.keys(conteoOcupacion).forEach(fecha => {
                 eventosFinales.push({
                     resourceId: 'total-row',
@@ -649,8 +560,8 @@ if (esDayUse) {
                     start: fecha,
                     end: fecha,
                     allDay: true,
-                    display: 'background', // Ocupa toda la celda
                     backgroundColor: 'transparent',
+                    borderColor: 'transparent',
                     extendedProps: { esTotal: true }
                 });
             });
@@ -671,64 +582,6 @@ window.abrirModal = () => {
 
 window.cerrarModal = () => { document.getElementById('modalReserva').classList.remove('active'); };
 
-window.editarReserva = async (id) => {
-    try {
-        const reserva = calendar.getEventById(id);
-        
-        if (!reserva) {
-            Swal.fire('Error', 'No se encontró la reserva en el sistema', 'error');
-            return;
-        }
-
-        const r = reserva.extendedProps;
-        const formulario = document.getElementById('formNuevaReserva');
-        document.getElementById('modalTitle').innerText = "Editar Reserva";
-        formulario.dataset.editId = id; 
-        formulario.dataset.fechaReg = r.fechaRegistro;
-
-        // --- LLENADO DE DATOS ---
-        document.getElementById("resHuesped").value = r.huesped || "";
-        document.getElementById("resDoc").value = r.doc || "";
-        document.getElementById("resTelefono").value = r.telefono || "";
-        document.getElementById("resNacionalidad").value = r.nacionalidad || "";
-        document.getElementById("resNacimiento").value = r.nacimiento || "";
-        document.getElementById("resCorreo").value = r.correo || "";
-        document.getElementById("resHabitacion").value = r.habitacion || "";
-        document.getElementById("resCheckIn").value = r.checkIn || "";
-        document.getElementById("resCheckOut").value = r.checkOut || "";
-        document.getElementById("resMedio").value = r.medio || "";
-        document.getElementById("resPersonas").value = r.personas || 1;
-        document.getElementById("resInfo").value = r.desayuno || "SIN DESAYUNO";
-
-        document.getElementById("resEarly").value = r.early || ""; 
-        document.getElementById("resLate").value = r.late || "";   
-        
-        document.getElementById("resCochera").value = r.cochera || "";
-        document.getElementById("resTraslado").value = r.traslado || "";
-        document.getElementById("resTarifa").value = r.tarifa || 0;
-        document.getElementById("resMoneda").value = r.moneda || "PEN";
-        document.getElementById("resTipoCambio").value = r.tipoCambio || 1;
-        document.getElementById("resTotal").value = r.total || 0;
-        document.getElementById("resAdelantoMonto").value = r.adelantoMonto || 0;
-        document.getElementById("resAdelantoDetalle").value = r.adelantoDetalle || "";
-        document.getElementById("resDiferencia").value = r.diferencia || 0;
-        document.getElementById("resObservaciones").value = r.observaciones || "";
-        
-        document.getElementById("resRecepcion").value = r.recepcion || "";
-        document.getElementById("resRecepcionconfi").value = r.recepcionconfi || "";
-
-        Swal.close(); 
-        document.getElementById('modalReserva').classList.add('active');
-
-    } catch (error) {
-        console.error("Error al cargar datos para editar:", error);
-        Swal.fire('Error', 'Error crítico al abrir edición', 'error');
-    }
-};
-
-// --- EL "MOTOR" QUE ENCIENDE TODO ---
-// Estas líneas deben ir al final, justo antes de cerrar el DOMContentLoaded
-
     calendar.render(); // 1. Dibuja el calendario vacío en el HTML
     
     // 2. Ejecuta las funciones que traen la data de Firebase
@@ -742,62 +595,3 @@ window.editarReserva = async (id) => {
 
 });
 
-window.hacerCheckIn = async (id) => {
-    const reservaSnap = await getDocs(query(collection(db, "reservas"))); // O busca el doc específico
-    // Necesitamos el número de habitación de esta reserva para actualizar el otro módulo
-    const reservaData = (calendar.getEventById(id)).extendedProps;
-    const numHab = reservaData.habitacion;
-
-    const { isConfirmed } = await Swal.fire({
-        title: '¿Confirmar Check-In?',
-        text: `La habitación ${numHab} pasará a estado OCUPADA`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#16a34a'
-    });
-
-    if (isConfirmed) {
-        try {
-            // 1. Actualiza la reserva
-            await updateDoc(doc(db, "reservas", id), { estado: "checkin" });
-            
-            // 2. Actualiza la habitación (Para que el módulo de cuadritos cambie a rojo)
-            // Asumiendo que tus docs en 'habitaciones' tienen el ID igual al número (ej: "101")
-            await updateDoc(doc(db, "habitaciones", numHab.toString()), { 
-                estadoDoc: "checkin" 
-            });
-
-            Swal.fire('¡Éxito!', 'Check-In registrado.', 'success');
-        } catch (e) { 
-            console.error(e);
-            Swal.fire('Error', 'No se pudo actualizar', 'error'); 
-        }
-    }
-};
-
-window.hacerCheckOut = async (id) => {
-    const reservaData = (calendar.getEventById(id)).extendedProps;
-    const numHab = reservaData.habitacion;
-
-    const { isConfirmed } = await Swal.fire({
-        title: '¿Confirmar Check-Out?',
-        text: "La habitación pasará a limpieza",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#6e0d25'
-    });
-
-    if (isConfirmed) {
-        try {
-            // 1. Actualiza la reserva
-            await updateDoc(doc(db, "reservas", id), { estado: "checkout" });
-            
-            // 2. Actualiza la habitación a "sucio" o "disponible"
-            await updateDoc(doc(db, "habitaciones", numHab.toString()), { 
-                estadoDoc: "checkout" 
-            });
-
-            Swal.fire('¡Éxito!', 'Check-Out registrado.', 'success');
-        } catch (e) { Swal.fire('Error', 'No se pudo completar', 'error'); }
-    }
-};
