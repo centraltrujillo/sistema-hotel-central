@@ -42,8 +42,8 @@ body {
     position: sticky;
     top: 0;
     background-color: var(--blanco-colonial); /* Evita que el calendario se vea por debajo */
-    z-index: 1000; /* Suficiente para tapar las flechas de FullCalendar */
-}
+    z-index: 2000 !important; }
+
 
 .header-left {
     display: flex;
@@ -146,10 +146,9 @@ body {
 /* Añade esto al final de tu archivo CSS */
 .fc-header-toolbar {
     position: relative;
-    z-index: 10 !important; /* Mucho menor que el 1000 del header */
+    z-index: 10 !important;
 }
 
-/* También para los botones específicos de Mes/Día y Hoy */
 .fc-button {
     z-index: 5 !important;
 }
@@ -189,20 +188,19 @@ body {
 /* Ajustes para que FullCalendar se parezca a tu Excel */
 .fc {
     font-family: var(--font-main);
-    --fc-border-color: #e2e8f0;
-    --fc-today-bg-color: rgba(245, 158, 11, 0.05);
+    --fc-border-color: #000000; 
+    --fc-today-bg-color: rgba(212, 175, 55, 0.15); 
+    background-color: #e5e7eb; 
     height: 100% !important;
     display: flex;
     flex-direction: column;
     justify-content: center;
 }
 
-
-
 /* Columna de Habitaciones (Izquierda) */
 .fc-resource-timeline-col {
-    background-color: #f8fafc;
-    border-right: 2px solid var(--amarillo-ocre) !important;
+    background-color: #ffffff !important;
+    border-right: 2px solid #000000 !important;
 }
 
 /* Estilo de los nombres de habitaciones */

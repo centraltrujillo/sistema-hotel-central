@@ -419,14 +419,13 @@ Swal.fire({
     
             // Definimos los extras y el total
             const extras = [
-                { id: 'extra1', title: 'CHECK OL 1', tipo: 'EXTRA' },
-                { id: 'extra2', title: 'CHECK OL 2', tipo: 'EXTRA' },
-                { id: 'extra3', title: 'CHECK OL 3', tipo: 'EXTRA' },
-                { id: 'extra4', title: 'CHECK OL 4', tipo: 'EXTRA' },
-                { id: 'extra5', title: 'CHECK OL 5', tipo: 'EXTRA' }
+                { id: 'extra1', title: 'CHECK OL 1' },
+                { id: 'extra2', title: 'CHECK OL 2' },
+                { id: 'extra3', title: 'CHECK OL 3' }
+
             ];
     
-            const filaTotal = [{ id: 'total-row', title: 'TOTAL OCUP', tipo: 'DIARIO' }];
+            const filaTotal = [{ id: 'total-row', title: 'TOTAL OCUP' }];
     
             // IMPORTANTE: Unimos en este orden exacto
             const recursosFinales = [...listaHabitaciones, ...extras, ...filaTotal];
