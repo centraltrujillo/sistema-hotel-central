@@ -446,6 +446,8 @@ Swal.fire({
             snapshot.docs.forEach(doc => {
                 const data = doc.data();
                 const idReserva = doc.id;
+
+                const debeSumarAlTotal = data.estado?.toLowerCase() === 'checkout';
                 
                 const colores = { 
                     'booking': '#1e40af', 'airbnb': '#ff5a5f', 'expedia': '#ffb400', 
@@ -467,7 +469,7 @@ Swal.fire({
                 const esDayUse = data.medio?.toLowerCase() === 'dayuse' || data.tipoVenta?.toLowerCase() === 'day use';
     
                 const registrarOcupacion = (fechaISO) => {
-                    if (!fechaISO) return;
+                    if (!fechaISO || !debeSumarAlTotal) return; 
                     conteoOcupacion[fechaISO] = (conteoOcupacion[fechaISO] || 0) + 1;
                 };
     
