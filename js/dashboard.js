@@ -33,14 +33,25 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         const uiNombre = document.getElementById('userName');
         const uiRol = document.getElementById('userRole');
+        const btnConfig = document.getElementById('nav-config'); // Seleccionamos el enlace de configuración
 
         try {
             const userDocRef = doc(db, "usuarios", user.uid);
             const userDocSnap = await getDoc(userDocRef);
+            
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
                 if (uiNombre) uiNombre.innerText = userData.nombre; 
                 if (uiRol) uiRol.innerText = userData.rol;      
+                
+                // --- LÓGICA DE VISIBILIDAD PARA ADMINISTRADOR ---
+                if (userData.rol === "Administrador") {
+                    if (btnConfig) {
+                        btnConfig.style.display = "block"; // Solo el Admin lo ve
+                        console.log("Acceso administrativo habilitado.");
+                    }
+                }
+
                 console.log(`Sesión iniciada: ${userData.nombre} (${userData.rol})`);
             }
         } catch (error) {
@@ -58,7 +69,6 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// --- 2. INICIALIZACIÓN DE GRÁFICOS ---
 // --- 2. INICIALIZACIÓN DE GRÁFICOS ---
 function inicializarGraficos() {
     const elSemanal = document.querySelector("#chart-line");
