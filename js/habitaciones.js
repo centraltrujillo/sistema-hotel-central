@@ -197,25 +197,29 @@ async function abrirModalCheckIn(hab) {
 
 async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
     try {
-        // 1. Cambiamos estado de la reserva y aseguramos estructura de pagos/consumos
+        const responsableCheckIn = await obtenerNombreRecepcionista();
+
+        // 2. Actualizamos la reserva con el NOMBRE REAL 
         await updateDoc(doc(db, "reservas", resId), { 
             estado: "checkin",
             fechaCheckInReal: new Date().toISOString(),
-            pagos: dataReserva.pagos || [], // Aseguramos que existan los arrays
+            recepcionconfi: responsableCheckIn, 
+            pagos: dataReserva.pagos || [],
             consumos: dataReserva.consumos || []
         });
 
-        // 2. Ocupamos la habitación
+        // 3. Ocupamos la habitación
         await updateDoc(doc(db, "habitaciones", hab.id), { 
             estado: "Ocupada",
             personasActuales: parseInt(dataReserva.personas) || 1,
-            reservaActualId: resId, // Guardamos el ID para acceder rápido a consumos
-            late: dataReserva.late || ""
+            reservaActualId: resId,
+            late: dataReserva.late || "",
+            recepcionconfi: responsableCheckIn 
         });
 
         Swal.fire({ icon: 'success', title: 'Huésped en Habitación', showConfirmButton: false, timer: 1500 });
     } catch (e) {
-        console.error(e);
+        console.error("Error en Check-in:", e);
         Swal.fire('Error', 'No se pudo procesar el ingreso', 'error');
     }
 }
@@ -635,90 +639,92 @@ const calcularMontosRack = () => {
         }
     });
 }
-
 /* ==========================================================================
-   5.1. HISTORIAL Y REGISTRO DE ABONOS
+   5.1. HISTORIAL Y REGISTRO DE ABONOS (ACTUALIZADO CON AUDITORÍA)
    ========================================================================== */
    async function abrirModalHistorialPagos(resId, hab, rData) {
-    // 1. Construir lista visual (Corrección de estilo: border-bottom)
     const listaPagosHTML = (rData.pagos && rData.pagos.length > 0) 
         ? rData.pagos.map((p, i) => `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px;">
                 <span><b style="color: #800020;">#${i+1}</b> ${new Date(p.fecha).toLocaleDateString('es-PE')}</span>
-                <span style="color: #555;">${p.metodo}</span>
+                <span style="color: #666; font-size: 11px;">${p.metodo} ${p.recibidoBy ? `(${p.recibidoBy})` : ''}</span>
                 <span style="font-weight: bold; color: #27ae60;">S/ ${parseFloat(p.monto).toFixed(2)}</span>
             </div>
         `).join('')
         : '<p style="text-align:center; color:#999; padding:10px;">No hay abonos registrados.</p>';
 
-// 2. Lanzar el modal con tu estilo personalizado
-const { value: nuevoAbono } = await Swal.fire({
-    title: `<span style="font-family:'Playfair Display'; color:#800020; font-size: 20px;">Historial de Pagos</span>`,
-    width: '450px',
-    customClass: {
-        popup: 'hotel-modal-custom', 
-        confirmButton: 'btn-dorado-full', 
-        cancelButton: 'btn-secundario'
-    },
-    html: `
-        <div style="text-align: left; font-family: 'Lato', sans-serif;">
-            <div style="max-height: 180px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
-                ${listaPagosHTML}
-            </div>
-            
-            <div style="background: #fdfaf5; padding: 15px; border-radius: 8px; border: 1px dashed #d4af37;">
-                <label style="font-size: 10px; font-weight: bold; color: #800020; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">
-                    Registrar Nuevo Abono
-                </label>
-                <div style="display: flex; gap: 8px;">
-                    <input id="sw-monto-pago" type="number" class="swal2-input" placeholder="Monto S/" style="margin:0; flex: 1; height: 38px; font-size: 14px;">
-                    <select id="sw-metodo-pago" class="swal2-select" style="margin:0; flex: 1; height: 38px; font-size: 13px;">
-                        <option value="Efectivo">💵 Efectivo</option>
-                        <option value="Tarjeta">💳 Tarjeta</option>
-                        <option value="Transferencia">📱 Transf.</option>
-                        <option value="Yape">📱 Yape</option>
-                        <option value="Plin">📱 Plin</option>
-                    </select>
+    // 2. Lanzar el modal 
+    const { value: nuevoAbono } = await Swal.fire({
+        title: `<span style="font-family:'Playfair Display'; color:#800020; font-size: 20px;">Historial de Pagos</span>`,
+        width: '450px',
+        customClass: {
+            popup: 'hotel-modal-custom', 
+            confirmButton: 'btn-dorado-full', 
+            cancelButton: 'btn-secundario'
+        },
+        html: `
+            <div style="text-align: left; font-family: 'Lato', sans-serif;">
+                <div style="max-height: 180px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
+                    ${listaPagosHTML}
+                </div>
+                
+                <div style="background: #fdfaf5; padding: 15px; border-radius: 8px; border: 1px dashed #d4af37;">
+                    <label style="font-size: 10px; font-weight: bold; color: #800020; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">
+                        Registrar Nuevo Abono
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <input id="sw-monto-pago" type="number" class="swal2-input" placeholder="Monto S/" style="margin:0; flex: 1; height: 38px; font-size: 14px;">
+                        <select id="sw-metodo-pago" class="swal2-select" style="margin:0; flex: 1; height: 38px; font-size: 13px;">
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Tarjeta">💳 Tarjeta</option>
+                            <option value="Transferencia">📱 Transf.</option>
+                            <option value="Yape">📱 Yape</option>
+                            <option value="Plin">📱 Plin</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-        </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: 'REGISTRAR PAGO',
-    cancelButtonText: 'VOLVER',
-    buttonsStyling: false, // Para que tome tus clases CSS de botones
-    preConfirm: () => {
-        const monto = parseFloat(document.getElementById('sw-monto-pago').value);
-        const metodo = document.getElementById('sw-metodo-pago').value;
-        if (!monto || monto <= 0) {
-            Swal.showValidationMessage('Ingrese un monto válido');
-            return false;
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'REGISTRAR PAGO',
+        cancelButtonText: 'VOLVER',
+        buttonsStyling: false,
+        preConfirm: () => {
+            const monto = parseFloat(document.getElementById('sw-monto-pago').value);
+            const metodo = document.getElementById('sw-metodo-pago').value;
+            if (!monto || monto <= 0) {
+                Swal.showValidationMessage('Ingrese un monto válido');
+                return false;
+            }
+            return { monto, metodo };
         }
-        return { monto, metodo };
-    }
-});
+    });
 
     if (nuevoAbono) {
         try {
+            const nombreResponsable = await obtenerNombreRecepcionista();
+
             const nuevoPagoObj = {
                 fecha: new Date().toISOString(),
                 monto: nuevoAbono.monto,
                 metodo: nuevoAbono.metodo,
-                concepto: "Abono a cuenta"
+                concepto: "Abono a cuenta",
+                recibidoBy: nombreResponsable 
             };
 
             const pagosActualizados = [...(rData.pagos || []), nuevoPagoObj];
             
-            // CORRECCIÓN: parseFloat para asegurar suma numérica
             const sumaAdelantos = pagosActualizados.reduce((acc, p) => acc + (parseFloat(p.monto) || 0), 0);
             const nuevaDiferencia = (parseFloat(rData.total) || 0) - sumaAdelantos;
 
+            // 2. Actualizar Reserva
             await updateDoc(doc(db, "reservas", resId), {
                 pagos: pagosActualizados,
                 adelantoMonto: sumaAdelantos,
                 diferencia: nuevaDiferencia
             });
 
+            // 3. Agregar a colección global de pagos con el nombre del usuario
             await addDoc(collection(db, "pagos"), {
                 idReserva: resId,
                 huesped: rData.huesped,
@@ -727,10 +733,16 @@ const { value: nuevoAbono } = await Swal.fire({
                 metodoPago: nuevoAbono.metodo,
                 fechaPago: new Date().toISOString(),
                 concepto: "Abono Parcial",
-                estado: "completado"
+                estado: "completado",
+                recepcionista: nombreResponsable 
             });
 
-            Toast.fire({ icon: 'success', title: 'Abono registrado con éxito' });
+            Toast.fire({ 
+                icon: 'success', 
+                title: `Abono registrado con éxito` 
+            });
+            
+            // Refrescar el modal principal
             abrirModalGestionOcupada(hab);
 
         } catch (e) {
@@ -741,7 +753,7 @@ const { value: nuevoAbono } = await Swal.fire({
 }
 
 /* ==========================================================================
-   6. AGREGAR CONSUMO (CON LÓGICA DE PAGO INMEDIATO)
+   6. AGREGAR CONSUMO (CON LÓGICA DE PAGO INMEDIATO Y AUDITORÍA)
    ========================================================================== */
    async function agregarConsumo(resId, hab) {
     const ahora = new Date();
@@ -791,15 +803,13 @@ const { value: nuevoAbono } = await Swal.fire({
                             <option value="Yape">📱 Yape</option>
                             <option value="Plin">📱 Plin</option>
                             <option value="Transferencia">📱 Transferencia</option>
-
                         </select>
                     </div>
                 </div>
 
                 <div id="subtotal-preview" style="margin-top: 20px; padding: 15px; background: #800020; border-radius: 8px; text-align: center; color: white;">
-                    <span style="font-size: 11px; text-transform: uppercase; opacity: 0.8;">Monto a registrar:</span>
-
-<strong id="preview-monto" style="display: block; font-size: 24px; font-weight: 900; margin-top: 2px; color: #800020;">S/ 0.00</strong>
+                    <span style="font-size: 11px; text-transform: uppercase; opacity: 0.9;">Monto a registrar:</span>
+                    <strong id="preview-monto" style="display: block; font-size: 24px; font-weight: 900; margin-top: 2px; color: #d4af37;">S/ 0.00</strong>
                 </div>
                 <input id="sw-fecha" type="hidden" value="${fechaLocal}">
             </div>`,
@@ -844,9 +854,10 @@ const { value: nuevoAbono } = await Swal.fire({
 
     if (formValues) {
         try {
+            const nombreAudit = await obtenerNombreRecepcionista();
             const montoTotal = Number((formValues.cant * formValues.pre).toFixed(2));
 
-            // 1. REGISTRAR EL CONSUMO EN LA COLECCIÓN (Para el historial de la habitación)
+            // 1. REGISTRAR EL CONSUMO CON TRAZABILIDAD
             await addDoc(collection(db, "consumos"), {
                 idReserva: resId,
                 descripcion: formValues.desc.toUpperCase(),
@@ -854,17 +865,19 @@ const { value: nuevoAbono } = await Swal.fire({
                 precioUnitario: formValues.pre,
                 precioTotal: montoTotal,
                 fechaConsumo: formValues.fecha,
-                estadoPago: formValues.pagado ? "PAGADO" : "PENDIENTE"
+                estadoPago: formValues.pagado ? "PAGADO" : "PENDIENTE",
+                registradoBy: nombreAudit 
             });
 
-            // 2. SI FUE PAGADO, REGISTRAR EN LA RESERVA Y EN LA CAJA (PAGOS.HTML)
+            // 2. SI FUE PAGADO, REGISTRAR EN LA RESERVA Y EN LA CAJA
             if (formValues.pagado) {
                 const nuevoPagoObj = {
                     fecha: new Date().toISOString(),
                     monto: montoTotal,
                     metodo: formValues.metodo,
                     tipo: "Consumos",
-                    concepto: `Pago Inmediato: ${formValues.desc.toUpperCase()}`
+                    concepto: `Pago Inmediato: ${formValues.desc.toUpperCase()}`,
+                    recibidoBy: nombreAudit // Auditoría en la reserva
                 };
 
                 const pagosActualizados = [...(rData.pagos || []), nuevoPagoObj];
@@ -878,7 +891,7 @@ const { value: nuevoAbono } = await Swal.fire({
                     adelantoConsumos: totalAbonoExtras 
                 });
 
-                // Registrar en Caja Diaria
+                // Registrar en Caja Diaria con nombre real
                 await addDoc(collection(db, "pagos"), {
                     idReserva: resId,
                     huesped: rData.huesped,
@@ -889,13 +902,13 @@ const { value: nuevoAbono } = await Swal.fire({
                     metodoPago: formValues.metodo,
                     fechaPago: new Date().toISOString(),
                     concepto: `Venta Directa: ${formValues.desc}`,
-                    atendidoBy: rData.recepcion || "Recepcionista"
+                    atendidoBy: nombreAudit 
                 });
             }
 
             Swal.fire({
                 icon: 'success',
-                title: formValues.pagado ? 'Venta cobrada con éxito' : 'Cargo añadido a la cuenta',
+                title: formValues.pagado ? `Venta cobrada con éxito` : 'Cargo añadido a la cuenta',
                 toast: true,
                 position: 'top-end',
                 timer: 2500,
@@ -999,6 +1012,7 @@ const { value: nuevoAbono } = await Swal.fire({
     if (isDismissed) return; 
 
     try {
+        const nombreResponsable = await obtenerNombreRecepcionista();
         const historialPagosActualizado = [...(rData.pagos || [])];
         
         if (granTotalAPagar > 0) {
@@ -1007,7 +1021,8 @@ const { value: nuevoAbono } = await Swal.fire({
                 monto: granTotalAPagar,
                 metodo: metodoSeleccionado,
                 tipo: "Liquidación",
-                concepto: "Cierre de Cuenta Final"
+                concepto: "Cierre de Cuenta Final",
+                recibidoBy: nombreResponsable 
             });
         }
 
@@ -1026,13 +1041,13 @@ const { value: nuevoAbono } = await Swal.fire({
             metodoPago: granTotalAPagar > 0 ? metodoSeleccionado : "Cuenta Saldada",
             fechaPago: new Date().toISOString(),
             concepto: "Liquidación Check-out",
-            atendidoBy: rData.recepcion || "Recepcionista"
+            recibidoBy: nombreResponsable 
         });
         // --- FIN DE LA CORRECCIÓN ---
 
         // Impresión
         if (isConfirmed && typeof imprimirTicket === 'function') {
-            imprimirTicket(rData, listaConsumos, totalConsumos, granTotalAPagar, metodoSeleccionado);
+            imprimirTicket(rData, listaConsumos, totalConsumos, granTotalAPagar, metodoSeleccionado, nombreResponsable);
         }
 
         // ACTUALIZACIÓN FINAL EN FIREBASE
@@ -1042,14 +1057,15 @@ const { value: nuevoAbono } = await Swal.fire({
             pagos: historialPagosActualizado,
             adelantoMonto: totalCobradoHistorico, // Actualizamos con la suma total final
             diferencia: 0,
-            totalFinalConServicios: subHosp + totalConsumos
+            totalFinalConServicios: subHosp + totalConsumos,
+            recepcionCheckOut: nombreResponsable 
         });
 
         await updateDoc(doc(db, "habitaciones", hab.id), { 
             estado: "Libre", 
             personasActuales: 0,
             reservaActualId: "",
-            late: "" // Limpiar para que el aviso desaparezca
+            late: "" 
         });
 
         Swal.fire({ icon: 'success', title: 'Check-out Exitoso', timer: 2000, showConfirmButton: false });
@@ -1060,18 +1076,7 @@ const { value: nuevoAbono } = await Swal.fire({
     }
 }
 
-async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodoPago) {
-    let nombreAtendido = "RECEPCIONISTA"; 
-    try {
-        const user = auth.currentUser;
-        if (user) {
-            const userDocRef = doc(db, "usuarios", user.uid);
-            const userSnap = await getDoc(userDocRef);
-            if (userSnap.exists()) {
-                nombreAtendido = userSnap.data().nombre || "ADMINISTRADOR";
-            }
-        }
-    } catch (error) { console.error("Error user ticket:", error); }
+async function imprimirTicket(rData, consumos, totalConsumos, pagoActual, metodoPago, nombreAtendido) {
 
     const ahora = new Date();
     const fechaEmision = ahora.toLocaleDateString('es-PE') + ' ' + ahora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
