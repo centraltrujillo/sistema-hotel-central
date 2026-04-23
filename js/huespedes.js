@@ -211,26 +211,66 @@ window.cerrarModal = () => {
     formHuesped.reset(); 
 };
 
-// --- EXPORTAR A EXCEL ---
+// --- EXPORTAR A EXCEL ACTUALIZADO ---
 window.exportarHuespedesExcel = async () => {
-    if (listaHuespedesGlobal.length === 0) return;
-    Swal.fire({ title: 'Generando reporte...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-
-    let excel = `<table border="1"><tr style="background-color: #800020; color: white;">
-                <th>NOMBRE</th><th>DOC</th><th>N° DOCUMENTO</th><th>CELULAR</th>
-                <th>CORREO</th><th>ÚLT. VISITA</th></tr>`;
-
-    for (const h of listaHuespedesGlobal) {
-        const fVisita = h.ultimaVisita ? new Date(h.ultimaVisita).toLocaleDateString() : "---";
-        excel += `<tr><td>${h.huesped || h.nombre || "---"}</td><td>${h.tipoDoc || "---"}</td><td>${h.doc || h.documento || "---"}</td>
-                <td>${h.telefono || h.celular || "---"}</td><td>${h.correo || h.email || "---"}</td><td>${fVisita}</td></tr>`;
+    if (listaHuespedesGlobal.length === 0) {
+        Swal.fire("Aviso", "No hay datos para exportar", "info");
+        return;
     }
+
+    Swal.fire({ 
+        title: 'Generando reporte...', 
+        allowOutsideClick: false, 
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    // Definición de cabeceras (Headers)
+    let excel = `
+        <table border="1">
+            <tr style="background-color: #800020; color: white; font-weight: bold;">
+                <th>NOMBRE COMPLETO</th>
+                <th>TIPO DOC</th>
+                <th>N° DOCUMENTO</th>
+                <th>TELÉFONO / CELULAR</th>
+                <th>CORREO ELECTRÓNICO</th>
+                <th>NACIONALIDAD</th>
+                <th>FECHA NACIMIENTO</th>
+                <th>MOTIVO DE VIAJE</th>
+                <th>ÚLT. VISITA</th>
+            </tr>`;
+
+    // Recorrido de los datos
+    listaHuespedesGlobal.forEach((h) => {
+        const fVisita = h.ultimaVisita ? new Date(h.ultimaVisita).toLocaleDateString() : "---";
+        const fNacimiento = h.nacimiento ? h.nacimiento : "---"; // Mantiene el formato YYYY-MM-DD
+        
+        excel += `
+            <tr>
+                <td>${(h.huesped || h.nombre || "---").toUpperCase()}</td>
+                <td>${h.tipoDoc || "---"}</td>
+                <td>${h.doc || h.documento || "---"}</td>
+                <td>${h.telefono || h.celular || "---"}</td>
+                <td>${h.correo || h.email || "---"}</td>
+                <td>${h.nacionalidad || "---"}</td>
+                <td>${fNacimiento}</td>
+                <td>${h.motivo || "---"}</td>
+                <td>${fVisita}</td>
+            </tr>`;
+    });
+
     excel += `</table>`;
-    const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(excel);
+
+    // Generación del archivo
+    const fileName = `Reporte_Huespedes_${new Date().toLocaleDateString()}.xls`;
+    const url = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(excel);
+    
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Reporte_Huespedes.xls`;
+    a.download = fileName;
+    document.body.appendChild(a); // Necesario para algunos navegadores
     a.click();
+    document.body.removeChild(a);
+    
     Swal.close();
 };
 
