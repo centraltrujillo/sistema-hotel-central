@@ -40,6 +40,27 @@ const Toast = Swal.mixin({
 // 1. Variable global (fuera de la función) para controlar el listener
 let unsubHabs = null; 
 
+/* ==========================================================================
+   FUNCIÓN DE APOYO: OBTENER NOMBRE DEL USUARIO
+   ========================================================================== */
+   async function obtenerNombreRecepcionista() {
+    const user = auth.currentUser;
+    if (!user) return "Desconocido";
+    try {
+        // Accedemos a tu colección de usuarios usando el UID de la sesión
+        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+        const userSnap = await getDocs(q);
+        
+        if (!userSnap.empty) {
+            return userSnap.docs[0].data().nombre; // Retorna "Kathy"
+        }
+        return user.email; // Respaldo si no tiene documento en Firestore
+    } catch (e) {
+        console.error("Error al obtener nombre:", e);
+        return "Sistema";
+    }
+}
+
 // --- 2. CARGAR TABLERO EN TIEMPO REAL ---
 function cargarHabitaciones() {
     if (unsubHabs) {
