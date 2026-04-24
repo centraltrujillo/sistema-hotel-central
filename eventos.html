@@ -16,89 +16,127 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
 
     <style>
-        /* Estilos personalizados para el Calendario del Hotel Central */
+        /* Ajuste del tamaño del contenedor */
         .card-calendar {
             background: #ffffff;
-            padding: 25px;
+            padding: 20px;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-            border: 1px solid #f1f5f9;
-            margin-top: 10px;
+            border: 1px solid #000000; /* Borde exterior negro */
+            margin: 10px auto; /* Centrado */
+            max-width: 900px; /* AQUÍ controlas qué tan ancho es */
         }
 
-        /* Título Principal */
+        /* Reducción de fuentes para que encaje en un calendario más chico */
         .fc .fc-toolbar-title {
             font-family: 'Playfair Display', serif;
-            font-size: 22px !important;
+            font-size: 18px !important;
             color: #1e293b;
             text-transform: capitalize;
         }
 
-        /* Botones de Navegación */
         .fc .fc-button-primary {
             background-color: #ffffff !important;
-            border: 1px solid #e2e8f0 !important;
-            color: #64748b !important;
-            font-size: 13px !important;
+            border: 1px solid #000000 !important; /* Botones con borde negro */
+            color: #000000 !important;
+            font-size: 12px !important;
             font-weight: 600;
-            transition: all 0.2s ease;
         }
 
         .fc .fc-button-primary:hover {
-            background-color: #800020 !important; /* Burgundy */
+            background-color: #800020 !important;
             color: #ffffff !important;
             border-color: #800020 !important;
         }
 
-        /* Botón de Vista Activa */
         .fc .fc-button-active {
             background-color: #800020 !important;
-            border-color: #800020 !important;
+            border-color: #000000 !important;
             color: #ffffff !important;
+        }
+
+        /* Líneas del calendario NEGRAS */
+        .fc-theme-standard td, 
+        .fc-theme-standard th,
+        .fc-theme-standard .fc-scrollgrid {
+            border: 1px solid #000000 !important; /* Líneas internas negras */
         }
 
         /* Cabecera de Días */
         .fc .fc-col-header-cell {
-            background-color: #f8fafc;
-            padding: 10px 0;
+            background-color: #f1f5f9;
         }
 
         .fc .fc-col-header-cell-cushion {
-            color: #475569;
+            color: #000000;
             font-weight: 700;
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
             text-decoration: none;
         }
 
         /* Números de los días */
         .fc .fc-daygrid-day-number {
-            font-size: 14px;
+            font-size: 13px;
             font-family: 'Lato', sans-serif;
-            color: #64748b;
-            padding: 8px !important;
+            color: #000000;
+            font-weight: bold;
             text-decoration: none;
         }
 
-        /* Día de hoy */
-        .fc .fc-day-today {
-            background-color: rgba(204, 153, 0, 0.08) !important; /* Ámbar suave */
+        /* Ajuste de altura de las celdas */
+        .fc .fc-daygrid-day-frame {
+            min-height: 80px !important; /* Celdas menos altas */
         }
 
-        /* Estilo de los Eventos */
         .fc-event {
-            border: none !important;
-            padding: 3px 6px !important;
-            border-radius: 4px !important;
-            font-size: 11px !important;
-            font-weight: 700 !important;
-            cursor: pointer;
+            border: 1px solid #000000 !important; /* Borde negro en eventos */
+            padding: 2px 4px !important;
+            font-size: 10px !important;
         }
+        /* Corrección para el Modal de SweetAlert */
+.swal2-popup {
+    border-radius: 15px !important;
+    padding: 2rem !important;
+    font-family: 'Lato', sans-serif !important;
+}
 
-        /* Bordes de la tabla más finos */
-        .fc-theme-standard td, .fc-theme-standard th {
-            border: 1px solid #f1f5f9 !important;
-        }
+.swal2-title {
+    font-family: 'Playfair Display', serif !important;
+    color: #1e293b !important;
+    margin-bottom: 20px !important;
+}
+
+.swal2-input {
+    height: 45px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    font-size: 14px !important;
+    margin: 10px auto !important;
+    width: 100% !important;
+}
+
+.swal2-input:focus {
+    border-color: #800020 !important; /* Burgundy al enfocar */
+    box-shadow: 0 0 0 2px rgba(128, 0, 32, 0.1) !important;
+}
+
+/* Estilo para el input de color específico */
+input[type="color"].swal2-input {
+    padding: 2px !important;
+    cursor: pointer;
+    background: transparent;
+}
+
+/* Eliminar barras amarillas o bordes extraños */
+.swal2-html-container {
+    margin: 1em 1.6em 0.3em !important;
+    overflow: hidden !important; /* Evita scrolls innecesarios */
+}
+
+.swal2-actions {
+    margin-top: 25px !important;
+}
     </style>
 </head>
 <body>

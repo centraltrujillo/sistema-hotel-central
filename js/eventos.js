@@ -36,20 +36,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const { value: formValues } = await Swal.fire({
                 title: 'Programar Evento',
                 html: `
-                    <div style="text-align: left; font-family: 'Lato', sans-serif;">
-                        <label style="font-size: 14px; color: #64748b; margin-bottom: 8px; display: block;">Descripción del evento:</label>
-                        <input id="swal-input1" class="swal2-input" placeholder="Ej: Mantenimiento Piscina" 
-                            style="width: 100%; margin: 0 0 20px 0; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div style="text-align: left;">
+                        <label style="font-size: 13px; color: #64748b; font-weight: bold;">Descripción:</label>
+                        <input id="swal-input1" class="swal2-input" placeholder="Ej: ">
                         
-                        <label style="font-size: 14px; color: #64748b; margin-bottom: 8px; display: block;">Color de etiqueta:</label>
-                        <input id="swal-input2" type="color" class="swal2-input" value="#800020" 
-                            style="width: 100%; height: 50px; padding: 5px; border-radius: 8px; cursor: pointer; border: 1px solid #e2e8f0;">
+                        <label style="font-size: 13px; color: #64748b; font-weight: bold; margin-top: 10px; display: block;">Color de etiqueta:</label>
+                        <input id="swal-input2" type="color" class="swal2-input" value="#800020">
                     </div>
                 `,
                 showCancelButton: true,
-                confirmButtonColor: '#800020', // Tu borgoña corporativo
+                confirmButtonColor: '#800020',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: '<i class="fa-solid fa-check"></i> Guardar Evento',
+                confirmButtonText: '<i class="fa-solid fa-check"></i>Guardar Evento',
                 cancelButtonText: 'Cancelar',
                 focusConfirm: false,
                 preConfirm: () => {
