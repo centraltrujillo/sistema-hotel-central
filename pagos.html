@@ -194,18 +194,20 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (
                 montoTotal: 0,
                 ultimaFecha: pago.fechaPago,
                 idReserva: idRes,
-                metodosUsados: new Set(), // Usamos Set para que no se repitan métodos
-                atendidoBy: pago.atendidoBy || 'Admin'
+                metodosUsados: new Set(), 
+                // Cambiado a recibidoBy para auditoría de caja
+                recibidoBy: pago.recibidoBy || 'Admin' 
             };
         }
 
         // Agregamos el método de este pago específico al Set
         if(pago.metodoPago) agrupados[idRes].metodosUsados.add(pago.metodoPago);
 
-        // Actualizamos al último que emitió un pago en esta reserva
+        // Actualizamos al último que emitió un pago (el último responsable de recibir dinero)
         if (convertirFecha(pago.fechaPago) >= convertirFecha(agrupados[idRes].ultimaFecha)) {
             agrupados[idRes].ultimaFecha = pago.fechaPago;
-            agrupados[idRes].atendidoBy = pago.atendidoBy || 'Admin';
+            // Priorizamos recibidoBy, usamos atendidoBy como respaldo
+            agrupados[idRes].recibidoBy = pago.recibidoBy || pago.atendidoBy || 'Admin';
         }
     }
 
