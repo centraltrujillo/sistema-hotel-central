@@ -469,7 +469,6 @@ Swal.fire({
                 const esDayUse = data.medio?.toLowerCase() === 'dayuse' || data.tipoVenta?.toLowerCase() === 'day use';
     
 // --- DEFINICIÓN DE LÓGICA DE CONTEO Y ESTADOS ---
-const debeSumarAlTotal = data.estado?.toLowerCase() === 'checkout';
 const esGestionado = data.estado === 'checkin' || data.estado === 'checkout';
 
 const registrarOcupacion = (fechaISO) => {
