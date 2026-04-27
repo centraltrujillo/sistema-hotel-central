@@ -468,89 +468,101 @@ Swal.fire({
     
                 const esDayUse = data.medio?.toLowerCase() === 'dayuse' || data.tipoVenta?.toLowerCase() === 'day use';
     
-                const registrarOcupacion = (fechaISO) => {
-                    if (!fechaISO || !debeSumarAlTotal) return; 
-                    conteoOcupacion[fechaISO] = (conteoOcupacion[fechaISO] || 0) + 1;
-                };
+// --- DEFINICIÓN DE LÓGICA DE CONTEO Y ESTADOS ---
+const debeSumarAlTotal = data.estado?.toLowerCase() === 'checkout';
+const esGestionado = data.estado === 'checkin' || data.estado === 'checkout';
+
+const registrarOcupacion = (fechaISO) => {
+    if (!fechaISO || !debeSumarAlTotal) return; 
+    conteoOcupacion[fechaISO] = (conteoOcupacion[fechaISO] || 0) + 1;
+};
+
+// 1. EVENTO PRINCIPAL (Habilitación física)
+eventosFinales.push({
+    id: idReserva,
+    resourceId: `hab${data.habitacion}`, 
+    title: textoNombre,
+    start: esDayUse ? `${data.checkIn}T08:00:00` : data.checkIn,
+    end: esDayUse ? `${data.checkIn}T20:00:00` : data.checkOut,
+    backgroundColor: colorFinal,
+    textColor: colorTexto,
+    borderColor: colorBorde,
+    allDay: !esDayUse,
+    extendedProps: { ...data }
+});
+
+// Lógica de conteo de estancia normal
+let fActual = new Date(data.checkIn + "T00:00:00");
+let fFin = new Date(data.checkOut + "T00:00:00");
+
+if (esDayUse) {
+    registrarOcupacion(data.checkIn);
+} else {
+    while (fActual < fFin) {
+        registrarOcupacion(fActual.toISOString().split('T')[0]);
+        fActual.setDate(fActual.getDate() + 1);
+    }
+}
+
+// 2. LATE CHECK-OUT (Suma +1 al día de salida y cambia color)
+if (data.late && data.late !== "Normal" && !esDayUse) {
+    registrarOcupacion(data.checkOut);
+    const horaLate = data.late.includes(':') ? data.late : "18:00";
+    eventosFinales.push({
+        id: idReserva + '_late',
+        resourceId: 'extra1', 
+        title: `LATE H-${data.habitacion} (${horaLate})`,
+        start: `${data.checkOut}T12:00:00`, 
+        end: `${data.checkOut}T${horaLate}:00`,
+        backgroundColor: esGestionado ? '#ffffff' : '#d9f99d',
+        textColor: esGestionado ? '#000000' : '#166534',
+        borderColor: esGestionado ? '#cbd5e1' : 'transparent',
+        allDay: false, 
+        extendedProps: { ...data, esExtra: true }
+    });
+}
+
+// 3. EARLY CHECK-IN (Suma al DÍA ANTERIOR y cambia color)
+if (data.early && data.early !== "Normal" && !esDayUse) {
+    let fEarly = new Date(data.checkIn + "T00:00:00");
+    fEarly.setDate(fEarly.getDate() - 1); 
+    const fechaAnterior = fEarly.toISOString().split('T')[0];
+
+    registrarOcupacion(fechaAnterior); // Conteo el día previo
+
+    const horaEarly = data.early.includes(':') ? data.early : "08:00";
+    eventosFinales.push({
+        id: idReserva + '_early',
+        resourceId: 'extra2', 
+        title: `EARLY H-${data.habitacion} (Mañana ${horaEarly})`,
+        start: `${fechaAnterior}T18:00:00`, 
+        end: `${fechaAnterior}T23:59:59`,
+        backgroundColor: esGestionado ? '#ffffff' : '#bae6fd',
+        textColor: esGestionado ? '#000000' : '#0369a1',
+        borderColor: esGestionado ? '#cbd5e1' : 'transparent',
+        allDay: false, 
+        extendedProps: { ...data, esExtra: true }
+    });
+}
     
-                // 1. EVENTO PRINCIPAL (Suma +1)
-                eventosFinales.push({
-                    id: idReserva,
-                    resourceId: `hab${data.habitacion}`, 
-                    title: textoNombre,
-                    start: esDayUse ? `${data.checkIn}T08:00:00` : data.checkIn,
-                    end: esDayUse ? `${data.checkIn}T20:00:00` : data.checkOut,
-                    backgroundColor: colorFinal,
-                    textColor: colorTexto,
-                    borderColor: colorBorde,
-                    allDay: !esDayUse,
-                    extendedProps: { ...data }
-                });
-    
-                // Lógica de conteo de estancia
-                let fActual = new Date(data.checkIn + "T00:00:00");
-                let fFin = new Date(data.checkOut + "T00:00:00");
-                
-                if (esDayUse) {
-                    registrarOcupacion(data.checkIn); // La habitación física
-                } else {
-                    while (fActual < fFin) {
-                        registrarOcupacion(fActual.toISOString().split('T')[0]);
-                        fActual.setDate(fActual.getDate() + 1);
-                    }
-                }
-    
-                // 2. LATE CHECK-OUT (Suma +1 extra al día de salida)
-                if (data.late && data.late !== "Normal" && !esDayUse) {
-                    registrarOcupacion(data.checkOut);
-                    const horaLate = data.late.includes(':') ? data.late : "15:00";
-                    eventosFinales.push({
-                        id: idReserva + '_late',
-                        resourceId: 'extra1', 
-                        title: `LATE H-${data.habitacion} (${horaLate})`,
-                        start: `${data.checkOut}T12:00:00`, 
-                        end: `${data.checkOut}T${horaLate}:00`,
-                        backgroundColor: '#d9f99d',
-                        textColor: '#166534',
-                        allDay: false, 
-                        extendedProps: { ...data, esExtra: true }
-                    });
-                }
-    
-                // 3. EARLY CHECK-IN (Suma +1 extra al día de entrada)
-                if (data.early && data.early !== "Normal" && !esDayUse) {
-                    registrarOcupacion(data.checkIn);
-                    const horaEarly = data.early.includes(':') ? data.early : "08:00";
-                    eventosFinales.push({
-                        id: idReserva + '_early',
-                        resourceId: 'extra2', 
-                        title: `EARLY H-${data.habitacion} (${horaEarly})`,
-                        start: `${data.checkIn}T${horaEarly}:00`, 
-                        end: `${data.checkIn}T13:00:00`,
-                        backgroundColor: '#bae6fd',
-                        textColor: '#0369a1',
-                        allDay: false, 
-                        extendedProps: { ...data, esExtra: true }
-                    });
-                }
-                    
-                // 4. DAY USE (Suma +1 ADICIONAL al de la habitación = TOTAL 2)
-                if (esDayUse) {
-                    registrarOcupacion(data.checkIn); // El segundo punto por ser Day Use
-                    const hEntrada = (data.early && data.early !== "Normal") ? data.early : "09:00";
-                    const hSalida = (data.late && data.late !== "Normal") ? data.late : "18:00";
-                    eventosFinales.push({
-                        id: idReserva + '_dayuse',
-                        resourceId: 'extra3', 
-                        title: `DAY USE H-${data.habitacion} (${hEntrada}-${hSalida})`,
-                        start: `${data.checkIn}T${hEntrada}:00`,
-                        end: `${data.checkIn}T${hSalida}:00`,
-                        backgroundColor: '#fef3c7',
-                        textColor: '#92400e',
-                        allDay: false,
-                        extendedProps: { ...data, esExtra: true }
-                    });
-                }
+// 4. DAY USE (Suma +1 adicional y cambia color)
+if (esDayUse) {
+    registrarOcupacion(data.checkIn); 
+    const hEntrada = (data.early && data.early !== "Normal") ? data.early : "09:00";
+    const hSalida = (data.late && data.late !== "Normal") ? data.late : "18:00";
+    eventosFinales.push({
+        id: idReserva + '_dayuse',
+        resourceId: 'extra3', 
+        title: `DAY USE H-${data.habitacion} (${hEntrada}-${hSalida})`,
+        start: `${data.checkIn}T${hEntrada}:00`,
+        end: `${data.checkIn}T${hSalida}:00`,
+        backgroundColor: esGestionado ? '#ffffff' : '#fef3c7',
+        textColor: esGestionado ? '#000000' : '#92400e',
+        borderColor: esGestionado ? '#cbd5e1' : 'transparent',
+        allDay: false,
+        extendedProps: { ...data, esExtra: true }
+    });
+}
             });
     
             // 5. RENDERIZAR TOTALES
