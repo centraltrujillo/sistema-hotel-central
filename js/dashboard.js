@@ -80,7 +80,6 @@ function inicializarGraficos() {
             chart: { type: 'area', height: 250, toolbar: { show: false }, zoom: { enabled: false } },
             series: [{ name: 'Ingresos S/', data: [0, 0, 0, 0, 0, 0, 0] }],
             xaxis: { categories: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'] },
-            // --- CORRECCIÓN AQUÍ: Configuración del eje Y ---
             yaxis: {
                 labels: {
                     formatter: (value) => `S/ ${value.toFixed(0)}`

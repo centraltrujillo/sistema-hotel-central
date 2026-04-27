@@ -108,46 +108,55 @@
 
         // --- 2. RENDERIZADO DE TABLA ---
         function renderTable(datos) {
-            tbody.innerHTML = '';
-            if(datos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay movimientos registrados.</td></tr>';
-                return;
-            }
+    tbody.innerHTML = '';
+    if(datos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No hay movimientos registrados.</td></tr>';
+        return;
+    }
 
-            datos.forEach((p) => {
-                const f = convertirFecha(p.ultimaFecha); 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">Último mov.</small></td>
-                    <td><strong>${p.huesped || 'S/N'}</strong></td>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 5px;">
-                            <i class="fa-solid fa-user-check" style="color: #64748b; font-size: 10px;"></i>
-                            <span style="font-weight: 600; text-transform: capitalize;">${p.atendidoBy || 'Admin'}</span>
-                        </div>
-                        <small style="color:#64748b; font-size:10px;">Hab: ${p.habitacion || '--'}</small>
-                    </td>
-                    <td><span style="font-size:12px;"><i class="fa-solid fa-layer-group"></i> ${p.metodoPago}</span></td>
-                    <td>
-                        <button class="btn-detalle" onclick="verDetalleAlojamiento('${p.idReserva}', ${p.montoHospedaje})">
-                            <span>S/ ${p.montoHospedaje.toFixed(2)}</span> <i class="fa-solid fa-magnifying-glass-dollar"></i>
-                        </button>
-                    </td>
-                    <td>
-                        <button class="btn-detalle" onclick="verDetalleExtras('${p.idReserva}', ${p.montoExtras})">
-                            <span>S/ ${p.montoExtras.toFixed(2)}</span> <i class="fa-solid fa-receipt"></i>
-                        </button>
-                    </td>
-                    <td>
-                        <button class="btn-detalle" style="background: #fff7ed; border-color: #ffedd5; color: #9a3412;" 
-                                onclick="verTicketGlobal('${p.idReserva}', ${p.montoHospedaje}, ${p.montoExtras}, ${p.montoTotal})">
-                            <strong style="font-size:15px;">S/ ${p.montoTotal.toFixed(2)}</strong> <i class="fa-solid fa-file-invoice"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
+    datos.forEach((p) => {
+        const f = convertirFecha(p.ultimaFecha); 
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${f ? f.toLocaleDateString('es-PE') : '---'}<br><small style="color:#64748b;">${f ? f.toLocaleTimeString('es-PE', {hour:'2-digit', minute:'2-digit'}) : ''}</small></td>
+            <td><strong>${p.huesped || 'S/N'}</strong></td>
+            
+            <td>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 24px; height: 24px; background: #800020; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px;">
+                        ${(p.atendidoBy || 'A').charAt(0).toUpperCase()}
+                    </div>
+                    <span style="font-weight: 600; text-transform: capitalize;">${p.atendidoBy || 'Admin'}</span>
+                </div>
+                <small style="color:#64748b; font-size:10px;">Hab: ${p.habitacion || '--'}</small>
+            </td>
+
+            <td>
+                <span style="font-size:12px; font-weight: bold; color: ${p.metodoColor};">
+                    <i class="fa-solid ${p.metodoIcono}"></i> ${p.metodoFinal.toUpperCase()}
+                </span>
+            </td>
+
+            <td>
+                <button class="btn-detalle" onclick="verDetalleAlojamiento('${p.idReserva}', ${p.montoHospedaje})">
+                    <span>S/ ${p.montoHospedaje.toFixed(2)}</span> <i class="fa-solid fa-magnifying-glass-dollar"></i>
+                </button>
+            </td>
+            <td>
+                <button class="btn-detalle" onclick="verDetalleExtras('${p.idReserva}', ${p.montoExtras})">
+                    <span>S/ ${p.montoExtras.toFixed(2)}</span> <i class="fa-solid fa-receipt"></i>
+                </button>
+            </td>
+            <td>
+                <button class="btn-detalle" style="background: #fff7ed; border-color: #ffedd5; color: #9a3412;" 
+                        onclick="verTicketGlobal('${p.idReserva}', ${p.montoHospedaje}, ${p.montoExtras}, ${p.montoTotal})">
+                    <strong style="font-size:15px;">S/ ${p.montoTotal.toFixed(2)}</strong> <i class="fa-solid fa-file-invoice"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
 
         // --- 3. APLICAR FILTROS ---
         function aplicarFiltros() {
@@ -164,15 +173,15 @@
             renderTable(pagosFiltrados);
         }
 
-// --- 4. ESCUCHA DE DATOS (FIREBASE) CORREGIDA ---
+// --- 4. ESCUCHA DE DATOS (FIREBASE) OPTIMIZADA ---
 onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (snapshot) => {
     const pagosBrutos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const agrupados = {};
 
-    // 1. Identificar reservas y montos de hospedaje
+    // 1. Agrupación por Reserva para consolidar pagos
     for (const pago of pagosBrutos) {
         const idRes = pago.idReserva;
-        if (!idRes) continue; // Saltar si no hay ID de reserva
+        if (!idRes) continue;
         
         if (!agrupados[idRes]) {
             const resSnap = await getDoc(doc(db, "reservas", idRes));
@@ -184,39 +193,47 @@ onSnapshot(query(collection(db, "pagos"), orderBy("fechaPago", "desc")), async (
                 montoExtras: 0, 
                 montoTotal: 0,
                 ultimaFecha: pago.fechaPago,
-                idReserva: idRes
+                idReserva: idRes,
+                metodosUsados: new Set(), // Usamos Set para que no se repitan métodos
+                atendidoBy: pago.atendidoBy || 'Admin'
             };
         }
 
-        if (convertirFecha(pago.fechaPago) > convertirFecha(agrupados[idRes].ultimaFecha)) {
+        // Agregamos el método de este pago específico al Set
+        if(pago.metodoPago) agrupados[idRes].metodosUsados.add(pago.metodoPago);
+
+        // Actualizamos al último que emitió un pago en esta reserva
+        if (convertirFecha(pago.fechaPago) >= convertirFecha(agrupados[idRes].ultimaFecha)) {
             agrupados[idRes].ultimaFecha = pago.fechaPago;
             agrupados[idRes].atendidoBy = pago.atendidoBy || 'Admin';
         }
     }
 
-    // 2. CORRECCIÓN: Usar Promise.all para asegurar que los montos se calculen ANTES de seguir
     const idsReservas = Object.keys(agrupados);
     await Promise.all(idsReservas.map(async (idRes) => {
+        // Cálculo de consumos
         const qConsumos = query(collection(db, "consumos"), where("idReserva", "==", idRes));
         const consSnap = await getDocs(qConsumos);
-        
         let sumaExtras = 0;
-consSnap.forEach(c => {
-    const data = c.data();
-    // Forzamos a que sea número, por si Firebase lo devuelve como string o int64
-    const pTotal = parseFloat(data.precioTotal || 0); 
-    sumaExtras += pTotal;
-});
+        consSnap.forEach(c => { sumaExtras += parseFloat(c.data().precioTotal || 0); });
 
-        // Actualizamos los datos directamente en el objeto de la reserva
         agrupados[idRes].montoExtras = sumaExtras;
         agrupados[idRes].montoTotal = agrupados[idRes].montoHospedaje + sumaExtras;
+
+        // --- LÓGICA DE MÉTODO DE PAGO (MIXTO vs ÚNICO) ---
+        const listaMetodos = Array.from(agrupados[idRes].metodosUsados);
+        if (listaMetodos.length > 1) {
+            agrupados[idRes].metodoFinal = "MIXTO";
+            agrupados[idRes].metodoIcono = "fa-layer-group";
+            agrupados[idRes].metodoColor = "#2563eb"; // Azul para mixto
+        } else {
+            agrupados[idRes].metodoFinal = listaMetodos[0] || "N/A";
+            agrupados[idRes].metodoIcono = "fa-wallet";
+            agrupados[idRes].metodoColor = "#64748b";
+        }
     }));
 
-    // 3. Solo después de que TODO lo anterior terminó, actualizamos la variable global
     todosLosPagos = Object.values(agrupados);
-    
-    // Forzamos el renderizado
     aplicarFiltros();
 });
 
