@@ -205,7 +205,7 @@ async function abrirModalCheckIn(hab) {
         input: 'select',
         inputOptions: opciones,
         confirmButtonColor: '#800020',
-        showCancelButton: true,
+        showCancelButton: 'Ingresar',
         cancelButtonText: 'Cancelar'
     });
 
