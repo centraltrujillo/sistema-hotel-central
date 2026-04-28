@@ -236,6 +236,7 @@ onSnapshot(qReservasHoy, (snapshot) => {
 });
 
 // E. ACTIVIDAD RECIENTE (Cruce exacto por idReserva)
+// E. ACTIVIDAD RECIENTE (Cruce exacto por idReserva)
 const qPagos = query(collection(db, "pagos"), orderBy("fechaPago", "desc"), limit(5));
 onSnapshot(qPagos, async (snapshot) => {
     const list = document.getElementById('list-checkins');
@@ -247,6 +248,18 @@ onSnapshot(qPagos, async (snapshot) => {
         const idReserva = dataPago.idReserva;
         let tipoExacto = "PAGO DE ESTADÍA"; // Valor por defecto
 
+        // --- PROCESAMIENTO DE FECHA Y HORA ---
+        const fRaw = dataPago.fechaPago;
+        let tiempoTexto = "";
+        if (fRaw) {
+            const dateObj = fRaw.toDate ? fRaw.toDate() : new Date(fRaw);
+            if (!isNaN(dateObj.getTime())) {
+                const fecha = dateObj.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
+                const hora = dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+                tiempoTexto = `${fecha} ${hora}`;
+            }
+        }
+
         try {
             if (idReserva) {
                 // 1. BUSCAR EN CONSUMOS
@@ -257,7 +270,6 @@ onSnapshot(qPagos, async (snapshot) => {
                 if (!consumoSnap.empty) {
                     consumoSnap.forEach(cDoc => {
                         const cData = cDoc.data();
-                        // Comparamos si el monto del pago es igual al del consumo (ej. los S/ 3.00 del agua)
                         if (Number(cData.precioTotal) === Number(dataPago.montoTotal)) {
                             tipoExacto = `CONSUMO: ${cData.descripcion}`;
                             esConsumo = true;
@@ -265,18 +277,15 @@ onSnapshot(qPagos, async (snapshot) => {
                     });
                 }
 
-                // 2. BUSCAR EN RESERVAS (Si no fue consumo, vemos si es Abono o Check-out)
+                // 2. BUSCAR EN RESERVAS
                 if (!esConsumo) {
                     const resRef = doc(db, "reservas", idReserva);
                     const resSnap = await getDoc(resRef);
                     if (resSnap.exists()) {
                         const resData = resSnap.data();
-                        
-                        // Si la reserva está finalizada, es el pago del checkout
                         if (resData.estado === "finalizada" || resData.estado === "check-out") {
                             tipoExacto = "LIQUIDACIÓN CHECK-OUT";
                         } 
-                        // Si el ticket dice adelanto o abono
                         else if (dataPago.tipoTicket === "Adelanto" || dataPago.tipoTicket === "Abono") {
                             tipoExacto = "ABONO / RESERVA";
                         }
@@ -299,6 +308,7 @@ onSnapshot(qPagos, async (snapshot) => {
                         ${tipoExacto}
                     </span> | 
                     <strong>S/ ${Number(dataPago.montoTotal || 0).toFixed(2)}</strong>
+                    <span style="color: #64748b; margin-left: 5px;"> • ${tiempoTexto}</span>
                 </small>
             </div>`;
         list.appendChild(item);

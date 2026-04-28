@@ -122,14 +122,14 @@
             <td><strong>${p.huesped || 'S/N'}</strong></td>
             
             <td>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <div style="width: 24px; height: 24px; background: #800020; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px;">
-                        ${(p.atendidoBy || 'A').charAt(0).toUpperCase()}
-                    </div>
-                    <span style="font-weight: 600; text-transform: capitalize;">${p.atendidoBy || 'Admin'}</span>
-                </div>
-                <small style="color:#64748b; font-size:10px;">Hab: ${p.habitacion || '--'}</small>
-            </td>
+    <div style="display: flex; align-items: center; gap: 5px;">
+        <div style="width: 24px; height: 24px; background: #800020; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px;">
+            ${(p.recibidoBy || 'A').charAt(0).toUpperCase()}
+        </div>
+        <span style="font-weight: 600; text-transform: capitalize;">${p.recibidoBy || 'Admin'}</span>
+    </div>
+    <small style="color:#64748b; font-size:10px;">Hab: ${p.habitacion || '--'}</small>
+</td>
 
             <td>
                 <span style="font-size:12px; font-weight: bold; color: ${p.metodoColor};">
