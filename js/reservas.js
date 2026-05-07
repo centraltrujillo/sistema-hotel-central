@@ -279,17 +279,16 @@ form.addEventListener("submit", async (e) => {
 
 // A. Estadísticas Globales (Escucha TODO para las cards)
 const escucharStatsGlobales = () => {
-    // Usamos onSnapshot para que las cards se actualicen solas
     onSnapshot(collection(db, "reservas"), (snapshot) => {
         const conteo = { booking: 0, airbnb: 0, directas: 0, expedia: 0, personal: 0, dayuse: 0, gmail: 0 };
         
         snapshot.docs.forEach(docSnap => {
             const res = docSnap.data();
+            // Limpiamos el texto del medio para que coincida con las llaves del objeto
             const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
             if (conteo.hasOwnProperty(m)) conteo[m]++;
         });
 
-        // Actualizar los números en el HTML
         Object.keys(conteo).forEach(k => {
             const el = document.getElementById(`stat-${k}`);
             if (el) el.textContent = conteo[k];
@@ -304,8 +303,14 @@ const cargarReservasPaginadas = async (direccion = "siguiente") => {
         let q;
 
         if (direccion === "siguiente") {
-            q = query(ref, orderBy("fechaRegistro", "desc"), startAfter(ultimoDoc || 0), limit(limitePorPagina));
+            // CORRECCIÓN: Si no hay ultimoDoc, es la primera carga y no usamos startAfter
+            if (ultimoDoc) {
+                q = query(ref, orderBy("fechaRegistro", "desc"), startAfter(ultimoDoc), limit(limitePorPagina));
+            } else {
+                q = query(ref, orderBy("fechaRegistro", "desc"), limit(limitePorPagina));
+            }
         } else {
+            // Para ir hacia atrás
             q = query(ref, orderBy("fechaRegistro", "desc"), endBefore(primerDoc), limitToLast(limitePorPagina));
         }
 
@@ -315,34 +320,49 @@ const cargarReservasPaginadas = async (direccion = "siguiente") => {
             primerDoc = snapshot.docs[0];
             ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
             
-            // Actualizamos la lista global con lo que hay en esta página
             listaReservasGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Usamos tu función renderizarTabla que ya tienes abajo
+            // Renderizamos con tu función existente
             renderizarTabla(listaReservasGlobal);
             
-            // Actualizar botones de paginación
-            document.getElementById("pageInfo").textContent = `Página ${paginaActual}`;
-            document.getElementById("btnPrev").disabled = (paginaActual === 1);
-            document.getElementById("btnNext").disabled = (snapshot.docs.length < limitePorPagina);
+            // Actualizar botones de interfaz
+            const btnPrev = document.getElementById("btnPrev");
+            const btnNext = document.getElementById("btnNext");
+            const pageIndicator = document.getElementById("pageInfo");
+
+            if (pageIndicator) pageIndicator.textContent = `Página ${paginaActual}`;
+            if (btnPrev) btnPrev.disabled = (paginaActual === 1);
+            if (btnNext) btnNext.disabled = (snapshot.docs.length < limitePorPagina);
+        } else {
+            // Si la consulta vuelve vacía y es la primera página, mostrar aviso
+            if (paginaActual === 1) {
+                tablaBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No se encontraron reservas</td></tr>';
+            }
         }
     } catch (error) {
-        console.error("Error cargando página:", error);
+        console.error("Error cargando página de reservas:", error);
     }
 };
 
-// Listeners para tus nuevos botones
-document.getElementById("btnNext").onclick = () => {
-    paginaActual++;
-    cargarReservasPaginadas("siguiente");
-};
+// Listeners corregidos para evitar errores si los elementos no existen aún
+const btnNext = document.getElementById("btnNext");
+const btnPrev = document.getElementById("btnPrev");
 
-document.getElementById("btnPrev").onclick = () => {
-    if (paginaActual > 1) {
-        paginaActual--;
-        cargarReservasPaginadas("anterior");
-    }
-};
+if (btnNext) {
+    btnNext.onclick = () => {
+        paginaActual++;
+        cargarReservasPaginadas("siguiente");
+    };
+}
+
+if (btnPrev) {
+    btnPrev.onclick = () => {
+        if (paginaActual > 1) {
+            paginaActual--;
+            cargarReservasPaginadas("anterior");
+        }
+    };
+}
 
 
 
