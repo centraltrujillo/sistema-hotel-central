@@ -177,15 +177,21 @@ function obtenerIconoSegunOcupacion(estado, p) {
 }
 
 /* ==========================================================================
-   3. MODAL CHECK-IN (ELECCIÓN DE ORIGEN)
+   3. MODAL CHECK-IN (CON RESERVAS DEL MES)
    ========================================================================== */
-async function abrirModalCheckIn(hab) {
+   async function abrirModalCheckIn(hab) {
     const hoy = getHoyISO();
+    
+    // Calculamos el rango del mes actual
+    const fecha = new Date();
+    const primerDiaMes = new Date(fecha.getFullYear(), fecha.getMonth(), 1).toISOString().split('T')[0];
+    const ultimoDiaMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).toISOString().split('T')[0];
 
-    // Buscamos reservas programadas para hoy en esta habitación
+    // Buscamos reservas del mes para esta habitación que aún estén en estado "reservada"
     const q = query(collection(db, "reservas"), 
               where("habitacion", "==", hab.numero.toString()), 
-              where("checkIn", "==", hoy),
+              where("checkIn", ">=", primerDiaMes),
+              where("checkIn", "<=", ultimoDiaMes),
               where("estado", "==", "reservada"));
     
     const snap = await getDocs(q);
@@ -194,7 +200,11 @@ async function abrirModalCheckIn(hab) {
 
     snap.forEach(d => { 
         const data = d.data();
-        opciones[d.id] = `🏨 Reserva: ${data.huesped}`; 
+        // Verificamos si la reserva es específicamente de hoy para poner la etiqueta
+        const etiquetaHoy = (data.checkIn === hoy) ? " 🚩 (RESERVA DE HOY)" : "";
+        
+        // Formateamos la opción con la fecha para que el recepcionista sepa de qué día es
+        opciones[d.id] = `📅 ${data.checkIn} - ${data.huesped}${etiquetaHoy}`; 
         datosReservas[d.id] = data; 
     });
     
@@ -202,48 +212,21 @@ async function abrirModalCheckIn(hab) {
 
     const { value: choice } = await Swal.fire({
         title: `Ingreso - Hab. ${hab.numero}`,
+        text: "Seleccione una reserva del mes o venta directa",
         input: 'select',
         inputOptions: opciones,
-        confirmButtonColor: '#800020',
-        showCancelButton: 'Ingresar',
+        confirmButtonColor: '#800020', // Tu color vino tinto de marca
+        showCancelButton: true,
+        confirmButtonText: 'Seleccionar',
         cancelButtonText: 'Cancelar'
     });
 
     if (choice) {
         if (choice === "directo") {
             modalCheckInDirecto(hab); 
-                } else {
+        } else {
             ejecutarCheckInReservaExistente(choice, hab, datosReservas[choice]);
         }
-    }
-}
-
-async function ejecutarCheckInReservaExistente(resId, hab, dataReserva) {
-    try {
-        const responsableCheckIn = await obtenerNombreRecepcionista();
-
-        // 2. Actualizamos la reserva con el NOMBRE REAL 
-        await updateDoc(doc(db, "reservas", resId), { 
-            estado: "checkin",
-            fechaCheckInReal: new Date().toISOString(),
-            recepcionconfi: responsableCheckIn, 
-            pagos: dataReserva.pagos || [],
-            consumos: dataReserva.consumos || []
-        });
-
-        // 3. Ocupamos la habitación
-        await updateDoc(doc(db, "habitaciones", hab.id), { 
-            estado: "Ocupada",
-            personasActuales: parseInt(dataReserva.personas) || 1,
-            reservaActualId: resId,
-            late: dataReserva.late || "",
-            recepcionconfi: responsableCheckIn 
-        });
-
-        Swal.fire({ icon: 'success', title: 'Huésped en Habitación', showConfirmButton: false, timer: 1500 });
-    } catch (e) {
-        console.error("Error en Check-in:", e);
-        Swal.fire('Error', 'No se pudo procesar el ingreso', 'error');
     }
 }
 
@@ -668,55 +651,75 @@ const calcularMontosRack = () => {
    async function abrirModalHistorialPagos(resId, hab, rData) {
     const listaPagosHTML = (rData.pagos && rData.pagos.length > 0) 
         ? rData.pagos.map((p, i) => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px;">
-                <span><b style="color: #800020;">#${i+1}</b> ${new Date(p.fecha).toLocaleDateString('es-PE')}</span>
-                <span style="color: #666; font-size: 11px;">${p.metodo} ${p.recibidoBy ? `(${p.recibidoBy})` : ''}</span>
-                <span style="font-weight: bold; color: #27ae60;">S/ ${parseFloat(p.monto).toFixed(2)}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px;">
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-weight: bold; color: #444;">Abono #${i+1}</span>
+                    <span style="color: #888; font-size: 11px;">${new Date(p.fecha).toLocaleDateString()} - ${p.metodo}</span>
+                </div>
+                <div style="text-align: right;">
+                    <span style="display: block; font-weight: bold; color: #166534;">S/ ${parseFloat(p.monto).toFixed(2)}</span>
+                    <span style="font-size: 10px; color: #94a3b8;">Por: ${p.recibidoBy || '---'}</span>
+                </div>
             </div>
         `).join('')
-        : '<p style="text-align:center; color:#999; padding:10px;">No hay abonos registrados.</p>';
+        : '<div style="padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">No hay abonos registrados</div>';
 
-    // 2. Lanzar el modal 
     const { value: nuevoAbono } = await Swal.fire({
-        title: `<span style="font-family:'Playfair Display'; color:#800020; font-size: 20px;">Historial de Pagos</span>`,
-        width: '450px',
-        customClass: {
-            popup: 'hotel-modal-custom', 
-            confirmButton: 'btn-dorado-full', 
-            cancelButton: 'btn-secundario'
-        },
+        title: `<span style="font-family:'Playfair Display'; color:#800020; font-size: 22px;">Historial de Pagos</span>`,
+        width: '400px',
+        background: '#f8fafc',
         html: `
             <div style="text-align: left; font-family: 'Lato', sans-serif;">
-                <div style="max-height: 180px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
+                <!-- Contenedor de Lista -->
+                <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
                     ${listaPagosHTML}
                 </div>
                 
-                <div style="background: #fdfaf5; padding: 15px; border-radius: 8px; border: 1px dashed #d4af37;">
-                    <label style="font-size: 10px; font-weight: bold; color: #800020; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">
+                <!-- Sección de Registro -->
+                <div style="background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <label style="font-size: 11px; font-weight: 800; color: #800020; text-transform: uppercase; margin-bottom: 10px; display: block;">
                         Registrar Nuevo Abono
                     </label>
-                    <div style="display: flex; gap: 8px;">
-                        <input id="sw-monto-pago" type="number" class="swal2-input" placeholder="Monto S/" style="margin:0; flex: 1; height: 38px; font-size: 14px;">
-                        <select id="sw-metodo-pago" class="swal2-select" style="margin:0; flex: 1; height: 38px; font-size: 13px;">
-                            <option value="Efectivo">💵 Efectivo</option>
-                            <option value="Tarjeta">💳 Tarjeta</option>
-                            <option value="Transferencia">📱 Transf.</option>
-                            <option value="Yape">📱 Yape</option>
-                            <option value="Plin">📱 Plin</option>
-                        </select>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 10px; color: #64748b; font-weight: bold;">MONTO</span>
+                            <input id="sw-monto-pago" type="number" placeholder="0.00" 
+                                   style="width: 100%; height: 38px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; font-size: 14px; outline: none;">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 10px; color: #64748b; font-weight: bold;">MÉTODO</span>
+                            <select id="sw-metodo-pago" 
+                                    style="width: 100%; height: 38px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 5px; font-size: 13px; background: white; outline: none;">
+                                    <option value="Efectivo">💵 Efectivo</option>
+                                    <option value="Tarjeta">💳 Tarjeta</option>
+                                    <option value="Yape">📱 Yape</option>
+                                    <option value="Plin">📱 Plin</option>
+                                    <option value="Transferencia">📱 Transferencia</option>
+                            </select>
+                        </div>
                     </div>
+                </div>
+                <div style="margin-top: 10px; text-align: right; font-size: 12px; color: #475569;">
+                    <b>Saldo pendiente:</b> S/ ${parseFloat(rData.diferencia).toFixed(2)}
                 </div>
             </div>
         `,
         showCancelButton: true,
         confirmButtonText: 'REGISTRAR PAGO',
         cancelButtonText: 'VOLVER',
-        buttonsStyling: false,
+        confirmButtonColor: '#800020',
+        cancelButtonColor: '#64748b',
         preConfirm: () => {
-            const monto = parseFloat(document.getElementById('sw-monto-pago').value);
+            const montoInput = document.getElementById('sw-monto-pago');
+            const monto = parseFloat(montoInput.value);
             const metodo = document.getElementById('sw-metodo-pago').value;
+
             if (!monto || monto <= 0) {
                 Swal.showValidationMessage('Ingrese un monto válido');
+                return false;
+            }
+            if (monto > parseFloat(rData.diferencia) + 0.01) { // Pequeño margen por decimales
+                Swal.showValidationMessage('El abono supera la deuda');
                 return false;
             }
             return { monto, metodo };

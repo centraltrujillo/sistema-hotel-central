@@ -1,6 +1,7 @@
 import { auth, db } from "./firebaseconfig.js";
 import { 
-    collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, query, orderBy, getDocs, where, setDoc
+    collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, query, orderBy, getDocs, where, setDoc,
+    limit, startAfter, endBefore, limitToLast
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // --- REFERENCIAS AL DOM ---
@@ -9,6 +10,12 @@ const form = document.getElementById("formNuevaReserva");
 const modal = document.getElementById("modalReserva");
 const btnAbrirModal = document.getElementById("btnAbrirModal");
 const closeModal = document.querySelector(".close-modal");
+
+// --- VARIABLES DE PAGINACIÓN ---
+let ultimoDoc = null;      
+let primerDoc = null;      
+const limitePorPagina = 15; 
+let paginaActual = 1;
 
 // Inputs de cálculo
 const inputTarifa = document.getElementById("resTarifa");
@@ -126,8 +133,6 @@ if (noches === 0) {
     }
 });
 
-
-
 // Configuración base para Toasts del Hotel
 const Toast = Swal.mixin({
     toast: true,
@@ -136,8 +141,6 @@ const Toast = Swal.mixin({
     timer: 2000,
     timerProgressBar: true
 });
-
-
 
 // --- 3. AUTOCOMPLETADO POR DNI ---
 document.getElementById("resDoc").addEventListener("blur", async (e) => {
@@ -272,46 +275,73 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-// --- 5. RENDERIZADO ---
-const escucharReservas = () => { 
-onSnapshot(query(collection(db, "reservas"), orderBy("fechaRegistro", "desc")), (snapshot) => {
-    tablaBody.innerHTML = "";
-    listaReservasGlobal = [];
-    const conteo = { booking: 0, airbnb: 0, directas: 0, expedia: 0, personal: 0, dayuse: 0, gmail: 0 };
+// --- 5. RENDERIZADO Y ESTADÍSTICAS ---
 
-    snapshot.docs.forEach(docSnap => {
-        const res = docSnap.data();
-        const id = docSnap.id;
-        listaReservasGlobal.push({ id, ...res });
+// A. Estadísticas Globales (Escucha TODO para las cards)
+const escucharStatsGlobales = () => {
+    // Usamos onSnapshot para que las cards se actualicen solas
+    onSnapshot(collection(db, "reservas"), (snapshot) => {
+        const conteo = { booking: 0, airbnb: 0, directas: 0, expedia: 0, personal: 0, dayuse: 0, gmail: 0 };
+        
+        snapshot.docs.forEach(docSnap => {
+            const res = docSnap.data();
+            const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
+            if (conteo.hasOwnProperty(m)) conteo[m]++;
+        });
 
-        const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
-        if (conteo.hasOwnProperty(m)) conteo[m]++;
-const tr = document.createElement("tr");
-tr.innerHTML = `
-    <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
-    
-    <td>${res.fechaRegistro ? new Date(res.fechaRegistro).toLocaleDateString() : '---'}</td>
-    
-    <td><span class="badge-hab">Hab. ${res.habitacion}</span></td>
-    <td>${res.checkIn}</td>
-    <td>${res.checkOut}</td>
-    <td style="text-align:center">${res.personas}</td>
-    <td><strong>S/ ${Number(res.total).toFixed(2)}</strong></td>
-    <td><span class="badge-medio type-${m}">${res.medio}</span></td>
-    <td>
-        <div class="actions">
-            <button class="btn-edit" onclick="prepararEdicion('${id}')"><i class="fa-solid fa-pen"></i></button>
-            <button class="btn-delete" onclick="eliminarReserva('${id}')"><i class="fa-solid fa-trash"></i></button>
-        </div>
-    </td>`;
-tablaBody.appendChild(tr);
+        // Actualizar los números en el HTML
+        Object.keys(conteo).forEach(k => {
+            const el = document.getElementById(`stat-${k}`);
+            if (el) el.textContent = conteo[k];
+        });
     });
+};
 
-    Object.keys(conteo).forEach(k => {
-        const el = document.getElementById(`stat-${k}`);
-        if (el) el.textContent = conteo[k];
-    });
-});
+// B. Carga Paginada (Solo trae 15 para la tabla)
+const cargarReservasPaginadas = async (direccion = "siguiente") => {
+    try {
+        const ref = collection(db, "reservas");
+        let q;
+
+        if (direccion === "siguiente") {
+            q = query(ref, orderBy("fechaRegistro", "desc"), startAfter(ultimoDoc || 0), limit(limitePorPagina));
+        } else {
+            q = query(ref, orderBy("fechaRegistro", "desc"), endBefore(primerDoc), limitToLast(limitePorPagina));
+        }
+
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+            primerDoc = snapshot.docs[0];
+            ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
+            
+            // Actualizamos la lista global con lo que hay en esta página
+            listaReservasGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // Usamos tu función renderizarTabla que ya tienes abajo
+            renderizarTabla(listaReservasGlobal);
+            
+            // Actualizar botones de paginación
+            document.getElementById("pageInfo").textContent = `Página ${paginaActual}`;
+            document.getElementById("btnPrev").disabled = (paginaActual === 1);
+            document.getElementById("btnNext").disabled = (snapshot.docs.length < limitePorPagina);
+        }
+    } catch (error) {
+        console.error("Error cargando página:", error);
+    }
+};
+
+// Listeners para tus nuevos botones
+document.getElementById("btnNext").onclick = () => {
+    paginaActual++;
+    cargarReservasPaginadas("siguiente");
+};
+
+document.getElementById("btnPrev").onclick = () => {
+    if (paginaActual > 1) {
+        paginaActual--;
+        cargarReservasPaginadas("anterior");
+    }
 };
 
 
@@ -559,11 +589,78 @@ window.exportarExcel = async () => {
     }
 };
 
-// --- FUNCIÓN DE INICIO (Llamada por auth-check.js) ---
+// --- 7. FILTROS DINÁMICOS ---
+
+// Esta función se llama cada vez que escribes en el buscador o cambias un filtro
+const aplicarFiltros = () => {
+    const textoBusqueda = document.getElementById("inputBusqueda").value.toLowerCase();
+    const filtroEstado = document.getElementById("selectFiltroEstado").value;
+    const hoy = new Date().toISOString().split('T')[0];
+
+    const reservasFiltradas = listaReservasGlobal.filter(res => {
+        // Filtro por texto (Nombre o Documento)
+        const coincideTexto = 
+            res.huesped.toLowerCase().includes(textoBusqueda) || 
+            res.doc.includes(textoBusqueda);
+
+        // Filtro por estado o categorías especiales
+        let coincideEstado = true;
+        if (filtroEstado === "hoy") {
+            coincideEstado = (res.checkIn === hoy);
+        } else if (filtroEstado !== "todos") {
+            coincideEstado = (res.estado === filtroEstado);
+        }
+
+        return coincideTexto && coincideEstado;
+    });
+
+    renderizarTabla(reservasFiltradas);
+};
+
+// Separamos el renderizado en una función aparte para reutilizarla
+const renderizarTabla = (datos) => {
+    tablaBody.innerHTML = "";
+    datos.forEach(res => {
+        const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
+        const tr = document.createElement("tr");
+        
+        // Resaltar si es para hoy con un estilo sutil
+        const esHoy = res.checkIn === new Date().toISOString().split('T')[0];
+        if (esHoy) tr.style.borderLeft = "4px solid #800020";
+
+        tr.innerHTML = `
+            <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
+            <td>${res.fechaRegistro ? new Date(res.fechaRegistro).toLocaleDateString() : '---'}</td>
+            <td><span class="badge-hab">Hab. ${res.habitacion}</span></td>
+            <td>${res.checkIn} ${esHoy ? '🚩' : ''}</td>
+            <td>${res.checkOut}</td>
+            <td style="text-align:center">${res.personas}</td>
+            <td><strong>S/ ${Number(res.total).toFixed(2)}</strong></td>
+            <td><span class="badge-medio type-${m}">${res.medio}</span></td>
+            <td>
+                <div class="actions">
+                    <button class="btn-edit" onclick="prepararEdicion('${res.id}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-delete" onclick="eliminarReserva('${res.id}')"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </td>`;
+        tablaBody.appendChild(tr);
+    });
+};
+
+// Vincular a los inputs de tu HTML
+document.getElementById("inputBusqueda").addEventListener("input", aplicarFiltros);
+document.getElementById("selectFiltroEstado").addEventListener("change", aplicarFiltros);
+
+
+// --- FUNCIÓN DE INICIO ---
 window.inicializarPagina = () => {
     console.log("Iniciando Módulo de Reservas - Hotel Central");
     
-    // Ahora sí, las conexiones a Firebase se disparan solo con sesión activa
     cargarHabitacionesSelect(); 
-    escucharReservas();        
+    
+    // 1. Iniciamos la escucha de las cards (Totales reales)
+    escucharStatsGlobales(); 
+    
+    // 2. Cargamos la primera página de la tabla
+    cargarReservasPaginadas("siguiente");        
 };

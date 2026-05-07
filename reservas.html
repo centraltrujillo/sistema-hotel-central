@@ -61,6 +61,22 @@
 
             </div>
 
+<div class="filters-bar card">
+    <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="inputBusqueda" placeholder="Buscar por huésped o DNI...">
+    </div>
+    <div class="filter-group">
+        <label><i class="fa-solid fa-filter"></i> Estado:</label>
+        <select id="selectFiltroEstado">
+            <option value="todos">Todos los registros</option>
+            <option value="hoy">Llegan hoy (Check-in)</option>
+            <option value="reservada">Solo Reservas</option>
+            <option value="checkin">En el Hotel (Ocupado)</option>
+        </select>
+    </div>
+</div>
+
             <div class="table-container card">
                 <table class="res-table">
                     <thead>
@@ -82,6 +98,17 @@
         </main>
     </div>
 
+    <div class="pagination-footer">
+        <div class="pagination-buttons">
+            <button id="btnPrev" class="btn-pag-square" disabled>
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <span id="pageInfo" class="page-indicator">Página 1</span>
+            <button id="btnNext" class="btn-pag-square">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+
  <div id="modalReserva" class="modal-reserva-overlay">
         
         <div class="modal-reserva-content">
@@ -99,7 +126,7 @@
                         <div class="form-group span-2"><label>Nombres</label><input type="text" id="resHuesped" required></div>
                         <div class="form-group"><label>DNI/Pasaporte/CE</label><input type="text" id="resDoc" required></div>
                         <div class="form-group"><label>Teléfono</label><input type="tel" id="resTelefono" required></div>
-                        <div class="form-group"><label>Nacionalidad</label><input type="text" id="resNacionalidad"></div>
+                        <div class="form-group"><label>Nacionalidad/Ciudad</label><input type="text" id="resNacionalidad"></div>
                         <div class="form-group"><label>Nacimiento</label><input type="date" id="resNacimiento"></div>
                         <div class="form-group span-2"><label>Correo</label><input type="email" id="resCorreo"></div>
                     </div>
@@ -117,9 +144,9 @@
                                 <option value="">Seleccionar...</option>
                                 <option value="booking">Booking</option>
                                 <option value="airbnb">Airbnb</option>
-                                <option value="directas">Directas</option>
+                                <option value="directas">Directas (Llamada, Whatsapp)</option>
                                 <option value="expedia">Expedia</option>
-                                <option value="personal">Personal</option>
+                                <option value="personal">Personal (Presencial)</option>
                                 <option value="dayuse">Day Use</option>
                                 <option value="gmail">Gmail</option>
                             </select>
