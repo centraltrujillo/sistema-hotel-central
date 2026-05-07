@@ -297,20 +297,55 @@ const escucharStatsGlobales = () => {
 };
 
 // B. Carga Paginada (Solo trae 15 para la tabla)
+// CORRECCIÓN EN RENDERIZADO PARA EVITAR TABLAS VACÍAS
+const renderizarTabla = (datos) => {
+    if (!tablaBody) return; // Seguridad
+    tablaBody.innerHTML = "";
+    
+    if (datos.length === 0) {
+        tablaBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No hay resultados que coincidan</td></tr>';
+        return;
+    }
+
+    datos.forEach(res => {
+        const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
+        const tr = document.createElement("tr");
+        
+        const hoy = new Date().toISOString().split('T')[0];
+        const esHoy = res.checkIn === hoy;
+        if (esHoy) tr.style.borderLeft = "4px solid #800020";
+
+        tr.innerHTML = `
+            <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
+            <td>${res.fechaRegistro ? new Date(res.fechaRegistro).toLocaleDateString() : '---'}</td>
+            <td><span class="badge-hab">Hab. ${res.habitacion}</span></td>
+            <td>${res.checkIn} ${esHoy ? '🚩' : ''}</td>
+            <td>${res.checkOut}</td>
+            <td style="text-align:center">${res.personas}</td>
+            <td><strong>S/ ${Number(res.total).toFixed(2)}</strong></td>
+            <td><span class="badge-medio type-${m}">${res.medio}</span></td>
+            <td>
+                <div class="actions">
+                    <button class="btn-edit" onclick="prepararEdicion('${res.id}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-delete" onclick="eliminarReserva('${res.id}')"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </td>`;
+        tablaBody.appendChild(tr);
+    });
+};
+
+// CORRECCIÓN EN CARGA PAGINADA (Asegurando el flujo de datos)
 const cargarReservasPaginadas = async (direccion = "siguiente") => {
     try {
         const ref = collection(db, "reservas");
         let q;
 
+        // Simplificamos la lógica de la query para asegurar resultados
         if (direccion === "siguiente") {
-            // CORRECCIÓN: Si no hay ultimoDoc, es la primera carga y no usamos startAfter
-            if (ultimoDoc) {
-                q = query(ref, orderBy("fechaRegistro", "desc"), startAfter(ultimoDoc), limit(limitePorPagina));
-            } else {
-                q = query(ref, orderBy("fechaRegistro", "desc"), limit(limitePorPagina));
-            }
+            q = ultimoDoc 
+                ? query(ref, orderBy("fechaRegistro", "desc"), startAfter(ultimoDoc), limit(limitePorPagina))
+                : query(ref, orderBy("fechaRegistro", "desc"), limit(limitePorPagina));
         } else {
-            // Para ir hacia atrás
             q = query(ref, orderBy("fechaRegistro", "desc"), endBefore(primerDoc), limitToLast(limitePorPagina));
         }
 
@@ -320,49 +355,32 @@ const cargarReservasPaginadas = async (direccion = "siguiente") => {
             primerDoc = snapshot.docs[0];
             ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
             
+            // Llenamos la lista global y renderizamos inmediatamente
             listaReservasGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // Renderizamos con tu función existente
             renderizarTabla(listaReservasGlobal);
             
-            // Actualizar botones de interfaz
-            const btnPrev = document.getElementById("btnPrev");
-            const btnNext = document.getElementById("btnNext");
-            const pageIndicator = document.getElementById("pageInfo");
-
-            if (pageIndicator) pageIndicator.textContent = `Página ${paginaActual}`;
-            if (btnPrev) btnPrev.disabled = (paginaActual === 1);
-            if (btnNext) btnNext.disabled = (snapshot.docs.length < limitePorPagina);
+            // Actualización de UI de paginación
+            actualizarInterfazPaginacion(snapshot.docs.length);
         } else {
-            // Si la consulta vuelve vacía y es la primera página, mostrar aviso
             if (paginaActual === 1) {
-                tablaBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No se encontraron reservas</td></tr>';
+                tablaBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No hay reservas registradas aún</td></tr>';
             }
         }
     } catch (error) {
-        console.error("Error cargando página de reservas:", error);
+        console.error("Error detallado:", error);
+        // Si sale un error de "index", revisa el link de la consola
     }
 };
 
-// Listeners corregidos para evitar errores si los elementos no existen aún
-const btnNext = document.getElementById("btnNext");
-const btnPrev = document.getElementById("btnPrev");
+const actualizarInterfazPaginacion = (totalEnPagina) => {
+    const btnPrev = document.getElementById("btnPrev");
+    const btnNext = document.getElementById("btnNext");
+    const pageIndicator = document.getElementById("pageInfo");
 
-if (btnNext) {
-    btnNext.onclick = () => {
-        paginaActual++;
-        cargarReservasPaginadas("siguiente");
-    };
-}
-
-if (btnPrev) {
-    btnPrev.onclick = () => {
-        if (paginaActual > 1) {
-            paginaActual--;
-            cargarReservasPaginadas("anterior");
-        }
-    };
-}
+    if (pageIndicator) pageIndicator.textContent = `Página ${paginaActual}`;
+    if (btnPrev) btnPrev.disabled = (paginaActual === 1);
+    if (btnNext) btnNext.disabled = (totalEnPagina < limitePorPagina);
+};
 
 
 
