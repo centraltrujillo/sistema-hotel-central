@@ -16,6 +16,7 @@ let ultimoDoc = null;
 let primerDoc = null;      
 const limitePorPagina = 15; 
 let paginaActual = 1;
+let totalPaginas = 1; 
 
 // Inputs de cálculo
 const inputTarifa = document.getElementById("resTarifa");
@@ -277,70 +278,38 @@ form.addEventListener("submit", async (e) => {
 
 // --- 5. RENDERIZADO Y ESTADÍSTICAS ---
 
-// A. Estadísticas Globales (Escucha TODO para las cards)
+// A. Estadísticas Globales (Calculamos el total de páginas aquí)
 const escucharStatsGlobales = () => {
     onSnapshot(collection(db, "reservas"), (snapshot) => {
         const conteo = { booking: 0, airbnb: 0, directas: 0, expedia: 0, personal: 0, dayuse: 0, gmail: 0 };
+        const totalRegistros = snapshot.size; // Total de reservas en Firebase
         
+        // Calculamos cuántas páginas existen en total
+        totalPaginas = Math.ceil(totalRegistros / limitePorPagina) || 1;
+
         snapshot.docs.forEach(docSnap => {
             const res = docSnap.data();
-            // Limpiamos el texto del medio para que coincida con las llaves del objeto
             const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
             if (conteo.hasOwnProperty(m)) conteo[m]++;
         });
 
+        // Actualizar cards
         Object.keys(conteo).forEach(k => {
             const el = document.getElementById(`stat-${k}`);
             if (el) el.textContent = conteo[k];
         });
+
+        // Forzamos actualización del texto de página por si cambió el total
+        actualizarInterfazPaginacion(listaReservasGlobal.length);
     });
 };
 
-// B. Carga Paginada (Solo trae 15 para la tabla)
-// CORRECCIÓN EN RENDERIZADO PARA EVITAR TABLAS VACÍAS
-const renderizarTabla = (datos) => {
-    if (!tablaBody) return; // Seguridad
-    tablaBody.innerHTML = "";
-    
-    if (datos.length === 0) {
-        tablaBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No hay resultados que coincidan</td></tr>';
-        return;
-    }
-
-    datos.forEach(res => {
-        const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
-        const tr = document.createElement("tr");
-        
-        const hoy = new Date().toISOString().split('T')[0];
-        const esHoy = res.checkIn === hoy;
-        if (esHoy) tr.style.borderLeft = "4px solid #800020";
-
-        tr.innerHTML = `
-            <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
-            <td>${res.fechaRegistro ? new Date(res.fechaRegistro).toLocaleDateString() : '---'}</td>
-            <td><span class="badge-hab">Hab. ${res.habitacion}</span></td>
-            <td>${res.checkIn} ${esHoy ? '🚩' : ''}</td>
-            <td>${res.checkOut}</td>
-            <td style="text-align:center">${res.personas}</td>
-            <td><strong>S/ ${Number(res.total).toFixed(2)}</strong></td>
-            <td><span class="badge-medio type-${m}">${res.medio}</span></td>
-            <td>
-                <div class="actions">
-                    <button class="btn-edit" onclick="prepararEdicion('${res.id}')"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-delete" onclick="eliminarReserva('${res.id}')"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </td>`;
-        tablaBody.appendChild(tr);
-    });
-};
-
-// CORRECCIÓN EN CARGA PAGINADA (Asegurando el flujo de datos)
+// B. Carga Paginada (Sin cambios, está correcta)
 const cargarReservasPaginadas = async (direccion = "siguiente") => {
     try {
         const ref = collection(db, "reservas");
         let q;
 
-        // Simplificamos la lógica de la query para asegurar resultados
         if (direccion === "siguiente") {
             q = ultimoDoc 
                 ? query(ref, orderBy("fechaRegistro", "desc"), startAfter(ultimoDoc), limit(limitePorPagina))
@@ -355,11 +324,8 @@ const cargarReservasPaginadas = async (direccion = "siguiente") => {
             primerDoc = snapshot.docs[0];
             ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
             
-            // Llenamos la lista global y renderizamos inmediatamente
             listaReservasGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderizarTabla(listaReservasGlobal);
-            
-            // Actualización de UI de paginación
             actualizarInterfazPaginacion(snapshot.docs.length);
         } else {
             if (paginaActual === 1) {
@@ -368,20 +334,41 @@ const cargarReservasPaginadas = async (direccion = "siguiente") => {
         }
     } catch (error) {
         console.error("Error detallado:", error);
-        // Si sale un error de "index", revisa el link de la consola
     }
 };
 
+// C. Actualización de Interfaz (Aquí se muestra el "Página X de Y")
 const actualizarInterfazPaginacion = (totalEnPagina) => {
     const btnPrev = document.getElementById("btnPrev");
     const btnNext = document.getElementById("btnNext");
     const pageIndicator = document.getElementById("pageInfo");
 
-    if (pageIndicator) pageIndicator.textContent = `Página ${paginaActual}`;
+    if (pageIndicator) {
+        pageIndicator.textContent = `Página ${paginaActual} de ${totalPaginas}`;
+    }
+    
     if (btnPrev) btnPrev.disabled = (paginaActual === 1);
-    if (btnNext) btnNext.disabled = (totalEnPagina < limitePorPagina);
+    
+    // El botón siguiente se apaga si no hay más páginas adelante
+    if (btnNext) {
+        btnNext.disabled = (paginaActual >= totalPaginas);
+    }
 };
 
+// D. Listeners de botones (Asegúrate de que existan)
+document.getElementById("btnNext").onclick = () => {
+    if (paginaActual < totalPaginas) {
+        paginaActual++;
+        cargarReservasPaginadas("siguiente");
+    }
+};
+
+document.getElementById("btnPrev").onclick = () => {
+    if (paginaActual > 1) {
+        paginaActual--;
+        cargarReservasPaginadas("anterior");
+    }
+};
 
 
 // --- FUNCIÓN DE VERIFICACIÓN EN TIEMPO REAL (MODIFICADA) ---
