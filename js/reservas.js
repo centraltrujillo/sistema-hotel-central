@@ -304,6 +304,43 @@ const escucharStatsGlobales = () => {
     });
 };
 
+// --- FUNCIÓN DE RENDERIZADO (Debe estar ANTES de cargarpaginadas) ---
+const renderizarTabla = (datos) => {
+    if (!tablaBody) return; 
+    tablaBody.innerHTML = "";
+    
+    if (datos.length === 0) {
+        tablaBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No hay resultados</td></tr>';
+        return;
+    }
+
+    datos.forEach(res => {
+        const m = res.medio?.toLowerCase().replace(/\s/g, "") || "personal";
+        const tr = document.createElement("tr");
+        const hoy = new Date().toISOString().split('T')[0];
+        const esHoy = res.checkIn === hoy;
+
+        if (esHoy) tr.style.borderLeft = "4px solid #800020";
+
+        tr.innerHTML = `
+            <td><strong>${res.huesped}</strong><br><small>${res.doc}</small></td>
+            <td>${res.fechaRegistro ? new Date(res.fechaRegistro).toLocaleDateString() : '---'}</td>
+            <td><span class="badge-hab">Hab. ${res.habitacion}</span></td>
+            <td>${res.checkIn} ${esHoy ? '🚩' : ''}</td>
+            <td>${res.checkOut}</td>
+            <td style="text-align:center">${res.personas}</td>
+            <td><strong>S/ ${Number(res.total).toFixed(2)}</strong></td>
+            <td><span class="badge-medio type-${m}">${res.medio}</span></td>
+            <td>
+                <div class="actions">
+                    <button class="btn-edit" onclick="prepararEdicion('${res.id}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-delete" onclick="eliminarReserva('${res.id}')"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </td>`;
+        tablaBody.appendChild(tr);
+    });
+};
+
 // B. Carga Paginada (Sin cambios, está correcta)
 const cargarReservasPaginadas = async (direccion = "siguiente") => {
     try {
