@@ -232,40 +232,40 @@ function obtenerIconoSegunOcupacion(estado, p) {
 
 async function ejecutarCheckInReservaExistente(reservaId, hab, datosReserva) {
     try {
-        // 1. Referencias a los documentos
         const reservaRef = doc(db, "reservas", reservaId);
-        const habRef = doc(db, "habitaciones", hab.id); // Asegúrate de que 'hab' tenga el ID de Firebase
+        const habRef = doc(db, "habitaciones", hab.id); 
 
-        // 2. Actualización en paralelo (Estado de reserva y Estado de habitación)
+        // IMPORTANTE: Usamos "checkin" porque es lo que busca tu abrirModalGestionOcupada
         await Promise.all([
             updateDoc(reservaRef, { 
-                estado: "checkin", // O el estado que manejes para clientes ya en el hotel
-                fechaCheckInReal: new Date().toISOString() // Opcional: registrar la hora exacta
+                estado: "checkin", 
+                fechaIngresoReal: new Date().toISOString() 
             }),
             updateDoc(habRef, { 
                 estado: "ocupada" 
             })
         ]);
 
-        // 3. Notificación de éxito
+        // Mensaje de éxito rápido
         await Swal.fire({
             icon: 'success',
-            title: 'Check-In Exitoso',
-            text: `La reserva de ${datosReserva.huesped} ha sido activada en la Hab. ${hab.numero}.`,
+            title: 'Check-in Realizado',
+            text: `Huésped: ${datosReserva.huesped}`,
+            timer: 1500,
+            showConfirmButton: false,
             confirmButtonColor: '#800020'
         });
 
-        // 4. Recargar la interfaz (Renderizar el Rack)
-        if (typeof renderizarHabitaciones === "function") {
-            renderizarHabitaciones();
-        }
+        // Ahora llamamos a tu Modal de Gestión 360°
+        // Pasamos 'hab' con los datos necesarios
+        abrirModalGestionOcupada(hab);
         
     } catch (error) {
         console.error("Error al procesar check-in:", error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'No se pudo completar el proceso en la base de datos.',
+            text: 'No se pudo vincular la reserva.',
             confirmButtonColor: '#800020'
         });
     }
